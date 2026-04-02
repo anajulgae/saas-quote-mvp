@@ -1,17 +1,12 @@
-import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
 import { demoUser } from "@/lib/demo-data"
+import { createServerSupabaseClient } from "@/lib/supabase/server"
+
+export { isSupabaseConfigured } from "@/lib/supabase/server"
 
 const DEMO_SESSION_COOKIE = "flowbill-demo-session"
-
-export function isSupabaseConfigured() {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )
-}
 
 export function getDemoCredentials() {
   return {
@@ -21,32 +16,88 @@ export function getDemoCredentials() {
 }
 
 export async function createSupabaseServerClient() {
-  if (!isSupabaseConfigured()) {
-    return null
+  return createServerSupabaseClient()
+}
+
+async function ensureUserProfile(
+  supabase: NonNullable<Awaited<ReturnType<typeof createServerSupabaseClient>>>,
+  user: {
+    id: string
+    email?: string | null
+    user_metadata?: Record<string, unknown>
   }
+) {
+  const fullName =
+    typeof user.user_metadata?.full_name === "string"
+      ? user.user_metadata.full_name
+      : user.email ?? "사용자"
 
-  const cookieStore = await cookies()
+  const businessName =
+    typeof user.user_metadata?.business_name === "string"
+      ? user.user_metadata.business_name
+      : fullName
 
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          } catch {
-            return
-          }
-        },
+  const phone =
+    typeof user.user_metadata?.phone === "string" ? user.user_metadata.phone : null
+
+  await ((supabase.from("users") as unknown) as {
+    upsert: (
+      value: {
+        id: string
+        full_name: string
+        business_name: string
+        phone: string | null
       },
+      options: { onConflict: string }
+    ) => Promise<unknown>
+  }).upsert(
+    {
+      id: user.id,
+      full_name: fullName,
+      business_name: businessName,
+      phone,
+    },
+    {
+      onConflict: "id",
     }
   )
+
+  await ((supabase.from("business_settings") as unknown) as {
+    upsert: (
+      value: {
+        user_id: string
+        business_name: string
+        owner_name: string
+        email: string | null
+        phone: string | null
+        payment_terms: string
+        bank_account: string
+        reminder_message: string
+      },
+      options: { onConflict: string }
+    ) => Promise<unknown>
+  }).upsert(
+    {
+      user_id: user.id,
+      business_name: businessName,
+      owner_name: fullName,
+      email: user.email ?? null,
+      phone,
+      payment_terms: "선금 50%, 납품 전 잔금 50%",
+      bank_account: "",
+      reminder_message:
+        "안녕하세요. 이전에 전달드린 청구 건의 입금 일정을 확인 부탁드립니다.",
+    },
+    {
+      onConflict: "user_id",
+    }
+  )
+
+  return {
+    fullName,
+    businessName,
+    phone: phone ?? "",
+  }
 }
 
 export async function getAppSession() {
@@ -74,14 +125,16 @@ export async function getAppSession() {
     return null
   }
 
+  const profile = await ensureUserProfile(supabase, user)
+
   return {
     mode: "supabase" as const,
     user: {
       id: user.id,
-      fullName: user.user_metadata.full_name ?? user.email ?? "사용자",
-      businessName: user.user_metadata.business_name ?? "내 사업장",
+      fullName: profile.fullName ?? user.email ?? "사용자",
+      businessName: profile.businessName ?? "내 사업장",
       email: user.email ?? "",
-      phone: user.user_metadata.phone ?? "",
+      phone: profile.phone ?? "",
     },
   }
 }

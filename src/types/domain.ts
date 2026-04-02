@@ -36,6 +36,7 @@ export interface Customer {
   tags: string[]
   notes?: string
   createdAt: string
+  updatedAt?: string
 }
 
 export interface Inquiry {
@@ -52,6 +53,7 @@ export interface Inquiry {
   stage: InquiryStage
   followUpAt?: string
   createdAt: string
+  updatedAt?: string
 }
 
 export interface QuoteItem {
@@ -79,6 +81,7 @@ export interface Quote {
   sentAt?: string
   validUntil?: string
   createdAt: string
+  updatedAt?: string
 }
 
 export interface Invoice {
@@ -94,6 +97,8 @@ export interface Invoice {
   paidAt?: string
   requestedAt?: string
   notes?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface Reminder {
@@ -108,6 +113,10 @@ export interface Reminder {
 export interface ActivityLog {
   id: string
   userId: string
+  customerId?: string
+  inquiryId?: string
+  quoteId?: string
+  invoiceId?: string
   action: string
   description: string
   createdAt: string
@@ -132,4 +141,38 @@ export interface BusinessSettings {
   paymentTerms: string
   bankAccount: string
   reminderMessage: string
+}
+
+export interface TimelineEvent {
+  id: string
+  label: string
+  description: string
+  createdAt: string
+}
+
+export interface CustomerSummary extends Customer {
+  inquiryCount: number
+  quoteCount: number
+  invoiceCount: number
+}
+
+export interface InquiryWithCustomer extends Inquiry {
+  customer?: Customer
+}
+
+export interface QuoteWithItems extends Quote {
+  customer?: Customer
+  items: QuoteItem[]
+}
+
+export interface InvoiceWithReminders extends Invoice {
+  customer?: Customer
+  reminders: Reminder[]
+}
+
+export interface DashboardMetrics {
+  quoteCountThisMonth: number
+  outstandingAmount: number
+  waitingPayments: number
+  followUpsToday: number
 }

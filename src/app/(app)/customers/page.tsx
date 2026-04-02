@@ -3,9 +3,11 @@ import { ArrowRight } from "lucide-react"
 
 import { PageHeader } from "@/components/app/page-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { demoCustomers, demoInquiries, demoInvoices, demoQuotes } from "@/lib/demo-data"
+import { getCustomersPageData } from "@/lib/data"
 
-export default function CustomersPage() {
+export default async function CustomersPage() {
+  const { customers } = await getCustomersPageData()
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -14,15 +16,7 @@ export default function CustomersPage() {
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {demoCustomers.map((customer) => {
-          const inquiryCount = demoInquiries.filter(
-            (item) => item.customerId === customer.id
-          ).length
-          const quoteCount = demoQuotes.filter((item) => item.customerId === customer.id).length
-          const invoiceCount = demoInvoices.filter(
-            (item) => item.customerId === customer.id
-          ).length
-
+        {customers.map((customer) => {
           return (
             <Card key={customer.id} className="border-border/70">
               <CardHeader>
@@ -46,15 +40,15 @@ export default function CustomersPage() {
                 <div className="grid grid-cols-3 gap-3">
                   <div className="rounded-2xl border border-border/70 bg-muted/30 p-3 text-center">
                     <p className="text-xs text-muted-foreground">문의</p>
-                    <p className="mt-1 text-xl font-semibold">{inquiryCount}</p>
+                    <p className="mt-1 text-xl font-semibold">{customer.inquiryCount}</p>
                   </div>
                   <div className="rounded-2xl border border-border/70 bg-muted/30 p-3 text-center">
                     <p className="text-xs text-muted-foreground">견적</p>
-                    <p className="mt-1 text-xl font-semibold">{quoteCount}</p>
+                    <p className="mt-1 text-xl font-semibold">{customer.quoteCount}</p>
                   </div>
                   <div className="rounded-2xl border border-border/70 bg-muted/30 p-3 text-center">
                     <p className="text-xs text-muted-foreground">청구</p>
-                    <p className="mt-1 text-xl font-semibold">{invoiceCount}</p>
+                    <p className="mt-1 text-xl font-semibold">{customer.invoiceCount}</p>
                   </div>
                 </div>
                 <Link

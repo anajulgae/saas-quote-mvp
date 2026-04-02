@@ -4,13 +4,7 @@ import { EmptyState } from "@/components/app/empty-state"
 import { PageHeader } from "@/components/app/page-header"
 import { InquiryStageBadge, PaymentStatusBadge, QuoteStatusBadge } from "@/components/app/status-badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  demoInquiries,
-  demoInvoices,
-  demoQuotes,
-  getCustomerById,
-  getCustomerTimeline,
-} from "@/lib/demo-data"
+import { getCustomerDetailData } from "@/lib/data"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 
 export default async function CustomerDetailPage({
@@ -19,16 +13,12 @@ export default async function CustomerDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const customer = getCustomerById(id)
+  const { customer, inquiries, quotes, invoices, timeline } =
+    await getCustomerDetailData(id)
 
   if (!customer) {
     notFound()
   }
-
-  const inquiries = demoInquiries.filter((item) => item.customerId === customer.id)
-  const quotes = demoQuotes.filter((item) => item.customerId === customer.id)
-  const invoices = demoInvoices.filter((item) => item.customerId === customer.id)
-  const timeline = getCustomerTimeline(customer.id)
 
   return (
     <div className="space-y-6">

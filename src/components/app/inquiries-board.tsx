@@ -1,8 +1,10 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import { Pencil, Plus, Sparkles } from "lucide-react"
 
+import { createInquiryAction, updateInquiryAction } from "@/app/actions"
 import { InquiryStageBadge } from "@/components/app/status-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,23 +25,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { demoCustomers, inquiryStageOptions } from "@/lib/demo-data"
+import { inquiryStageOptions } from "@/lib/constants"
 import { formatCurrency, formatDateTime } from "@/lib/format"
-import type { Inquiry, InquiryStage } from "@/types/domain"
-
-const emptyForm = {
-  title: "",
-  customerId: demoCustomers[0]?.id ?? "",
-  serviceCategory: "",
-  channel: "카카오톡",
-  details: "",
-  budgetMin: "",
-  budgetMax: "",
-  stage: "new" as InquiryStage,
-  followUpAt: "",
-}
-
-type InquiryForm = typeof emptyForm
+import type { Customer, InquiryWithCustomer, InquiryStage } from "@/types/domain"
 
 function toLocalDateTimeValue(value?: string) {
   if (!value) {
@@ -50,14 +38,28 @@ function toLocalDateTimeValue(value?: string) {
 }
 
 export function InquiriesBoard({
-  initialInquiries,
+  inquiries,
+  customers,
 }: {
-  initialInquiries: Inquiry[]
+  inquiries: InquiryWithCustomer[]
+  customers: Customer[]
 }) {
-  const [inquiries, setInquiries] = useState(initialInquiries)
+  const router = useRouter()
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [form, setForm] = useState<InquiryForm>(emptyForm)
+  const [isPending, startTransition] = useTransition()
+  const [errorMessage, setErrorMessage] = useState("")
+  const [form, setForm] = useState({
+    title: "",
+    customerId: customers[0]?.id ?? "",
+    serviceCategory: "",
+    channel: "카카오톡",
+    details: "",
+    budgetMin: "",
+    budgetMax: "",
+    stage: "new" as InquiryStage,
+    followUpAt: "",
+  })
 
   const editingInquiry = useMemo(
     () => inquiries.find((item) => item.id === editingId) ?? null,
@@ -65,32 +67,36 @@ export function InquiriesBoard({
   )
 
   const resetForm = () => {
-    setForm(emptyForm)
+    setForm({
+      title: "",
+      customerId: customers[0]?.id ?? "",
+      serviceCategory: "",
+      channel: "카카오톡",
+      details: "",
+      budgetMin: "",
+      budgetMax: "",
+      stage: "new" as InquiryStage,
+      followUpAt: "",
+    })
+    setErrorMessage("")
     setEditingId(null)
   }
 
   const handleCreate = () => {
-    const nextInquiry: Inquiry = {
-      id: `inquiry-${crypto.randomUUID()}`,
-      userId: "user-demo",
-      customerId: form.customerId,
-      title: form.title,
-      serviceCategory: form.serviceCategory,
-      channel: form.channel,
-      details: form.details,
-      requestedDate: new Date().toISOString().slice(0, 10),
-      budgetMin: Number(form.budgetMin) || undefined,
-      budgetMax: Number(form.budgetMax) || undefined,
-      stage: form.stage,
-      followUpAt: form.followUpAt
-        ? new Date(form.followUpAt).toISOString()
-        : undefined,
-      createdAt: new Date().toISOString(),
-    }
+    setErrorMessage("")
 
-    setInquiries((current) => [nextInquiry, ...current])
-    resetForm()
-    setIsCreateOpen(false)
+    startTransition(async () => {
+      const result = await createInquiryAction(form)
+
+      if (!result.ok) {
+        setErrorMessage(result.error)
+        return
+      }
+
+      resetForm()
+      setIsCreateOpen(false)
+      router.refresh()
+    })
   }
 
   const handleEdit = () => {
@@ -98,32 +104,24 @@ export function InquiriesBoard({
       return
     }
 
-    setInquiries((current) =>
-      current.map((item) =>
-        item.id === editingInquiry.id
-          ? {
-              ...item,
-              title: form.title,
-              customerId: form.customerId,
-              serviceCategory: form.serviceCategory,
-              channel: form.channel,
-              details: form.details,
-              budgetMin: Number(form.budgetMin) || undefined,
-              budgetMax: Number(form.budgetMax) || undefined,
-              stage: form.stage,
-              followUpAt: form.followUpAt
-                ? new Date(form.followUpAt).toISOString()
-                : undefined,
-            }
-          : item
-      )
-    )
+    setErrorMessage("")
 
-    resetForm()
+    startTransition(async () => {
+      const result = await updateInquiryAction(editingInquiry.id, form)
+
+      if (!result.ok) {
+        setErrorMessage(result.error)
+        return
+      }
+
+      resetForm()
+      router.refresh()
+    })
   }
 
-  const openEdit = (inquiry: Inquiry) => {
+  const openEdit = (inquiry: InquiryWithCustomer) => {
     setEditingId(inquiry.id)
+    setErrorMessage("")
     setForm({
       title: inquiry.title,
       customerId: inquiry.customerId,
@@ -163,7 +161,7 @@ export function InquiriesBoard({
               <SelectValue placeholder="고객 선택" />
             </SelectTrigger>
             <SelectContent>
-              {demoCustomers.map((customer) => (
+              {customers.map((customer) => (
                 <SelectItem key={customer.id} value={customer.id}>
                   {customer.companyName ?? customer.name}
                 </SelectItem>
@@ -287,17 +285,23 @@ export function InquiriesBoard({
               <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
                 취소
               </Button>
-              <Button onClick={handleCreate} disabled={!form.title || !form.serviceCategory}>
+              <Button
+                onClick={handleCreate}
+                disabled={isPending || !form.title || !form.serviceCategory}
+              >
                 저장
               </Button>
             </DialogFooter>
+            {errorMessage ? (
+              <p className="text-sm text-destructive">{errorMessage}</p>
+            ) : null}
           </DialogContent>
         </Dialog>
       </div>
 
       <div className="grid gap-4">
         {inquiries.map((inquiry) => {
-          const customer = demoCustomers.find((item) => item.id === inquiry.customerId)
+          const customer = inquiry.customer
 
           return (
             <div
@@ -360,11 +364,14 @@ export function InquiriesBoard({
                       <Button variant="outline" onClick={resetForm}>
                         닫기
                       </Button>
-                      <Button onClick={handleEdit}>
+                      <Button onClick={handleEdit} disabled={isPending}>
                         <Sparkles className="size-4" />
                         저장
                       </Button>
                     </DialogFooter>
+                    {errorMessage ? (
+                      <p className="text-sm text-destructive">{errorMessage}</p>
+                    ) : null}
                   </DialogContent>
                 </Dialog>
               </div>

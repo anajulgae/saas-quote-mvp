@@ -2,14 +2,10 @@ import { PageHeader } from "@/components/app/page-header"
 import { InquiriesBoard } from "@/components/app/inquiries-board"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { demoInquiries } from "@/lib/demo-data"
+import { getInquiriesPageData } from "@/lib/data"
 
-export default function InquiriesPage() {
-  const stageSummary = {
-    new: demoInquiries.filter((item) => item.stage === "new").length,
-    qualified: demoInquiries.filter((item) => item.stage === "qualified").length,
-    quoted: demoInquiries.filter((item) => item.stage === "quoted").length,
-  }
+export default async function InquiriesPage() {
+  const { inquiries, customers, stageSummary } = await getInquiriesPageData()
 
   return (
     <div className="space-y-6">
@@ -42,7 +38,7 @@ export default function InquiriesPage() {
         </Card>
       </section>
 
-      <InquiriesBoard initialInquiries={demoInquiries} />
+      <InquiriesBoard inquiries={inquiries} customers={customers} />
     </div>
   )
 }

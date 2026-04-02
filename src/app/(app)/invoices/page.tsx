@@ -1,10 +1,12 @@
 import { PageHeader } from "@/components/app/page-header"
 import { PaymentStatusBadge } from "@/components/app/status-badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { demoCustomers, demoInvoices, demoReminders } from "@/lib/demo-data"
+import { getInvoicesPageData } from "@/lib/data"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
 
-export default function InvoicesPage() {
+export default async function InvoicesPage() {
+  const { invoices } = await getInvoicesPageData()
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -13,9 +15,9 @@ export default function InvoicesPage() {
       />
 
       <div className="grid gap-4">
-        {demoInvoices.map((invoice) => {
-          const customer = demoCustomers.find((item) => item.id === invoice.customerId)
-          const reminders = demoReminders.filter((item) => item.invoiceId === invoice.id)
+        {invoices.map((invoice) => {
+          const customer = invoice.customer
+          const reminders = invoice.reminders
 
           return (
             <Card key={invoice.id} className="border-border/70">

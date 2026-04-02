@@ -5,14 +5,7 @@ import { PageHeader } from "@/components/app/page-header"
 import { InquiryStageBadge, PaymentStatusBadge } from "@/components/app/status-badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  demoActivityLogs,
-  demoCustomers,
-  demoInquiries,
-  demoInvoices,
-  getCustomerById,
-  getDashboardMetrics,
-} from "@/lib/demo-data"
+import { getDashboardPageData } from "@/lib/data"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 
 const pipelineColumns = [
@@ -22,15 +15,9 @@ const pipelineColumns = [
   { key: "won", label: "수주 완료" },
 ] as const
 
-export default function DashboardPage() {
-  const metrics = getDashboardMetrics()
-  const followUps = demoInquiries
-    .filter((item) => item.followUpAt?.startsWith("2026-04-02"))
-    .sort((a, b) => (a.followUpAt ?? "").localeCompare(b.followUpAt ?? ""))
-
-  const overdueInvoices = demoInvoices.filter(
-    (invoice) => invoice.paymentStatus === "overdue"
-  )
+export default async function DashboardPage() {
+  const { metrics, followUps, overdueInvoices, recentActivities, pipelineSummary } =
+    await getDashboardPageData()
 
   return (
     <div className="space-y-6">
@@ -82,7 +69,7 @@ export default function DashboardPage() {
               >
                 <p className="text-sm font-medium">{column.label}</p>
                 <p className="mt-3 text-3xl font-semibold">
-                  {demoInquiries.filter((item) => item.stage === column.key).length}
+                  {pipelineSummary[column.key]}
                 </p>
               </div>
             ))}
@@ -96,7 +83,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {overdueInvoices.map((invoice) => {
-              const customer = getCustomerById(invoice.customerId)
+              const customer = invoice.customer
 
               return (
                 <div
@@ -127,7 +114,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {followUps.map((item) => {
-              const customer = demoCustomers.find((customer) => customer.id === item.customerId)
+              const customer = item.customer
 
               return (
                 <div
@@ -167,7 +154,7 @@ export default function DashboardPage() {
             <CardDescription>견적, 입금, 리마인드 관련 주요 변경</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {demoActivityLogs.map((activity) => (
+            {recentActivities.map((activity) => (
               <div key={activity.id} className="flex gap-3">
                 <div className="mt-1 rounded-full bg-muted p-2">
                   {activity.action.includes("reminder") ? (

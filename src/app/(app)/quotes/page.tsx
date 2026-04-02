@@ -2,10 +2,12 @@ import { PageHeader } from "@/components/app/page-header"
 import { QuoteDraftAssistant } from "@/components/app/quote-draft-assistant"
 import { QuoteStatusBadge } from "@/components/app/status-badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { demoCustomers, demoQuotes, getQuoteItems } from "@/lib/demo-data"
+import { getQuotesPageData } from "@/lib/data"
 import { formatCurrency, formatDate } from "@/lib/format"
 
-export default function QuotesPage() {
+export default async function QuotesPage() {
+  const { quotes } = await getQuotesPageData()
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -15,9 +17,9 @@ export default function QuotesPage() {
 
       <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-4">
-          {demoQuotes.map((quote) => {
-            const customer = demoCustomers.find((item) => item.id === quote.customerId)
-            const items = getQuoteItems(quote.id)
+          {quotes.map((quote) => {
+            const customer = quote.customer
+            const items = quote.items
 
             return (
               <Card key={quote.id} className="border-border/70">
