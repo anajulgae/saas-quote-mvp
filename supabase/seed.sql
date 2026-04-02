@@ -1,0 +1,2 @@
+-- TODO: production seed should use real auth.users ids after signup flow.
+-- Local demo UI currently uses src/lib/demo-data.ts.

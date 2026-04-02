@@ -123,8 +123,15 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer utilities {
+  .surface-panel {
+    @apply rounded-3xl border border-border/70 bg-background/90 shadow-sm backdrop-blur;
   }
 }
