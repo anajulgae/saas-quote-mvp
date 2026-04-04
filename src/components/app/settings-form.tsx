@@ -5,12 +5,73 @@ import { useRouter } from "next/navigation"
 import { Loader2, Save } from "lucide-react"
 import { toast } from "sonner"
 
-import { saveSettingsAction } from "@/app/actions"
+import { saveBusinessSettingsOnlyAction, saveTemplatesSettingsAction } from "@/app/actions"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { cn } from "@/lib/utils"
 import type { BusinessSettings, Template } from "@/types/domain"
+
+function FieldHint({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <p className={cn("text-[11px] leading-snug text-muted-foreground", className)}>{children}</p>
+  )
+}
+
+function SectionBadge({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "shrink-0 rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground",
+        className
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
+function SettingsSection({
+  title,
+  badge,
+  children,
+  className,
+}: {
+  title: string
+  badge?: React.ReactNode
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <section className={cn("space-y-3 border-t border-border/50 pt-4 first:border-t-0 first:pt-0", className)}>
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="text-sm font-semibold tracking-tight text-foreground">{title}</h3>
+        {badge}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+const defaultTemplates = (userId: string): Template[] => [
+  {
+    id: "",
+    userId,
+    type: "quote",
+    name: "기본 견적 템플릿",
+    content: "",
+    isDefault: true,
+  },
+  {
+    id: "",
+    userId,
+    type: "reminder",
+    name: "기본 리마인드 템플릿",
+    content: "",
+    isDefault: true,
+  },
+]
 
 export function SettingsForm({
   initialSettings,
@@ -20,37 +81,20 @@ export function SettingsForm({
   templates: Template[]
 }) {
   const router = useRouter()
-  const [isPending, startTransition] = useTransition()
+  const [isBizPending, startBizTransition] = useTransition()
+  const [isTplPending, startTplTransition] = useTransition()
   const [settings, setSettings] = useState(initialSettings)
   const [templateState, setTemplateState] = useState<Template[]>(
-    templates.length
-      ? templates
-      : [
-          {
-            id: "",
-            userId: initialSettings.userId,
-            type: "quote",
-            name: "기본 견적 템플릿",
-            content: "",
-            isDefault: true,
-          },
-          {
-            id: "",
-            userId: initialSettings.userId,
-            type: "reminder",
-            name: "기본 리마인드 템플릿",
-            content: "",
-            isDefault: true,
-          },
-        ]
+    templates.length ? templates : defaultTemplates(initialSettings.userId)
   )
-  const [errorMessage, setErrorMessage] = useState("")
+  const [errorBusiness, setErrorBusiness] = useState("")
+  const [errorTemplates, setErrorTemplates] = useState("")
 
-  const handleSave = () => {
-    setErrorMessage("")
+  const saveBusiness = () => {
+    setErrorBusiness("")
 
-    startTransition(async () => {
-      const result = await saveSettingsAction({
+    startBizTransition(async () => {
+      const result = await saveBusinessSettingsOnlyAction({
         businessName: settings.businessName,
         ownerName: settings.ownerName,
         email: settings.email,
@@ -58,6 +102,24 @@ export function SettingsForm({
         paymentTerms: settings.paymentTerms,
         bankAccount: settings.bankAccount,
         reminderMessage: settings.reminderMessage,
+      })
+
+      if (!result.ok) {
+        setErrorBusiness(result.error)
+        toast.error(result.error)
+        return
+      }
+
+      toast.success("사업자·결제·리마인드 기본 문구가 저장되었습니다.")
+      router.refresh()
+    })
+  }
+
+  const saveTemplates = () => {
+    setErrorTemplates("")
+
+    startTplTransition(async () => {
+      const result = await saveTemplatesSettingsAction({
         templates: templateState.map((template) => ({
           id: template.id || undefined,
           type: template.type,
@@ -68,89 +130,116 @@ export function SettingsForm({
       })
 
       if (!result.ok) {
-        setErrorMessage(result.error)
+        setErrorTemplates(result.error)
         toast.error(result.error)
         return
       }
 
-      toast.success("설정과 템플릿이 저장되었습니다.")
+      toast.success("기본 템플릿이 저장되었습니다.")
       router.refresh()
     })
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5 md:space-y-6">
       <Card className="border-border/70">
-        <CardHeader>
-          <CardTitle>기본 사업자 설정</CardTitle>
-          <CardDescription>
-            견적과 청구에 반복해서 들어가는 사업자 정보를 관리합니다.
+        <CardHeader className="space-y-1 pb-3">
+          <CardTitle className="text-base font-semibold">사업자 및 안내 설정</CardTitle>
+          <CardDescription className="text-xs leading-relaxed">
+            아래 내용은 Supabase에 저장되며, 견적·청구 화면과 리마인드 작성에 반복 반영됩니다.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">사업장명</label>
-              <Input
-                value={settings.businessName}
-                onChange={(event) =>
-                  setSettings((current) => ({
-                    ...current,
-                    businessName: event.target.value,
-                  }))
-                }
-              />
+        <CardContent className="space-y-0 pb-4">
+          <SettingsSection
+            title="사업자 기본 정보"
+            badge={<SectionBadge>견적·청구 문구에 사용</SectionBadge>}
+          >
+            <FieldHint>상호·대표·연락처가 견적서·청구 안내에 함께 쓰입니다.</FieldHint>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium">사업장명</label>
+                <Input
+                  className="h-9"
+                  value={settings.businessName}
+                  onChange={(event) =>
+                    setSettings((current) => ({
+                      ...current,
+                      businessName: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium">대표자명</label>
+                <Input
+                  className="h-9"
+                  value={settings.ownerName}
+                  onChange={(event) =>
+                    setSettings((current) => ({ ...current, ownerName: event.target.value }))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium">이메일</label>
+                <Input
+                  className="h-9"
+                  type="email"
+                  value={settings.email}
+                  onChange={(event) =>
+                    setSettings((current) => ({ ...current, email: event.target.value }))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium">연락처</label>
+                <Input
+                  className="h-9"
+                  value={settings.phone}
+                  onChange={(event) =>
+                    setSettings((current) => ({ ...current, phone: event.target.value }))
+                  }
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">대표자명</label>
-              <Input
-                value={settings.ownerName}
-                onChange={(event) =>
-                  setSettings((current) => ({ ...current, ownerName: event.target.value }))
-                }
-              />
+          </SettingsSection>
+
+          <SettingsSection
+            title="결제 및 안내"
+            badge={<SectionBadge>상대방 안내 문구</SectionBadge>}
+          >
+            <div className="grid gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium">결제 조건</label>
+                <FieldHint>견적·청구 생성 시 기본 안내 문구로 활용할 수 있습니다.</FieldHint>
+                <Input
+                  className="h-9"
+                  value={settings.paymentTerms}
+                  onChange={(event) =>
+                    setSettings((current) => ({ ...current, paymentTerms: event.target.value }))
+                  }
+                  placeholder="예: 선금 50%, 잔금 납품 전"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium">계좌 안내</label>
+                <FieldHint>상대방에게 보여줄 기본 입금 안내입니다.</FieldHint>
+                <Input
+                  className="h-9"
+                  value={settings.bankAccount}
+                  onChange={(event) =>
+                    setSettings((current) => ({ ...current, bankAccount: event.target.value }))
+                  }
+                  placeholder="은행·계좌·예금주"
+                />
+              </div>
             </div>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">이메일</label>
-              <Input
-                value={settings.email}
-                onChange={(event) =>
-                  setSettings((current) => ({ ...current, email: event.target.value }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">연락처</label>
-              <Input
-                value={settings.phone}
-                onChange={(event) =>
-                  setSettings((current) => ({ ...current, phone: event.target.value }))
-                }
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">결제 조건</label>
-            <Input
-              value={settings.paymentTerms}
-              onChange={(event) =>
-                setSettings((current) => ({ ...current, paymentTerms: event.target.value }))
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">계좌 안내</label>
-            <Input
-              value={settings.bankAccount}
-              onChange={(event) =>
-                setSettings((current) => ({ ...current, bankAccount: event.target.value }))
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">기본 리마인드 문구</label>
+          </SettingsSection>
+
+          <SettingsSection
+            title="기본 리마인드 문구"
+            badge={<SectionBadge>청구 리마인드</SectionBadge>}
+          >
+            <FieldHint>청구 화면에서 리마인드를 새로 쓸 때 입력란 기본값으로 들어갑니다.</FieldHint>
             <Textarea
               value={settings.reminderMessage}
               onChange={(event) =>
@@ -159,78 +248,149 @@ export function SettingsForm({
                   reminderMessage: event.target.value,
                 }))
               }
-              className="min-h-28"
+              className="min-h-[5.5rem] text-sm"
+              placeholder="안내 멘트를 입력하세요"
             />
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">
-              사업자 정보와 기본 문구는 실제 Supabase 데이터로 저장됩니다.
+          </SettingsSection>
+
+          <div className="mt-4 flex flex-col gap-3 border-t border-border/50 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[11px] leading-snug text-muted-foreground">
+              위 영역만 저장합니다. 템플릿은 아래 카드에서 따로 저장하세요.
             </p>
-            <Button onClick={handleSave} disabled={isPending} className="gap-2">
-              {isPending ? (
+            <Button
+              type="button"
+              onClick={saveBusiness}
+              disabled={isBizPending}
+              size="sm"
+              className="h-9 w-full shrink-0 gap-2 sm:w-auto"
+            >
+              {isBizPending ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden />
               ) : (
                 <Save className="size-4" aria-hidden />
               )}
-              저장
+              사업자·결제 정보 저장
             </Button>
           </div>
-          {errorMessage ? (
-            <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {errorMessage}
+          {errorBusiness ? (
+            <p className="mt-2 rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              {errorBusiness}
             </p>
           ) : null}
         </CardContent>
       </Card>
 
+      <div className="relative py-1">
+        <div className="absolute inset-0 flex items-center" aria-hidden>
+          <span className="w-full border-t border-border/60" />
+        </div>
+        <div className="relative flex justify-center">
+          <span className="bg-background px-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            템플릿
+          </span>
+        </div>
+      </div>
+
       <Card className="border-border/70">
-        <CardHeader>
-          <CardTitle>기본 템플릿</CardTitle>
-          <CardDescription>견적/리마인드 템플릿 초안을 빠르게 재사용합니다.</CardDescription>
+        <CardHeader className="space-y-1 pb-3">
+          <CardTitle className="text-base font-semibold">기본 템플릿</CardTitle>
+          <CardDescription className="text-xs leading-relaxed">
+            견적 요약·리마인드 본문의 출발점입니다. 각각 견적/청구 흐름에서 초안으로 불러옵니다.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4">
-          {templateState.map((template, index) => (
-            <div
-              key={`${template.id || template.type}-${index}`}
-              className="rounded-2xl border border-border/70 p-4"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1 space-y-2">
-                  <Input
-                    value={template.name}
-                    onChange={(event) =>
-                      setTemplateState((current) =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? { ...item, name: event.target.value }
-                            : item
-                        )
-                      )
-                    }
-                  />
-                  <p className="text-sm text-muted-foreground">{template.type}</p>
+        <CardContent className="space-y-3 pb-4">
+          {templateState.map((template, index) => {
+            const isQuote = template.type === "quote"
+            return (
+              <div
+                key={`${template.id || template.type}-${index}`}
+                className="rounded-lg border border-border/60 bg-muted/10 p-3"
+              >
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold text-foreground">
+                      {isQuote ? "기본 견적 템플릿" : "기본 리마인드 템플릿"}
+                    </span>
+                    <SectionBadge
+                      className={cn(
+                        isQuote
+                          ? "border-primary/30 bg-primary/[0.06] text-primary"
+                          : "border-amber-500/25 bg-amber-500/[0.06] text-amber-900 dark:text-amber-100"
+                      )}
+                    >
+                      {isQuote ? "견적 작성 시 사용" : "리마인드 작성 시 사용"}
+                    </SectionBadge>
+                  </div>
+                  {template.isDefault ? (
+                    <span className="rounded-full border border-border/60 bg-background px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                      기본값
+                    </span>
+                  ) : null}
                 </div>
-                {template.isDefault ? (
-                  <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
-                    기본값
-                  </span>
-                ) : null}
+                <FieldHint className="mb-2">
+                  {isQuote
+                    ? "견적 생성 시 요약란 초안으로 채워집니다."
+                    : "리마인드 작성 시 메시지 기본값으로 들어갑니다."}
+                </FieldHint>
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium text-muted-foreground">템플릿 제목</label>
+                    <Input
+                      className="h-8 text-sm"
+                      value={template.name}
+                      onChange={(event) =>
+                        setTemplateState((current) =>
+                          current.map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, name: event.target.value } : item
+                          )
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium text-muted-foreground">내용</label>
+                    <Textarea
+                      value={template.content}
+                      onChange={(event) =>
+                        setTemplateState((current) =>
+                          current.map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, content: event.target.value } : item
+                          )
+                        )
+                      }
+                      className="min-h-[5.5rem] text-sm"
+                    />
+                  </div>
+                </div>
               </div>
-              <Textarea
-                value={template.content}
-                onChange={(event) =>
-                  setTemplateState((current) =>
-                    current.map((item, itemIndex) =>
-                      itemIndex === index
-                        ? { ...item, content: event.target.value }
-                        : item
-                    )
-                  )
-                }
-                className="mt-3 min-h-28"
-              />
-            </div>
-          ))}
+            )
+          })}
+
+          <div className="flex flex-col gap-3 border-t border-border/50 pt-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[11px] leading-snug text-muted-foreground">
+              견적·리마인드 템플릿만 저장합니다. 사업자 정보는 위 카드에서 저장하세요.
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-9 w-full shrink-0 gap-2 sm:w-auto"
+              onClick={saveTemplates}
+              disabled={isTplPending}
+            >
+              {isTplPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : (
+                <Save className="size-4" aria-hidden />
+              )}
+              템플릿 저장
+            </Button>
+          </div>
+          {errorTemplates ? (
+            <p className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              {errorTemplates}
+            </p>
+          ) : null}
         </CardContent>
       </Card>
     </div>

@@ -6,10 +6,10 @@ export default async function SettingsPage() {
   const { settings, templates } = await getSettingsPageData()
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 md:space-y-6">
       <PageHeader
         title="설정"
-        description="사업자 정보, 결제 조건, 기본 템플릿을 관리합니다."
+        description="사업자·결제 안내는 위 카드에서, 견적·리마인드 초안은 아래 템플릿에서 각각 저장합니다."
       />
       <SettingsForm
         initialSettings={settings}

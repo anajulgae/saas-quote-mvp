@@ -618,6 +618,61 @@ export async function createReminderAction(input: {
   }
 }
 
+export async function saveBusinessSettingsOnlyAction(input: {
+  businessName: string
+  ownerName: string
+  email: string
+  phone: string
+  paymentTerms: string
+  bankAccount: string
+  reminderMessage: string
+}) {
+  try {
+    const parsedSettings = settingsSchema.parse(input)
+    await saveBusinessSettingsRecord(parsedSettings)
+    revalidatePath("/settings")
+
+    return { ok: true as const }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { ok: false as const, error: error.issues[0]?.message ?? "입력값을 확인해 주세요." }
+    }
+
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "사업자·결제 설정 저장에 실패했습니다."),
+    }
+  }
+}
+
+export async function saveTemplatesSettingsAction(input: {
+  templates: Array<{
+    id?: string
+    type: "quote" | "reminder"
+    name: string
+    content: string
+    isDefault: boolean
+  }>
+}) {
+  try {
+    const parsedTemplates = z.array(templateSchema).parse(input.templates)
+    await saveTemplatesRecord(parsedTemplates)
+    revalidatePath("/settings")
+
+    return { ok: true as const }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { ok: false as const, error: error.issues[0]?.message ?? "입력값을 확인해 주세요." }
+    }
+
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "템플릿 저장에 실패했습니다."),
+    }
+  }
+}
+
+/** 사업자 설정과 템플릿을 한 번에 저장 (필요 시 호출용) */
 export async function saveSettingsAction(input: {
   businessName: string
   ownerName: string
@@ -634,31 +689,17 @@ export async function saveSettingsAction(input: {
     isDefault: boolean
   }>
 }) {
-  try {
-    const parsedSettings = settingsSchema.parse({
-      businessName: input.businessName,
-      ownerName: input.ownerName,
-      email: input.email,
-      phone: input.phone,
-      paymentTerms: input.paymentTerms,
-      bankAccount: input.bankAccount,
-      reminderMessage: input.reminderMessage,
-    })
-    const parsedTemplates = z.array(templateSchema).parse(input.templates)
-
-    await saveBusinessSettingsRecord(parsedSettings)
-    await saveTemplatesRecord(parsedTemplates)
-    revalidatePath("/settings")
-
-    return { ok: true as const }
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return { ok: false as const, error: error.issues[0]?.message ?? "입력값을 확인해 주세요." }
-    }
-
-    return {
-      ok: false as const,
-      error: toUserFacingActionError(error, "설정 저장에 실패했습니다."),
-    }
+  const biz = await saveBusinessSettingsOnlyAction({
+    businessName: input.businessName,
+    ownerName: input.ownerName,
+    email: input.email,
+    phone: input.phone,
+    paymentTerms: input.paymentTerms,
+    bankAccount: input.bankAccount,
+    reminderMessage: input.reminderMessage,
+  })
+  if (!biz.ok) {
+    return biz
   }
+  return saveTemplatesSettingsAction({ templates: input.templates })
 }
