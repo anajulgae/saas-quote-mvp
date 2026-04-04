@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition, type MutableRefObject } from "react"
 import Link from "next/link"
-import { ArrowRight, ListOrdered, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import { ArrowRight, FileText, ListOrdered, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
@@ -568,24 +568,25 @@ function QuotesBoardPanel({
       ) : null}
 
       {!quotes.length ? (
+        <>
         <Card className="border border-primary/30 bg-gradient-to-b from-primary/[0.05] to-background shadow-sm">
-          <CardContent className="space-y-3 p-4 sm:p-5">
-            <div className="space-y-1.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">시작하기</p>
-              <h2 className="text-lg font-bold tracking-tight sm:text-xl">
+          <CardContent className="space-y-2.5 p-3 sm:p-4">
+            <div className="space-y-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">시작하기</p>
+              <h2 className="text-base font-bold tracking-tight sm:text-lg">
                 {hasInquiries
                   ? "문의를 연결해 첫 견적을 만들어보세요"
                   : "문의를 먼저 등록한 뒤 견적을 시작하세요"}
               </h2>
-              <p className="text-sm leading-snug text-muted-foreground">
-                견적은 문의를 바탕으로 항목과 금액을 정리한 뒤 발송 상태를 추적합니다.
+              <p className="text-[13px] leading-snug text-muted-foreground">
+                문의를 바탕으로 항목·금액을 정리하고 발송 상태를 추적합니다.
               </p>
             </div>
 
             {hasInquiries ? (
-              <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-background/80 p-3 sm:flex-row sm:items-end">
+              <div className="flex flex-col gap-2 rounded-md border border-border/60 bg-background/80 p-2.5 sm:flex-row sm:items-end">
                 <div className="min-w-0 flex-1 space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">빠른 시작 · 문의 선택</label>
+                  <label className="text-[11px] font-medium text-muted-foreground">빠른 시작 · 문의 선택</label>
                   <Select
                     value={quickInquiryId}
                     onValueChange={(value) => setQuickInquiryId(value ?? "")}
@@ -614,22 +615,22 @@ function QuotesBoardPanel({
               </div>
             ) : null}
 
-            <div ref={flowRef} className="rounded-lg border border-border/60 bg-muted/15 p-2.5 sm:p-3">
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <div ref={flowRef} className="rounded-md border border-border/60 bg-muted/15 p-2 sm:p-2.5">
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 진행 순서
               </p>
-              <ol className="grid gap-2 sm:grid-cols-3">
+              <ol className="grid gap-1.5 sm:grid-cols-3">
                 {flowSteps.map((item) => (
                   <li
                     key={item.step}
-                    className="flex gap-2 rounded-md border border-border/50 bg-background/70 px-2.5 py-2 text-[13px]"
+                    className="flex gap-1.5 rounded-md border border-border/50 bg-background/70 px-2 py-1.5 text-[12px]"
                   >
-                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/12 text-[11px] font-bold text-primary">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/12 text-[10px] font-bold text-primary">
                       {item.step}
                     </span>
                     <div>
                       <p className="font-semibold leading-tight">{item.title}</p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">{item.hint}</p>
+                      <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">{item.hint}</p>
                     </div>
                   </li>
                 ))}
@@ -646,7 +647,7 @@ function QuotesBoardPanel({
                       "inline-flex h-9 items-center justify-center gap-1.5"
                     )}
                   >
-                    문의 목록 보기
+                    문의 선택하기
                     <ArrowRight className="size-3.5" />
                   </Link>
                   <Button type="button" size="sm" variant="outline" className="h-9 gap-1.5" onClick={scrollToFlow}>
@@ -679,6 +680,19 @@ function QuotesBoardPanel({
             </div>
           </CardContent>
         </Card>
+
+        <div className="flex gap-2.5 rounded-lg border border-dashed border-border/60 bg-muted/10 px-3 py-2.5">
+          <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <div className="min-w-0 space-y-0.5">
+            <p className="text-sm font-medium text-foreground">아직 생성된 견적이 없습니다</p>
+            <p className="text-[11px] leading-snug text-muted-foreground">
+              {hasInquiries
+                ? "견적을 저장하면 이 영역에 카드가 쌓이고, 상태·금액을 한눈에 관리할 수 있어요."
+                : "문의를 등록하면 위에서 바로 견적 작성을 시작할 수 있어요."}
+            </p>
+          </div>
+        </div>
+        </>
       ) : !filteredQuotes.length ? (
         <EmptyState
           title="해당 상태의 견적이 없습니다"
@@ -853,7 +867,7 @@ export function QuotesWorkspace({
                       "inline-flex h-9 flex-1 items-center justify-center gap-2 font-medium"
                     )}
                   >
-                    문의 보러가기
+                    문의 등록하기
                     <ArrowRight className="size-3.5" />
                   </Link>
                   <Button
@@ -861,15 +875,15 @@ export function QuotesWorkspace({
                     variant="outline"
                     size="sm"
                     disabled
-                    className="h-9 flex-1 cursor-not-allowed opacity-55 sm:max-w-[8.5rem]"
-                    title="견적 생성 전에 먼저 문의를 등록해주세요"
+                    className="h-9 flex-1 cursor-not-allowed opacity-50 sm:max-w-[8.5rem]"
+                    title="먼저 문의를 등록한 뒤 견적을 만들 수 있어요"
                   >
                     <Plus className="size-3.5" />
                     새 견적
                   </Button>
                 </div>
-                <p className="mt-2 border-t border-border/50 pt-2 text-center text-[11px] leading-snug text-muted-foreground sm:text-left">
-                  견적 생성 전에 먼저 문의를 등록해주세요
+                <p className="mt-1.5 border-t border-border/40 pt-1.5 text-center text-[11px] leading-snug text-muted-foreground sm:text-left">
+                  먼저 문의를 등록하면 새 견적을 만들 수 있습니다
                 </p>
               </div>
             )}

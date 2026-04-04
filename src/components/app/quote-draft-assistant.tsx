@@ -55,23 +55,23 @@ export function QuoteDraftAssistant({
 
   if (preferCollapsed && !expanded) {
     return (
-      <Card className="border-border/60 bg-muted/15 shadow-none">
-        <CardContent className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+      <Card className="border-border/50 bg-muted/10 shadow-none">
+        <CardContent className="flex flex-col gap-2 p-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
           <div className="min-w-0">
-            <p className="text-xs font-medium text-muted-foreground">보조 기능</p>
-            <p className="text-sm font-medium text-foreground">AI 견적 초안 도우미</p>
-            <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
-              문구 초안만 빠르게 뽑아볼 때 사용하세요. 실제 견적은 문의 연결 후 만드는 것을 권장합니다.
+            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">보조</p>
+            <p className="text-[13px] font-semibold text-foreground">AI 견적 초안 도우미</p>
+            <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
+              문구 초안 테스트용 · 실제 견적은 문의 연결 후 권장
             </p>
           </div>
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="h-9 shrink-0 gap-1.5"
+            className="h-8 shrink-0 gap-1 text-xs"
             onClick={() => setExpanded(true)}
           >
-            <Sparkles className="size-3.5" />
+            <Sparkles className="size-3" />
             초안 도우미 열기
           </Button>
         </CardContent>
@@ -86,10 +86,10 @@ export function QuoteDraftAssistant({
         preferCollapsed && expanded && "ring-1 ring-border/60"
       )}
     >
-      <CardHeader className="space-y-1 pb-3">
+      <CardHeader className="space-y-1 pb-2 pt-4">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="flex items-center gap-2 text-base font-semibold">
-            <Sparkles className="size-4 text-muted-foreground" />
+          <CardTitle className="flex items-center gap-1.5 text-sm font-semibold">
+            <Sparkles className="size-3.5 text-muted-foreground" />
             AI 견적 초안 생성
           </CardTitle>
           {preferCollapsed ? (
@@ -97,60 +97,59 @@ export function QuoteDraftAssistant({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-8 shrink-0 gap-1 text-xs text-muted-foreground"
+              className="h-7 shrink-0 gap-1 px-2 text-[11px] text-muted-foreground"
               onClick={() => setExpanded(false)}
             >
               접기
             </Button>
           ) : null}
         </div>
-        <CardDescription className="text-xs leading-relaxed">
-          실제 AI 연동 전에도 규칙 기반 초안으로 문구를 점검할 수 있습니다.
+        <CardDescription className="text-[11px] leading-snug">
+          규칙 기반 초안으로 문구만 빠르게 점검합니다.
         </CardDescription>
         {!hasInquiries ? (
-          <p className="rounded-md border border-amber-500/25 bg-amber-500/10 px-2.5 py-2 text-[11px] leading-snug text-amber-950 dark:text-amber-100/90">
-            문의 없이도 문구 초안을 테스트할 수 있지만, 실제 견적은 문의를 등록한 뒤 연결해 만드는 것을
-            권장합니다.
+          <p className="rounded border border-amber-500/20 bg-amber-500/10 px-2 py-1.5 text-[10px] leading-snug text-amber-950 dark:text-amber-100/90">
+            문의 없이 테스트는 가능하지만, 실제 견적은 문의 등록·연결 후 진행하는 것을 권장합니다.
           </p>
         ) : null}
       </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium">서비스 카테고리</label>
+      <CardContent className="space-y-2 pb-4">
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium">서비스 카테고리</label>
           <Input
             value={serviceCategory}
             onChange={(event) => setServiceCategory(event.target.value)}
-            className="h-9"
+            className="h-8 text-sm"
           />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium">작업 범위</label>
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium">작업 범위</label>
           <Textarea
             value={scope}
             onChange={(event) => setScope(event.target.value)}
-            className="min-h-[4.5rem] text-sm"
+            className="min-h-[3.5rem] text-sm"
           />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium">문체 톤</label>
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium">문체 톤</label>
           <Input
             value={tone}
             onChange={(event) => setTone(event.target.value)}
-            className="h-9"
+            className="h-8 text-sm"
           />
         </div>
-        <Button type="button" variant="outline" size="sm" className="h-9 w-full gap-1.5">
-          <Sparkles className="size-3.5" />
+        <Button type="button" variant="outline" size="sm" className="h-8 w-full gap-1 text-xs">
+          <Sparkles className="size-3" />
           초안 새로 만들기
         </Button>
-        <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+        <div className="rounded-md border border-border/60 bg-muted/15 p-2">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-medium text-foreground">생성된 초안</p>
+            <p className="text-[11px] font-medium text-foreground">생성된 초안</p>
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="h-7 gap-1 px-2 text-xs text-muted-foreground"
+              className="h-6 gap-0.5 px-1.5 text-[10px] text-muted-foreground"
               onClick={() => setDraftOpen((o) => !o)}
             >
               {draftOpen ? (
