@@ -100,11 +100,16 @@ npm run build
 
 ## Supabase Auth — Site URL / Redirect URL
 
-배포 도메인에서 로그인 후 리다이렉트가 깨지지 않도록 설정합니다.
+배포 도메인에서 로그인·이메일 인증·비밀번호 재설정 링크가 깨지지 않도록 설정합니다.
 
 1. Supabase **Authentication → URL Configuration**
 2. **Site URL**: 프로덕션 기본 URL (예: `https://your-app.vercel.app`)
-3. **Redirect URLs**: 위 URL과 필요 시 `http://localhost:3000` (로컬 테스트용) 등 허용 목록에 추가
+3. **Redirect URLs** (예시 — 실제 도메인으로 바꿔 등록):
+   - `{SITE_URL}/auth/callback` — 가입·이메일 확인 등 PKCE 콜백
+   - `{SITE_URL}/reset-password` — 비밀번호 재설정 메일의 `redirectTo`
+   - 로컬: `http://localhost:3000/auth/callback`, `http://localhost:3000/reset-password`
+
+**비밀번호 재설정 흐름**: `/forgot-password` → 메일의 링크 → `/reset-password` → 저장 → 로그인 (`/login?reset=success` 안내 가능).
 
 자세한 형식은 Supabase 문서를 따릅니다.
 

@@ -2,6 +2,10 @@
  * 이메일 인증·비밀번호 재설정 등 Supabase redirectTo 에 사용하는 사이트 기준 URL.
  * 프로덕션: NEXT_PUBLIC_SITE_URL=https://your-domain.com (슬래시 없이)
  * Vercel: 미설정 시 VERCEL_URL 기준 https 로 보정
+ *
+ * Supabase Dashboard → Authentication → URL Configuration → Redirect URLs 에
+ * `{SITE_URL}/auth/callback`(가입·이메일 인증)과 `{SITE_URL}/reset-password`(비밀번호 재설정)를
+ * 허용 목록에 넣어야 메일 링크가 차단되지 않습니다.
  */
 export function getSiteOrigin(): string {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "")

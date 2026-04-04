@@ -2,16 +2,50 @@
 
 import { useActionState } from "react"
 import Link from "next/link"
-import { LoaderCircle, LockKeyhole } from "lucide-react"
+import { CheckCircle2, LoaderCircle, LockKeyhole } from "lucide-react"
 
-import { updatePasswordAction } from "@/app/actions"
+import { type UpdatePasswordState, updatePasswordAction } from "@/app/actions"
 import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { authCardClass, authFooterLinkClass, authIconBoxClass } from "@/lib/auth-ui"
+import { cn } from "@/lib/utils"
 
 export function UpdatePasswordForm() {
-  const [state, formAction, isPending] = useActionState(updatePasswordAction, undefined)
+  const [state, formAction, isPending] = useActionState<UpdatePasswordState, FormData>(
+    updatePasswordAction,
+    undefined
+  )
+
+  if (state && "ok" in state && state.ok) {
+    return (
+      <Card className={authCardClass}>
+        <CardHeader className="space-y-3 pb-2">
+          <div className={cn(authIconBoxClass, "bg-emerald-600 text-white")}>
+            <CheckCircle2 className="size-5" aria-hidden />
+          </div>
+          <CardTitle className="text-xl font-semibold tracking-tight">비밀번호가 변경되었습니다</CardTitle>
+          <CardDescription className="text-sm leading-relaxed text-muted-foreground">
+            보안을 위해 재설정용 세션은 종료되었습니다. 새 비밀번호로 다시 로그인해 주세요.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-0">
+          <Link
+            href="/login?reset=success"
+            className={cn(buttonVariants({ variant: "default" }), "inline-flex h-11 w-full items-center justify-center text-base font-semibold")}
+          >
+            로그인으로 이동
+          </Link>
+          <p className="border-t border-border/50 pt-4 text-center">
+            <Link href="/login" className={authFooterLinkClass}>
+              로그인 화면
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card className={authCardClass}>
@@ -22,8 +56,7 @@ export function UpdatePasswordForm() {
         <div className="space-y-1.5 pt-1">
           <CardTitle className="text-2xl font-semibold tracking-tight">새 비밀번호 설정</CardTitle>
           <CardDescription className="text-sm leading-relaxed text-muted-foreground">
-            재설정 메일의 링크를 통해 들어온 경우에만 이 화면을 사용할 수 있습니다. 저장하면 로그인된
-            상태로 대시보드로 이동합니다.
+            아래에 새 비밀번호를 입력하고 저장하세요. 저장이 완료되면 다시 로그인하게 됩니다.
           </CardDescription>
         </div>
       </CardHeader>
@@ -71,7 +104,7 @@ export function UpdatePasswordForm() {
               />
             </div>
           </div>
-          {state?.error ? (
+          {state && "error" in state ? (
             <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {state.error}
             </p>

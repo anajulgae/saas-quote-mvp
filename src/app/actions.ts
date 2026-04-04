@@ -479,8 +479,9 @@ export async function requestPasswordResetAction(
   }
 
   const origin = getSiteOrigin()
+  /** 메일 링크는 이 URL(+ Supabase가 붙이는 ?code= 등)로 열립니다. Redirect URLs 에 `/reset-password` 를 등록해야 합니다. */
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
+    redirectTo: `${origin}/reset-password`,
   })
 
   if (error) {
@@ -497,7 +498,12 @@ export async function requestPasswordResetAction(
   }
 }
 
-export async function updatePasswordAction(_: { error?: string } | undefined, formData: FormData) {
+export type UpdatePasswordState = undefined | { error: string } | { ok: true }
+
+export async function updatePasswordAction(
+  _: UpdatePasswordState,
+  formData: FormData
+): Promise<UpdatePasswordState> {
   if (!isSupabaseConfigured()) {
     return { error: "인증 설정을 확인해 주세요." }
   }
@@ -514,7 +520,7 @@ export async function updatePasswordAction(_: { error?: string } | undefined, fo
   if (!user) {
     return {
       error:
-        "세션이 없거나 링크가 만료되었습니다. 비밀번호 찾기를 다시 진행하거나 로그인해 주세요.",
+        "세션이 없거나 재설정 링크가 만료되었습니다. 비밀번호 찾기를 다시 진행해 주세요.",
     }
   }
 
@@ -524,8 +530,9 @@ export async function updatePasswordAction(_: { error?: string } | undefined, fo
   })
 
   if (!parsed.success) {
+    const issue = parsed.error.issues[0]
     return {
-      error: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요.",
+      error: issue?.message ?? "입력값을 확인해 주세요.",
     }
   }
 
@@ -540,7 +547,8 @@ export async function updatePasswordAction(_: { error?: string } | undefined, fo
   }
 
   await ensureUserProfile(supabase, user)
-  redirect("/dashboard")
+  await supabase.auth.signOut()
+  return { ok: true as const }
 }
 
 export async function createCustomerAction(input: {

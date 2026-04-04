@@ -85,7 +85,7 @@ export function toPasswordResetEmailError(error: unknown): string {
     lower.includes("redirect url") ||
     lower.includes("invalid redirect")
   ) {
-    return "재설정 메일의 링크 주소가 Supabase 설정과 맞지 않습니다. Authentication → URL Configuration에서 Redirect URLs에 배포 주소(예: https://본인도메인/auth/callback)가 등록돼 있는지 확인해 주세요."
+    return "재설정 메일의 링크 주소가 Supabase 설정과 맞지 않습니다. Authentication → URL Configuration의 Redirect URLs에 배포 주소의 `/reset-password` 및 `/auth/callback`(이메일 인증용)이 등록돼 있는지 확인해 주세요."
   }
 
   if (
@@ -101,6 +101,48 @@ export function toPasswordResetEmailError(error: unknown): string {
   return toUserFacingActionError(
     error,
     "재설정 메일을 보내지 못했습니다. 잠시 후 다시 시도하거나, 네트워크와 서버 설정을 확인해 주세요."
+  )
+}
+
+/**
+ * 재설정 링크로 들어온 뒤 `exchangeCodeForSession` / `setSession` / `verifyOtp` 실패 시 안내
+ */
+export function toRecoveryExchangeError(error: unknown): string {
+  const obj =
+    typeof error === "object" && error !== null
+      ? (error as { message?: unknown; code?: unknown })
+      : null
+
+  const message =
+    error instanceof Error
+      ? error.message
+      : obj && typeof obj.message === "string"
+        ? obj.message
+        : String(error)
+
+  const lower = message.toLowerCase()
+
+  if (
+    lower.includes("expired") ||
+    lower.includes("otp expired") ||
+    lower.includes("link is invalid") ||
+    lower.includes("token has expired")
+  ) {
+    return "재설정 링크가 만료되었거나 이미 사용되었습니다. 비밀번호 찾기에서 메일을 다시 요청해 주세요."
+  }
+
+  if (
+    lower.includes("invalid") ||
+    lower.includes("malformed") ||
+    lower.includes("bad request") ||
+    lower.includes("already been used")
+  ) {
+    return "재설정 링크가 올바르지 않습니다. 메일에 있는 링크를 다시 눌렀는지, 주소가 잘리지 않았는지 확인해 주세요."
+  }
+
+  return toUserFacingActionError(
+    error,
+    "재설정 링크를 처리하지 못했습니다. 비밀번호 찾기를 다시 시도하거나, 다른 브라우저·시크릿 창이 아닌지 확인해 주세요."
   )
 }
 

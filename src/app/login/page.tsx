@@ -16,7 +16,7 @@ const valueBullets = [
 ]
 
 type LoginPageProps = {
-  searchParams?: Promise<{ error?: string }>
+  searchParams?: Promise<{ error?: string; reset?: string }>
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
@@ -48,6 +48,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     sp.error === "auth"
       ? "인증 링크 처리에 실패했습니다. 메일의 링크를 다시 열거나 로그인을 시도해 주세요."
       : undefined
+  const passwordResetDone = sp.reset === "success"
   const showAccountLinks = supabaseConfigured && !deploymentBlocked
 
   return (
@@ -146,6 +147,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 defaultPassword={defaultPassword}
                 reviewHintsMode={reviewHintsMode}
                 authCallbackError={authCallbackError}
+                passwordResetNotice={passwordResetDone}
                 showAccountLinks={showAccountLinks}
               />
               {!showAccountLinks && contactEmail ? (

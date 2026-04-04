@@ -1,19 +1,24 @@
 import Link from "next/link"
 
+import { ResetPasswordFlow } from "@/components/app/reset-password-flow"
 import { AuthScreenShell } from "@/components/app/auth-screen-shell"
-import { UpdatePasswordForm } from "@/components/app/update-password-form"
 import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { authCardClass } from "@/lib/auth-ui"
+import { isSupabaseConfigured } from "@/lib/supabase/server"
 import { cn } from "@/lib/utils"
-import { createServerSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/server"
 
 export const dynamic = "force-dynamic"
 
-export default async function ResetPasswordPage() {
+/**
+ * 비밀번호 재설정 완료 UI.
+ * Supabase `resetPasswordForEmail` 의 redirectTo 는 반드시 이 페이지의 절대 URL이어야 하며,
+ * Dashboard → Authentication → URL Configuration 의 Redirect URLs 에 동일 패턴이 허용돼 있어야 합니다.
+ * (예: https://배포도메인/reset-password 및 로컬 http://localhost:3000/reset-password)
+ */
+export default function ResetPasswordPage() {
   if (!isSupabaseConfigured()) {
     return (
-      <AuthScreenShell eyebrow="비밀번호 재설정">
+      <AuthScreenShell eyebrow="계정 · 비밀번호 재설정">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">설정 오류</CardTitle>
@@ -29,56 +34,9 @@ export default async function ResetPasswordPage() {
     )
   }
 
-  const supabase = await createServerSupabaseClient()
-  if (!supabase) {
-    return (
-      <AuthScreenShell eyebrow="비밀번호 재설정">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">설정 오류</CardTitle>
-            <CardDescription>인증 클라이언트를 만들 수 없습니다.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/login" className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
-              로그인
-            </Link>
-          </CardContent>
-        </Card>
-      </AuthScreenShell>
-    )
-  }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return (
-      <AuthScreenShell eyebrow="비밀번호 재설정">
-        <Card className={authCardClass}>
-          <CardHeader className="space-y-2">
-            <CardTitle className="text-xl font-semibold tracking-tight">링크를 다시 확인해 주세요</CardTitle>
-            <CardDescription className="text-sm leading-relaxed text-muted-foreground">
-              재설정 메일의 링크를 이 브라우저에서 연 뒤 다시 시도해 주세요. 링크는 시간이 지나면
-              만료될 수 있습니다.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <Link href="/forgot-password" className={cn(buttonVariants({ variant: "default" }), "h-10")}>
-              비밀번호 찾기
-            </Link>
-            <Link href="/login" className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
-              로그인
-            </Link>
-          </CardContent>
-        </Card>
-      </AuthScreenShell>
-    )
-  }
-
   return (
-    <AuthScreenShell eyebrow="비밀번호 재설정">
-      <UpdatePasswordForm />
+    <AuthScreenShell eyebrow="계정 · 비밀번호 재설정">
+      <ResetPasswordFlow />
     </AuthScreenShell>
   )
 }

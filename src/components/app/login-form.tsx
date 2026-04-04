@@ -15,6 +15,7 @@ export function LoginForm({
   defaultPassword,
   reviewHintsMode,
   authCallbackError,
+  passwordResetNotice,
   showAccountLinks,
 }: {
   defaultEmail: string
@@ -23,6 +24,8 @@ export function LoginForm({
   reviewHintsMode: "off" | "local-sandbox" | "public-review"
   /** 이메일 인증/콜백 실패 등 */
   authCallbackError?: string
+  /** 비밀번호 재설정 완료 후 로그인 화면으로 돌아온 경우 */
+  passwordResetNotice?: boolean
   /** Supabase 가입·재설정 링크 (운영 경로) */
   showAccountLinks?: boolean
 }) {
@@ -45,6 +48,11 @@ export function LoginForm({
         {authCallbackError ? (
           <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {authCallbackError}
+          </p>
+        ) : null}
+        {passwordResetNotice ? (
+          <p className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-900 dark:text-emerald-100">
+            비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요.
           </p>
         ) : null}
         <form action={formAction} className="space-y-4 sm:space-y-5">

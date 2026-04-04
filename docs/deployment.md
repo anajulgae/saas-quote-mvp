@@ -78,7 +78,7 @@ http://localhost:3000
 
 - `**` 와일드카드는 Supabase 버전에 따라 지원 형식이 다를 수 있으므로, 문제가 있으면 **정확한 URL**만 한 줄씩 추가합니다.
 - 이 앱은 **표준 Supabase Auth 쿠키**(`sb-…-auth-token`)와 `middleware.ts`로 보호 라우트를 판별합니다. Site URL·Redirect가 어긋나면 로그인 후 **리다이렉트 루프** 또는 **세션 없음**이 납니다.
-- 비밀번호 재설정 메일의 `redirectTo` 는 `…/auth/callback?next=/reset-password` 로 이어집니다. (구 경로 `/auth/update-password` 는 `/reset-password` 로 리다이렉트됩니다.)
+- 비밀번호 재설정 메일의 `redirectTo` 는 **`…/reset-password`** 입니다. Redirect URLs 에 해당 절대 URL(또는 와일드카드 패턴)을 반드시 넣어야 합니다. 메일 링크는 보통 `…/reset-password?code=…` 형태로 열리며, 브라우저에서 PKCE·hash·`token_hash` 등을 처리한 뒤 새 비밀번호 폼이 표시됩니다. (구 경로 `/auth/update-password` 는 `/reset-password` 로 리다이렉트됩니다.)
 
 ---
 
