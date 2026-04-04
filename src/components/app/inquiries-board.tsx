@@ -9,7 +9,8 @@ import { toast } from "sonner"
 import { createInquiryAction, updateInquiryAction } from "@/app/actions"
 import { EmptyState } from "@/components/app/empty-state"
 import { InquiryStageBadge } from "@/components/app/status-badge"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button-variants"
 import {
   Dialog,
   DialogContent,

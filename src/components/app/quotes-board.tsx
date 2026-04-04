@@ -13,7 +13,8 @@ import {
 } from "@/app/actions"
 import { EmptyState } from "@/components/app/empty-state"
 import { QuoteStatusBadge } from "@/components/app/status-badge"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,

@@ -5,7 +5,7 @@ import Link from "next/link"
 import { ArrowRight, Search } from "lucide-react"
 
 import { EmptyState } from "@/components/app/empty-state"
-import { buttonVariants } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
