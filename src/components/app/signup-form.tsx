@@ -8,6 +8,7 @@ import { signupAction } from "@/app/actions"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { authCardClass, authIconBoxClass } from "@/lib/auth-ui"
 
 export function SignupForm() {
   const [state, formAction, isPending] = useActionState(signupAction, undefined)
@@ -123,15 +124,19 @@ export function SignupForm() {
               {state.error}
             </p>
           ) : null}
-          <Button type="submit" className="h-11 w-full text-base font-semibold" disabled={isPending}>
+          <Button
+            type="submit"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 text-base font-semibold"
+            disabled={isPending}
+          >
             {isPending ? (
               <>
-                <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                <LoaderCircle className="size-4 shrink-0 animate-spin" aria-hidden />
                 가입 처리 중…
               </>
             ) : (
               <>
-                <UserPlus className="size-4" aria-hidden />
+                <UserPlus className="size-4 shrink-0" aria-hidden />
                 무료로 시작하기
               </>
             )}

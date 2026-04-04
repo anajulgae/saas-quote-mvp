@@ -1,5 +1,6 @@
 import { z } from "zod"
 
+import { AuthScreenShell } from "@/components/app/auth-screen-shell"
 import { SignupCheckEmailPanel } from "@/components/app/signup-check-email-panel"
 import { maskEmailForDisplay } from "@/lib/mask-email"
 
@@ -15,10 +16,8 @@ export default async function SignupCheckEmailPage({ searchParams }: PageProps) 
   const maskedEmail = valid ? maskEmailForDisplay(raw) : null
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#ffffff,#f4f4f5_50%,#eef2ff)] px-4 py-12 sm:py-16">
-      <div className="mx-auto w-full max-w-md">
-        <SignupCheckEmailPanel prefillEmail={prefillEmail} maskedEmail={maskedEmail} />
-      </div>
-    </div>
+    <AuthScreenShell eyebrow="회원가입 · 이메일 인증">
+      <SignupCheckEmailPanel prefillEmail={prefillEmail} maskedEmail={maskedEmail} />
+    </AuthScreenShell>
   )
 }

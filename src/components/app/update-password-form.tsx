@@ -8,14 +8,15 @@ import { updatePasswordAction } from "@/app/actions"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { authCardClass, authFooterLinkClass, authIconBoxClass } from "@/lib/auth-ui"
 
 export function UpdatePasswordForm() {
   const [state, formAction, isPending] = useActionState(updatePasswordAction, undefined)
 
   return (
-    <Card className="border-border/80 bg-background/95 shadow-md ring-1 ring-border/40">
+    <Card className={authCardClass}>
       <CardHeader className="space-y-2 pb-4">
-        <div className="flex size-11 items-center justify-center rounded-xl bg-foreground text-background">
+        <div className={authIconBoxClass}>
           <LockKeyhole className="size-5" aria-hidden />
         </div>
         <div className="space-y-1.5 pt-1">
@@ -87,10 +88,7 @@ export function UpdatePasswordForm() {
           </Button>
         </form>
         <p className="border-t border-border/50 pt-4 text-center">
-          <Link
-            href="/login"
-            className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-          >
+          <Link href="/login" className={authFooterLinkClass}>
             로그인 화면으로
           </Link>
         </p>

@@ -12,6 +12,7 @@ import {
   getDemoSessionCookieName,
   isSupabaseConfigured,
 } from "@/lib/auth"
+import { maskEmailForDisplay } from "@/lib/mask-email"
 import { getSiteOrigin } from "@/lib/site-url"
 import { toUserFacingActionError } from "@/lib/action-errors"
 import { isDemoLoginEnabled, isDemoPasswordStrongEnoughForProduction } from "@/lib/demo-flags"
@@ -446,16 +447,23 @@ export async function resendSignupConfirmationAction(
   return { ok: true as const }
 }
 
+export type RequestPasswordResetState =
+  | undefined
+  | { error: string }
+  | { ok: true; maskedEmail: string; email: string }
+
 export async function requestPasswordResetAction(
-  _: { error?: string } | undefined,
+  _prev: RequestPasswordResetState,
   formData: FormData
-) {
+): Promise<RequestPasswordResetState> {
   const email = String(formData.get("email") ?? "").trim()
   if (!email) {
     return { error: "이메일을 입력해 주세요." }
   }
   if (!z.string().email().safeParse(email).success) {
-    return { error: "올바른 이메일을 입력해 주세요." }
+    return {
+      error: "이메일 형식을 확인해 주세요. 가입·로그인에 쓰는 주소를 정확히 입력했는지도 함께 확인해 주세요.",
+    }
   }
 
   if (!isSupabaseConfigured()) {
@@ -478,12 +486,16 @@ export async function requestPasswordResetAction(
     return {
       error: toUserFacingActionError(
         error,
-        "재설정 메일 발송에 실패했습니다. 잠시 후 다시 시도해 주세요."
+        "재설정 메일을 보내지 못했습니다. 잠시 후 다시 시도하거나 네트워크를 확인해 주세요."
       ),
     }
   }
 
-  redirect("/forgot-password/sent")
+  return {
+    ok: true as const,
+    maskedEmail: maskEmailForDisplay(email),
+    email,
+  }
 }
 
 export async function updatePasswordAction(_: { error?: string } | undefined, formData: FormData) {

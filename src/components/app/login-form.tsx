@@ -8,6 +8,7 @@ import { loginAction } from "@/app/actions"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { authCardClass, authIconBoxClass } from "@/lib/auth-ui"
 
 export function LoginForm({
   defaultEmail,
@@ -28,12 +29,9 @@ export function LoginForm({
   const [state, formAction, isPending] = useActionState(loginAction, undefined)
 
   return (
-    <Card
-      id="login-form"
-      className="border-border/80 bg-background/95 shadow-md ring-1 ring-border/40"
-    >
+    <Card id="login-form" className={authCardClass}>
       <CardHeader className="space-y-2 pb-4">
-        <div className="flex size-11 items-center justify-center rounded-xl bg-foreground text-background">
+        <div className={authIconBoxClass}>
           <LockKeyhole className="size-5" aria-hidden />
         </div>
         <div className="space-y-1.5 pt-1">
@@ -43,13 +41,13 @@ export function LoginForm({
           </CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="space-y-5 pt-0">
+      <CardContent className="space-y-6 pt-0">
         {authCallbackError ? (
           <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {authCallbackError}
           </p>
         ) : null}
-        <form action={formAction} className="space-y-4">
+        <form action={formAction} className="space-y-4 sm:space-y-5">
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium text-foreground">
               이메일
@@ -85,15 +83,19 @@ export function LoginForm({
               {state.error}
             </p>
           ) : null}
-          <Button type="submit" className="h-11 w-full text-base font-semibold" disabled={isPending}>
+          <Button
+            type="submit"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 text-base font-semibold"
+            disabled={isPending}
+          >
             {isPending ? (
               <>
-                <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                <LoaderCircle className="size-4 shrink-0 animate-spin" aria-hidden />
                 로그인 중…
               </>
             ) : (
               <>
-                <LockKeyhole className="size-4" aria-hidden />
+                <LockKeyhole className="size-4 shrink-0" aria-hidden />
                 로그인
               </>
             )}
@@ -104,7 +106,7 @@ export function LoginForm({
             <div className="flex flex-col gap-3 text-center text-sm sm:flex-row sm:items-center sm:justify-between sm:text-left">
               <Link
                 href="/forgot-password"
-                className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                className="rounded-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 비밀번호를 잊으셨나요?
               </Link>
@@ -112,7 +114,7 @@ export function LoginForm({
                 계정이 없으신가요?{" "}
                 <Link
                   href="/signup"
-                  className="font-semibold text-foreground underline-offset-4 hover:underline"
+                  className="rounded-sm font-semibold text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   회원가입
                 </Link>

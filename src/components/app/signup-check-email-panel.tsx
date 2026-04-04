@@ -8,6 +8,7 @@ import { resendSignupConfirmationAction } from "@/app/actions"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { authCardClass, authFooterLinkClass, authIconBoxClass } from "@/lib/auth-ui"
 
 export function SignupCheckEmailPanel({
   prefillEmail = "",
@@ -21,9 +22,9 @@ export function SignupCheckEmailPanel({
   const [state, formAction, isPending] = useActionState(resendSignupConfirmationAction, undefined)
 
   return (
-    <Card className="border-border/80 bg-background/95 shadow-md ring-1 ring-border/40">
+    <Card className={authCardClass}>
       <CardHeader className="space-y-3 pb-2">
-        <div className="flex size-11 items-center justify-center rounded-xl bg-foreground text-background">
+        <div className={authIconBoxClass}>
           <Mail className="size-5" aria-hidden />
         </div>
         <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.07] px-3 py-2.5 text-sm leading-snug text-foreground">
@@ -33,9 +34,6 @@ export function SignupCheckEmailPanel({
             있습니다.
           </p>
         </div>
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          회원가입 · 이메일 인증
-        </p>
         <CardTitle className="text-xl font-semibold tracking-tight">이메일 인증을 마쳐 주세요</CardTitle>
         <CardDescription className="text-sm leading-relaxed text-muted-foreground">
           {maskedEmail ? (
@@ -112,24 +110,28 @@ export function SignupCheckEmailPanel({
                 인증 메일을 다시 보냈습니다. 잠시 후 메일함을 확인해 주세요.
               </p>
             ) : null}
-            <Button type="submit" className="h-11 w-full text-base font-semibold" disabled={isPending}>
+            <Button
+              type="submit"
+              className="inline-flex h-11 w-full items-center justify-center gap-2 text-base font-semibold"
+              disabled={isPending}
+            >
               {isPending ? (
                 <>
-                  <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                  <LoaderCircle className="size-4 shrink-0 animate-spin" aria-hidden />
                   발송 중…
                 </>
               ) : (
-                "인증 메일 다시 보내기"
+                <>
+                  <Mail className="size-4 shrink-0" aria-hidden />
+                  인증 메일 다시 보내기
+                </>
               )}
             </Button>
           </form>
         </div>
 
         <p className="border-t border-border/50 pt-4 text-center">
-          <Link
-            href="/login"
-            className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-          >
+          <Link href="/login" className={authFooterLinkClass}>
             로그인 화면으로 돌아가기
           </Link>
         </p>

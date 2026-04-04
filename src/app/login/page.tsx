@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { buttonVariants } from "@/components/ui/button-variants"
 import { getDemoCredentials, isSupabaseConfigured } from "@/lib/auth"
 import { isDemoLoginEnabled, showLoginReviewHints } from "@/lib/demo-flags"
+import { authSplitOuterClass } from "@/lib/auth-ui"
 import { cn } from "@/lib/utils"
 
 const valueBullets = [
@@ -50,8 +51,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const showAccountLinks = supabaseConfigured && !deploymentBlocked
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#ffffff,#f4f4f5_50%,#eef2ff)]">
-      <div className="mx-auto grid min-h-screen max-w-6xl items-start gap-8 px-4 py-8 sm:py-10 lg:grid-cols-[1fr_min(100%,420px)] lg:items-center lg:gap-12 lg:px-8">
+    <div className={authSplitOuterClass}>
+      <div className="mx-auto grid min-h-screen max-w-6xl items-start gap-8 lg:grid-cols-[1fr_min(100%,420px)] lg:items-center lg:gap-12">
         <section
           id="value-prop"
           className="order-2 space-y-6 pb-6 lg:order-1 lg:pb-0 lg:pr-4"
@@ -61,10 +62,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             견적·청구·수금을 한 화면에서
           </div>
           <div className="space-y-3">
-            <h1 className="max-w-md text-3xl font-semibold tracking-tight text-balance sm:text-4xl sm:max-w-xl">
+            <h1 className="max-w-md text-3xl font-semibold tracking-tight text-balance sm:max-w-xl sm:text-4xl">
               소규모 사업자를 위한
-              <br className="hidden sm:block" />{" "}
-              <span className="text-balance">견적·청구·수금 관리</span>
+              <br className="hidden sm:block" />
+              <span className="text-balance"> 견적·청구·수금 관리</span>
             </h1>
             <p className="max-w-md text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
               문의부터 견적·청구·입금까지 한 흐름으로 이어 관리합니다.

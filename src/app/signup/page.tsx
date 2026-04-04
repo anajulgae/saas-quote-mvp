@@ -3,6 +3,7 @@ import { CheckCircle2, CircleDot } from "lucide-react"
 
 import { SignupForm } from "@/components/app/signup-form"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { authSplitOuterClass } from "@/lib/auth-ui"
 import { isSupabaseConfigured } from "@/lib/auth"
 import { isDemoLoginEnabled } from "@/lib/demo-flags"
 
@@ -18,8 +19,8 @@ export default function SignupPage() {
   const blocked = !supabaseConfigured
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#ffffff,#f4f4f5_50%,#eef2ff)]">
-      <div className="mx-auto grid min-h-screen max-w-6xl items-start gap-8 px-4 py-8 sm:py-10 lg:grid-cols-[1fr_min(100%,420px)] lg:items-center lg:gap-12 lg:px-8">
+    <div className={authSplitOuterClass}>
+      <div className="mx-auto grid min-h-screen max-w-6xl items-start gap-8 lg:grid-cols-[1fr_min(100%,420px)] lg:items-center lg:gap-12">
         <section className="order-2 space-y-5 pb-6 lg:order-1 lg:pb-0 lg:pr-4">
           <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-border/70 bg-background/90 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm">
             <CircleDot className="size-3 shrink-0 fill-emerald-500 text-emerald-500" aria-hidden />
