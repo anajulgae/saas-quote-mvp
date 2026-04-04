@@ -10,6 +10,8 @@ const headlineByAction: Record<string, string> = {
   "quote.created": "견적 생성",
   "quote.updated": "견적 수정",
   "quote.status_changed": "견적 상태 변경",
+  "quote.duplicated": "견적 복제",
+  "quote.deleted": "견적 삭제",
   "quote.sent": "견적 발송",
   "invoice.created": "청구 생성",
   "invoice.updated": "청구 수정",

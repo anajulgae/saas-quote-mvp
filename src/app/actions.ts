@@ -24,6 +24,8 @@ import {
   createInvoiceRecord,
   createQuoteRecord,
   createReminderRecord,
+  deleteQuoteRecord,
+  duplicateQuoteRecord,
   saveBusinessSettingsRecord,
   saveTemplatesRecord,
   updateInquiryRecord,
@@ -177,8 +179,8 @@ function normalizeQuoteInput(input: {
     items: input.items.map((item) => ({
       name: item.name,
       description: item.description || undefined,
-      quantity: Number(item.quantity),
-      unitPrice: Number(item.unitPrice),
+      quantity: parseInvoiceAmountString(item.quantity),
+      unitPrice: parseInvoiceAmountString(item.unitPrice),
     })),
   })
 }
@@ -762,6 +764,49 @@ export async function updateQuoteStatusAction(
     return {
       ok: false as const,
       error: toUserFacingActionError(error, "견적 상태 변경에 실패했습니다."),
+    }
+  }
+}
+
+function quoteMutationErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) {
+    if (error.message === "DEMO_MODE") {
+      return "데모 세션에서는 저장되지 않습니다. 실제 계정으로 로그인해 주세요."
+    }
+    if (error.message === "QUOTE_NOT_FOUND") {
+      return "견적을 찾을 수 없습니다. 목록을 새로고침한 뒤 다시 시도해 주세요."
+    }
+  }
+  return toUserFacingActionError(error, fallback)
+}
+
+export async function duplicateQuoteAction(quoteId: string) {
+  try {
+    await duplicateQuoteRecord(quoteId)
+    revalidateBusinessPages()
+    revalidatePath("/inquiries")
+    revalidatePath("/quotes")
+    return { ok: true as const }
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: quoteMutationErrorMessage(error, "견적 복제에 실패했습니다."),
+    }
+  }
+}
+
+export async function deleteQuoteAction(quoteId: string) {
+  try {
+    const result = await deleteQuoteRecord(quoteId)
+    const customerId = result.mode === "supabase" ? result.customerId : undefined
+    revalidateBusinessPages(customerId)
+    revalidatePath("/inquiries")
+    revalidatePath("/quotes")
+    return { ok: true as const }
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: quoteMutationErrorMessage(error, "견적 삭제에 실패했습니다."),
     }
   }
 }

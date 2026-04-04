@@ -7,7 +7,7 @@ export default async function QuotesPage({
   searchParams: Promise<{ customer?: string; new?: string }>
 }) {
   const sp = await searchParams
-  const { quotes, customers, inquiries, defaultQuoteSummary } =
+  const { quotes, customers, inquiries, defaultQuoteSummary, nextQuoteNumberPreview } =
     await getQuotesPageData()
 
   const initialCreateOpen = sp.new === "1" || sp.new === "true"
@@ -18,6 +18,7 @@ export default async function QuotesPage({
       customers={customers}
       inquiries={inquiries}
       defaultQuoteSummary={defaultQuoteSummary}
+      nextQuoteNumberPreview={nextQuoteNumberPreview}
       deepLinkCustomerId={sp.customer}
       deepLinkOpenCreate={initialCreateOpen}
     />

@@ -714,6 +714,7 @@ export async function updateQuoteStatusRecord(quoteId: string, status: Quote["st
     quoteId,
     metadata: {
       status,
+      previous_status: existingQuote?.status ?? null,
     },
   })
 
@@ -727,6 +728,242 @@ export async function updateQuoteStatusRecord(quoteId: string, status: Quote["st
   return {
     mode: "supabase" as const,
     quote: mapQuote(quote),
+  }
+}
+
+/** 목록·생성 화면에 보여 줄 다음 견적 번호(실제 저장 시점 번호와 다를 수 있음) */
+export function computeNextQuoteNumberPreview(quotes: Pick<Quote, "quoteNumber">[]): string {
+  const year = new Date().getFullYear()
+  const prefix = `Q-${year}-`
+  let maxSeq = 0
+  for (const q of quotes) {
+    const n = q.quoteNumber
+    if (!n.startsWith(prefix)) {
+      continue
+    }
+    const seq = Number(n.split("-").at(-1))
+    if (Number.isFinite(seq)) {
+      maxSeq = Math.max(maxSeq, seq)
+    }
+  }
+  return `${prefix}${String(maxSeq + 1).padStart(3, "0")}`
+}
+
+export async function duplicateQuoteRecord(quoteId: string) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    throw new Error("DEMO_MODE")
+  }
+
+  const { data: quoteRowRaw, error: quoteError } = await context.supabase
+    .from("quotes")
+    .select("*")
+    .eq("id", quoteId)
+    .maybeSingle()
+
+  if (quoteError) {
+    throw quoteError
+  }
+
+  const quoteRow = quoteRowRaw as QuoteRow | null
+  if (!quoteRow) {
+    throw new Error("QUOTE_NOT_FOUND")
+  }
+
+  const { data: itemRows, error: itemError } = await context.supabase
+    .from("quote_items")
+    .select("*")
+    .eq("quote_id", quoteId)
+    .order("sort_order", { ascending: true })
+
+  if (itemError) {
+    throw itemError
+  }
+
+  const itemsSafe = (itemRows ?? []) as QuoteItemRow[]
+  const baseTitle = quoteRow.title.trim()
+  const copyTitle =
+    baseTitle.length > 180 ? `${baseTitle.slice(0, 177)}… (사본)` : `${baseTitle} (사본)`
+
+  const validUntilDate = new Date()
+  validUntilDate.setDate(validUntilDate.getDate() + 14)
+
+  const input: QuoteFormInput = {
+    customerId: quoteRow.customer_id,
+    inquiryId: quoteRow.inquiry_id ?? undefined,
+    title: copyTitle,
+    summary: quoteRow.summary ?? "",
+    status: "draft",
+    validUntil: validUntilDate.toISOString().slice(0, 10),
+    sentAt: undefined,
+    items:
+      itemsSafe.length > 0
+        ? itemsSafe.map((row) => ({
+            name: row.name,
+            description: row.description ?? undefined,
+            quantity: row.quantity,
+            unitPrice: row.unit_price,
+          }))
+        : [{ name: "항목 1", description: undefined, quantity: 1, unitPrice: 0 }],
+  }
+
+  const created = await createQuoteRecord(input)
+
+  if (created.mode === "supabase" && created.quote) {
+    await createActivityLog({
+      action: "quote.duplicated",
+      description: `「${quoteRow.title}」(${quoteRow.quote_number})을 복제해 ${created.quote.quoteNumber} 견적을 만들었습니다.`,
+      customerId: created.quote.customerId,
+      inquiryId: created.quote.inquiryId,
+      quoteId: created.quote.id,
+      metadata: {
+        source_quote_id: quoteId,
+        source_quote_number: quoteRow.quote_number,
+      },
+    })
+  }
+
+  return created
+}
+
+export async function deleteQuoteRecord(quoteId: string) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    throw new Error("DEMO_MODE")
+  }
+
+  const { data: quoteRowRaw, error: quoteError } = await context.supabase
+    .from("quotes")
+    .select("*")
+    .eq("id", quoteId)
+    .maybeSingle()
+
+  if (quoteError) {
+    throw quoteError
+  }
+
+  const quoteRow = quoteRowRaw as QuoteRow | null
+  if (!quoteRow) {
+    throw new Error("QUOTE_NOT_FOUND")
+  }
+
+  await createActivityLog({
+    action: "quote.deleted",
+    description: `「${quoteRow.title}」(${quoteRow.quote_number}) 견적을 삭제했습니다.`,
+    customerId: quoteRow.customer_id,
+    inquiryId: quoteRow.inquiry_id ?? undefined,
+    quoteId,
+    metadata: {
+      quote_number: quoteRow.quote_number,
+    },
+  })
+
+  const { error: delError } = await context.supabase.from("quotes").delete().eq("id", quoteId)
+
+  if (delError) {
+    throw delError
+  }
+
+  return {
+    mode: "supabase" as const,
+    customerId: quoteRow.customer_id,
+  }
+}
+
+export async function getQuotePrintPageData(quoteId: string): Promise<{
+  quote: QuoteWithItems
+  issuer: {
+    businessName: string
+    ownerName: string
+    email: string
+    phone: string
+    paymentTerms: string
+    bankAccount: string
+  }
+} | null> {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    const quote = demoQuotes.find((q) => q.id === quoteId)
+    if (!quote) {
+      return null
+    }
+    const customer = demoCustomers.find((c) => c.id === quote.customerId)
+    const items = demoQuoteItems.filter((i) => i.quoteId === quote.id)
+    return {
+      quote: {
+        ...quote,
+        customer,
+        items,
+      },
+      issuer: {
+        businessName: demoBusinessSettings.businessName,
+        ownerName: demoBusinessSettings.ownerName,
+        email: demoBusinessSettings.email,
+        phone: demoBusinessSettings.phone,
+        paymentTerms: demoBusinessSettings.paymentTerms,
+        bankAccount: demoBusinessSettings.bankAccount,
+      },
+    }
+  }
+
+  const [{ data: quoteRowRaw, error: quoteError }, { data: settingsRow, error: settingsError }] =
+    await Promise.all([
+      context.supabase.from("quotes").select("*").eq("id", quoteId).maybeSingle(),
+      context.supabase.from("business_settings").select("*").eq("user_id", context.userId).maybeSingle(),
+    ])
+
+  if (quoteError || settingsError) {
+    throw quoteError ?? settingsError
+  }
+
+  const quoteRow = quoteRowRaw as QuoteRow | null
+  if (!quoteRow) {
+    return null
+  }
+
+  const { data: itemRows, error: itemError } = await context.supabase
+    .from("quote_items")
+    .select("*")
+    .eq("quote_id", quoteId)
+    .order("sort_order", { ascending: true })
+
+  if (itemError) {
+    throw itemError
+  }
+
+  const { data: customerRow, error: customerError } = await context.supabase
+    .from("customers")
+    .select("*")
+    .eq("id", quoteRow.customer_id)
+    .maybeSingle()
+
+  if (customerError) {
+    throw customerError
+  }
+
+  const mapped = mapQuote(quoteRow)
+  const items = ((itemRows ?? []) as QuoteItemRow[]).map(mapQuoteItem)
+  const settings = settingsRow
+    ? mapBusinessSettings(settingsRow as BusinessSettingsRow)
+    : null
+
+  return {
+    quote: {
+      ...mapped,
+      customer: customerRow ? mapCustomer(customerRow as CustomerRow) : undefined,
+      items,
+    },
+    issuer: {
+      businessName: settings?.businessName ?? "",
+      ownerName: settings?.ownerName ?? "",
+      email: settings?.email ?? "",
+      phone: settings?.phone ?? "",
+      paymentTerms: settings?.paymentTerms ?? "",
+      bankAccount: settings?.bankAccount ?? "",
+    },
   }
 }
 
@@ -1319,22 +1556,25 @@ export async function getQuotesPageData(): Promise<{
   customers: Customer[]
   inquiries: InquiryWithCustomer[]
   defaultQuoteSummary: string
+  nextQuoteNumberPreview: string
 }> {
   const context = await getDataContext()
 
   if (context.mode === "demo") {
+    const quotes = demoQuotes.map((quote) => ({
+      ...quote,
+      customer: demoCustomers.find((customer) => customer.id === quote.customerId),
+      items: demoQuoteItems.filter((item) => item.quoteId === quote.id),
+    }))
     return {
-      quotes: demoQuotes.map((quote) => ({
-        ...quote,
-        customer: demoCustomers.find((customer) => customer.id === quote.customerId),
-        items: demoQuoteItems.filter((item) => item.quoteId === quote.id),
-      })),
+      quotes,
       customers: demoCustomers,
       inquiries: demoInquiries.map((inquiry) => ({
         ...inquiry,
         customer: demoCustomers.find((customer) => customer.id === inquiry.customerId),
       })),
       defaultQuoteSummary: defaultQuoteSummaryFromTemplates(demoTemplates),
+      nextQuoteNumberPreview: computeNextQuoteNumberPreview(quotes),
     }
   }
 
@@ -1405,16 +1645,18 @@ export async function getQuotesPageData(): Promise<{
 
   const mappedTemplates = templateRowsSafe.map(mapTemplate)
 
-  return {
-    quotes: quoteRowsSafe.map((row) => {
-      const quote = mapQuote(row)
+  const quotes = quoteRowsSafe.map((row) => {
+    const quote = mapQuote(row)
 
-      return {
-        ...quote,
-        customer: customerMap.get(quote.customerId),
-        items: itemsByQuote.get(quote.id) ?? [],
-      }
-    }),
+    return {
+      ...quote,
+      customer: customerMap.get(quote.customerId),
+      items: itemsByQuote.get(quote.id) ?? [],
+    }
+  })
+
+  return {
+    quotes,
     customers: customerRowsSafe.map(mapCustomer),
     inquiries: inquiryRowsSafe.map((row) => {
       const inquiry = mapInquiry(row)
@@ -1424,6 +1666,7 @@ export async function getQuotesPageData(): Promise<{
       }
     }),
     defaultQuoteSummary: defaultQuoteSummaryFromTemplates(mappedTemplates),
+    nextQuoteNumberPreview: computeNextQuoteNumberPreview(quotes),
   }
 }
 

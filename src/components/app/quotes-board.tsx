@@ -2,18 +2,35 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition, type MutableRefObject } from "react"
 import Link from "next/link"
-import { ArrowRight, FileText, ListOrdered, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import {
+  ArrowRight,
+  Copy,
+  Download,
+  FileText,
+  Link2,
+  ListOrdered,
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Search,
+  Send,
+  Trash2,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
 import {
   createQuoteAction,
+  deleteQuoteAction,
+  duplicateQuoteAction,
   updateQuoteAction,
   updateQuoteStatusAction,
 } from "@/app/actions"
 import { EmptyState } from "@/components/app/empty-state"
 import { PageHeader } from "@/components/app/page-header"
 import { QuoteDraftAssistant } from "@/components/app/quote-draft-assistant"
+import { Badge } from "@/components/ui/badge"
 import { QuoteStatusBadge } from "@/components/app/status-badge"
 import { Button } from "@/components/ui/button"
 import { buttonVariants } from "@/components/ui/button-variants"
@@ -27,6 +44,13 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -39,6 +63,14 @@ import {
   quoteStatusOptions,
 } from "@/lib/constants"
 import { formatCurrency, formatDate } from "@/lib/format"
+import {
+  customerPrimaryLabel,
+  formatKrwDigitsInput,
+  getQuoteValidityHint,
+  parseAmountInput,
+  quoteSearchHaystack,
+  type QuoteListSort,
+} from "@/lib/quote-utils"
 import { cn } from "@/lib/utils"
 import type { Customer, InquiryWithCustomer, QuoteStatus, QuoteWithItems } from "@/types/domain"
 
@@ -125,6 +157,14 @@ function createEmptyForm(customers: Customer[], defaultSummary = ""): QuoteFormS
   }
 }
 
+function stripKrwForEdit(raw: string): string {
+  const n = parseAmountInput(raw)
+  if (!Number.isFinite(n)) {
+    return raw.replace(/,/g, "")
+  }
+  return String(Math.round(n))
+}
+
 function toFormState(quote: QuoteWithItems): QuoteFormState {
   return {
     customerId: quote.customerId,
@@ -164,6 +204,7 @@ function QuotesBoardPanel({
   createOpenSourceRef,
   deepLinkCustomerId,
   deepLinkOpenCreate,
+  nextQuoteNumberPreview,
 }: {
   quotes: QuoteWithItems[]
   customers: Customer[]
@@ -175,6 +216,7 @@ function QuotesBoardPanel({
   createOpenSourceRef: MutableRefObject<"header" | null>
   deepLinkCustomerId?: string
   deepLinkOpenCreate?: boolean
+  nextQuoteNumberPreview: string
 }) {
   const router = useRouter()
   const flowRef = useRef<HTMLDivElement>(null)
@@ -182,6 +224,19 @@ function QuotesBoardPanel({
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState("")
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | "all">("all")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [customerFilterId, setCustomerFilterId] = useState<string | "all">("all")
+  const [createdFrom, setCreatedFrom] = useState("")
+  const [createdTo, setCreatedTo] = useState("")
+  const [amountMin, setAmountMin] = useState("")
+  const [amountMax, setAmountMax] = useState("")
+  const [sortBy, setSortBy] = useState<QuoteListSort>("created_desc")
+  const [statusConfirm, setStatusConfirm] = useState<{
+    quote: QuoteWithItems
+    next: QuoteStatus
+  } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<QuoteWithItems | null>(null)
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false)
   const [quickInquiryId, setQuickInquiryId] = useState(inquiries[0]?.id ?? "")
   const [form, setForm] = useState<QuoteFormState>(() =>
     createEmptyForm(customers, defaultQuoteSummary)
@@ -268,8 +323,8 @@ function QuotesBoardPanel({
       if (!item.name.trim()) {
         emptyNameRows.push(row)
       }
-      const q = Number(item.quantity)
-      const p = Number(item.unitPrice)
+      const q = parseAmountInput(item.quantity)
+      const p = parseAmountInput(item.unitPrice)
       if (!Number.isFinite(q) || q <= 0) {
         badQtyRows.push(row)
       }
@@ -331,18 +386,65 @@ function QuotesBoardPanel({
     return stage ? `${inv.title} · ${stage}` : inv.title
   }, [form.customerId, form.inquiryId, inquiries, availableInquiries])
 
-  const filteredQuotes = useMemo(() => {
-    if (statusFilter === "all") {
-      return quotes
+  const processedQuotes = useMemo(() => {
+    let list = [...quotes]
+    if (statusFilter !== "all") {
+      list = list.filter((q) => q.status === statusFilter)
     }
-    return quotes.filter((q) => q.status === statusFilter)
-  }, [quotes, statusFilter])
+    const needle = searchQuery.trim().toLowerCase()
+    if (needle) {
+      list = list.filter((row) => quoteSearchHaystack(row, row.customer).includes(needle))
+    }
+    if (customerFilterId !== "all") {
+      list = list.filter((row) => row.customerId === customerFilterId)
+    }
+    if (createdFrom.trim()) {
+      const from = new Date(createdFrom).getTime()
+      list = list.filter((row) => new Date(row.createdAt).getTime() >= from)
+    }
+    if (createdTo.trim()) {
+      const to = new Date(`${createdTo}T23:59:59.999`).getTime()
+      list = list.filter((row) => new Date(row.createdAt).getTime() <= to)
+    }
+    const minA = amountMin.trim() ? parseAmountInput(amountMin) : null
+    const maxA = amountMax.trim() ? parseAmountInput(amountMax) : null
+    if (minA !== null && Number.isFinite(minA)) {
+      list = list.filter((row) => row.total >= minA)
+    }
+    if (maxA !== null && Number.isFinite(maxA)) {
+      list = list.filter((row) => row.total <= maxA)
+    }
+    if (sortBy === "created_desc") {
+      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    } else if (sortBy === "total_desc") {
+      list.sort((a, b) => b.total - a.total)
+    } else {
+      list.sort((a, b) => {
+        const av = a.validUntil ? new Date(a.validUntil).getTime() : Number.POSITIVE_INFINITY
+        const bv = b.validUntil ? new Date(b.validUntil).getTime() : Number.POSITIVE_INFINITY
+        return av - bv
+      })
+    }
+    return list
+  }, [
+    quotes,
+    statusFilter,
+    searchQuery,
+    customerFilterId,
+    createdFrom,
+    createdTo,
+    amountMin,
+    amountMax,
+    sortBy,
+  ])
 
   const previewTotal = useMemo(() => {
     const subtotal = form.items.reduce((sum, item) => {
-      const quantity = Number(item.quantity) || 0
-      const unitPrice = Number(item.unitPrice) || 0
-      return sum + quantity * unitPrice
+      const quantity = parseAmountInput(item.quantity)
+      const unitPrice = parseAmountInput(item.unitPrice)
+      const q = Number.isFinite(quantity) ? quantity : 0
+      const p = Number.isFinite(unitPrice) ? unitPrice : 0
+      return sum + q * p
     }, 0)
 
     const tax = Math.round(subtotal * 0.1)
@@ -408,6 +510,80 @@ function QuotesBoardPanel({
           ? [createEmptyItem()]
           : current.items.filter((_, itemIndex) => itemIndex !== index),
     }))
+  }
+
+  const duplicateItemRow = (index: number) => {
+    setForm((current) => {
+      const row = current.items[index]
+      const copy: QuoteItemForm = {
+        name: row.name.trim() ? `${row.name.trim()} (복사)` : "",
+        description: row.description,
+        quantity: row.quantity,
+        unitPrice: row.unitPrice,
+      }
+      return {
+        ...current,
+        items: [...current.items.slice(0, index + 1), copy, ...current.items.slice(index + 1)],
+      }
+    })
+  }
+
+  const copyQuotePrintLink = async (quoteId: string) => {
+    const url = `${window.location.origin}/quotes/${quoteId}/print`
+    try {
+      await navigator.clipboard.writeText(url)
+      toast.success("견적서 링크를 복사했습니다. 로그인한 수신자에게 전달하세요.")
+    } catch {
+      toast.error("클립보드 복사에 실패했습니다.")
+    }
+  }
+
+  const openSendPrep = (quoteId: string) => {
+    toast.message("발송 준비", {
+      description: "견적서를 PDF로 저장한 뒤 이메일·메신저 등으로 보내 보세요.",
+    })
+    window.open(`/quotes/${quoteId}/print`, "_blank", "noopener,noreferrer")
+  }
+
+  const runDuplicateQuote = (quote: QuoteWithItems) => {
+    startTransition(async () => {
+      const result = await duplicateQuoteAction(quote.id)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      toast.success("견적을 복제했습니다.")
+      router.refresh()
+    })
+  }
+
+  const runDeleteQuote = () => {
+    if (!deleteTarget) {
+      return
+    }
+    const id = deleteTarget.id
+    startTransition(async () => {
+      const result = await deleteQuoteAction(id)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      setDeleteTarget(null)
+      toast.success("견적을 삭제했습니다.")
+      if (editingQuoteId === id) {
+        resetForm()
+      }
+      router.refresh()
+    })
+  }
+
+  const confirmStatusChange = () => {
+    if (!statusConfirm) {
+      return
+    }
+    const { quote, next } = statusConfirm
+    setStatusConfirm(null)
+    changeStatus(quote.id, next, quote.customerId)
   }
 
   const saveCreate = () => {
@@ -739,14 +915,17 @@ function QuotesBoardPanel({
                   단가 <span className="text-destructive">*</span>
                 </th>
                 <th className="w-32 px-2 py-2 text-right">금액</th>
+                <th className="w-10 p-2 text-center" aria-label="행 복제" />
                 <th className="w-11 p-2" aria-label="삭제" />
               </tr>
             </thead>
             <tbody>
               {form.items.map((item, index) => {
-                const q = Number(item.quantity) || 0
-                const p = Number(item.unitPrice) || 0
-                const line = q * p
+                const q = parseAmountInput(item.quantity)
+                const p = parseAmountInput(item.unitPrice)
+                const qn = Number.isFinite(q) ? q : 0
+                const pn = Number.isFinite(p) ? p : 0
+                const line = qn * pn
                 return (
                   <tr key={`row-${index}`} className="border-b border-border/50 last:border-0">
                     <td className="px-2 py-2 pl-3 align-top">
@@ -754,6 +933,16 @@ function QuotesBoardPanel({
                         className="h-8"
                         value={item.name}
                         onChange={(event) => updateItem(index, { name: event.target.value })}
+                        onKeyDown={(event) => {
+                          if (event.key !== "Enter") {
+                            return
+                          }
+                          event.preventDefault()
+                          setForm((cur) => ({
+                            ...cur,
+                            items: [...cur.items, createEmptyItem()],
+                          }))
+                        }}
                         placeholder="예: 촬영 1회"
                       />
                       <Input
@@ -783,8 +972,17 @@ function QuotesBoardPanel({
                         onChange={(event) =>
                           updateItem(index, { unitPrice: event.target.value })
                         }
+                        onFocus={() => {
+                          if (item.unitPrice.includes(",")) {
+                            updateItem(index, { unitPrice: stripKrwForEdit(item.unitPrice) })
+                          }
+                        }}
+                        onBlur={() => {
+                          const formatted = formatKrwDigitsInput(item.unitPrice)
+                          updateItem(index, { unitPrice: formatted === "" ? "0" : formatted })
+                        }}
                         inputMode="numeric"
-                        placeholder="예: 500000"
+                        placeholder="예: 500,000"
                       />
                     </td>
                     <td className="px-2 py-2 align-top">
@@ -792,6 +990,18 @@ function QuotesBoardPanel({
                         {formatCurrency(line)}
                         <span className="sr-only">(수량×단가)</span>
                       </div>
+                    </td>
+                    <td className="p-2 align-top">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-8"
+                        onClick={() => duplicateItemRow(index)}
+                        aria-label={`${index + 1}번째 항목 복제`}
+                      >
+                        <Copy className="size-4" />
+                      </Button>
                     </td>
                     <td className="p-2 align-top">
                       <Button
@@ -814,9 +1024,11 @@ function QuotesBoardPanel({
 
         <div className="space-y-3 md:hidden">
           {form.items.map((item, index) => {
-            const q = Number(item.quantity) || 0
-            const p = Number(item.unitPrice) || 0
-            const line = q * p
+            const q = parseAmountInput(item.quantity)
+            const p = parseAmountInput(item.unitPrice)
+            const qn = Number.isFinite(q) ? q : 0
+            const pn = Number.isFinite(p) ? p : 0
+            const line = qn * pn
             return (
               <div
                 key={`m-${index}`}
@@ -826,15 +1038,26 @@ function QuotesBoardPanel({
                   <span className="text-xs font-medium text-muted-foreground">
                     항목 {index + 1}
                   </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => removeItem(index)}
-                    aria-label="삭제"
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
+                  <div className="flex gap-0.5">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => duplicateItemRow(index)}
+                      aria-label="항목 복제"
+                    >
+                      <Copy className="size-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => removeItem(index)}
+                      aria-label="삭제"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[11px] text-muted-foreground">항목명 *</label>
@@ -842,6 +1065,16 @@ function QuotesBoardPanel({
                     className="h-9"
                     value={item.name}
                     onChange={(event) => updateItem(index, { name: event.target.value })}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter") {
+                        return
+                      }
+                      event.preventDefault()
+                      setForm((cur) => ({
+                        ...cur,
+                        items: [...cur.items, createEmptyItem()],
+                      }))
+                    }}
                     placeholder="예: 촬영 1회"
                   />
                 </div>
@@ -877,8 +1110,17 @@ function QuotesBoardPanel({
                       onChange={(event) =>
                         updateItem(index, { unitPrice: event.target.value })
                       }
+                      onFocus={() => {
+                        if (item.unitPrice.includes(",")) {
+                          updateItem(index, { unitPrice: stripKrwForEdit(item.unitPrice) })
+                        }
+                      }}
+                      onBlur={() => {
+                        const formatted = formatKrwDigitsInput(item.unitPrice)
+                        updateItem(index, { unitPrice: formatted === "" ? "0" : formatted })
+                      }}
                       inputMode="numeric"
-                      placeholder="예: 500000"
+                      placeholder="예: 500,000"
                     />
                   </div>
                   <div className="space-y-1">
@@ -963,7 +1205,7 @@ function QuotesBoardPanel({
   const scrollToFlow = () => flowRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
 
   return (
-    <div className="space-y-3 md:space-y-4">
+    <>
       <Dialog
         open={isCreateOpen}
         onOpenChange={(open) => {
@@ -976,9 +1218,20 @@ function QuotesBoardPanel({
         <DialogContent className={quoteFormDialogClass}>
           <div className="shrink-0 border-b border-border/60 px-4 pb-3 pt-4 pr-12 sm:px-6 sm:pr-14">
             <DialogHeader className="gap-1">
-              <DialogTitle className="text-lg">견적 생성</DialogTitle>
+              <DialogTitle className="text-lg leading-snug">
+                견적 생성
+                {!editingQuoteId ? (
+                  <span className="mt-1.5 block text-xs font-normal text-muted-foreground">
+                    부여 예정 번호{" "}
+                    <span className="font-mono font-semibold text-foreground">
+                      {nextQuoteNumberPreview}
+                    </span>
+                    <span className="font-normal"> · 저장 시 확정</span>
+                  </span>
+                ) : null}
+              </DialogTitle>
               <DialogDescription className="text-xs leading-relaxed">
-                고객 → 문의 → 항목 순으로 입력하면 합계가 바로 반영됩니다.
+                고객과 문의를 고른 뒤 항목·금액을 입력하면 공급가·부가세·총액이 바로 계산됩니다.
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -1033,38 +1286,142 @@ function QuotesBoardPanel({
         </DialogContent>
       </Dialog>
 
+      <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr] xl:items-start">
+        <div className="min-w-0 space-y-3 md:space-y-4">
       {hasQuotes ? (
         <div className="rounded-lg border border-border/60 bg-muted/15 px-3 py-2.5 text-xs text-muted-foreground">
-          문의를 연결한 견적은 목록에서 상태를 바꾸거나 수정할 수 있습니다.
+          검색·필터로 견적을 빠르게 찾고, 카드 메뉴에서 수정·복제·견적서·발송 준비까지 이어갈 수 있습니다.
         </div>
       ) : null}
 
       {hasQuotes ? (
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-          <p className="text-xs font-medium text-muted-foreground">상태 필터</p>
-          <div className="flex flex-wrap gap-1.5">
-            <Button
-              type="button"
-              size="sm"
-              variant={statusFilter === "all" ? "default" : "outline"}
-              className="h-8"
-              onClick={() => setStatusFilter("all")}
-            >
-              전체
-            </Button>
-            {quoteStatusOptions.map((option) => (
+        <div className="space-y-3 rounded-xl border border-border/60 bg-card/40 p-3 shadow-sm sm:p-4">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="h-9 pl-9"
+              placeholder="제목, 견적 번호, 고객명으로 검색…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="견적 검색"
+            />
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <p className="text-xs font-medium text-muted-foreground">상태</p>
+            <div className="flex flex-wrap gap-1.5">
               <Button
-                key={option.value}
                 type="button"
                 size="sm"
+                variant={statusFilter === "all" ? "default" : "outline"}
                 className="h-8"
-                variant={statusFilter === option.value ? "default" : "outline"}
-                onClick={() => setStatusFilter(option.value)}
+                onClick={() => setStatusFilter("all")}
               >
-                {option.label}
+                전체
               </Button>
-            ))}
+              {quoteStatusOptions.map((option) => (
+                <Button
+                  key={option.value}
+                  type="button"
+                  size="sm"
+                  className="h-8"
+                  variant={statusFilter === option.value ? "default" : "outline"}
+                  onClick={() => setStatusFilter(option.value)}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
           </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+            <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-muted-foreground">고객</label>
+                <Select
+                  value={customerFilterId}
+                  onValueChange={(v) => setCustomerFilterId(v ?? "all")}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="전체" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">전체 고객</SelectItem>
+                    {customers.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {formatCustomerSelectLabel(c)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-muted-foreground">정렬</label>
+                <Select
+                  value={sortBy}
+                  onValueChange={(v) => setSortBy((v as QuoteListSort) ?? "created_desc")}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="created_desc">최신 작성순</SelectItem>
+                    <SelectItem value="total_desc">총액 높은순</SelectItem>
+                    <SelectItem value="valid_until_asc">유효기한 임박순</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 shrink-0"
+              onClick={() => setAdvancedFiltersOpen((o) => !o)}
+            >
+              {advancedFiltersOpen ? "고급 필터 접기" : "기간·금액 필터"}
+            </Button>
+          </div>
+          {advancedFiltersOpen ? (
+            <div className="grid gap-3 border-t border-border/50 pt-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-muted-foreground">작성일부터</label>
+                <Input
+                  type="date"
+                  className="h-9"
+                  value={createdFrom}
+                  onChange={(e) => setCreatedFrom(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-muted-foreground">작성일까지</label>
+                <Input
+                  type="date"
+                  className="h-9"
+                  value={createdTo}
+                  onChange={(e) => setCreatedTo(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-muted-foreground">총액 최소(원)</label>
+                <Input
+                  className="h-9 tabular-nums"
+                  inputMode="numeric"
+                  placeholder="예: 100000"
+                  value={amountMin}
+                  onChange={(e) => setAmountMin(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-muted-foreground">총액 최대(원)</label>
+                <Input
+                  className="h-9 tabular-nums"
+                  inputMode="numeric"
+                  placeholder="예: 5000000"
+                  value={amountMax}
+                  onChange={(e) => setAmountMax(e.target.value)}
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -1073,7 +1430,7 @@ function QuotesBoardPanel({
         <Card className="border border-primary/30 bg-gradient-to-b from-primary/[0.05] to-background shadow-sm">
           <CardContent className="space-y-2.5 p-3 sm:p-4">
             <div className="space-y-1">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">시작하기</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">첫 견적</p>
               <h2 className="text-base font-bold tracking-tight sm:text-lg">
                 {hasInquiries
                   ? "문의를 연결해 첫 견적을 만들어보세요"
@@ -1194,39 +1551,77 @@ function QuotesBoardPanel({
           </div>
         </div>
         </>
-      ) : !filteredQuotes.length ? (
+      ) : !processedQuotes.length ? (
         <EmptyState
-          title="해당 상태의 견적이 없습니다"
-          description="필터를 바꾸거나 새 견적을 추가해 보세요."
+          title={
+            searchQuery.trim() ||
+            customerFilterId !== "all" ||
+            createdFrom ||
+            createdTo ||
+            amountMin.trim() ||
+            amountMax.trim() ||
+            statusFilter !== "all"
+              ? "조건에 맞는 견적이 없습니다"
+              : "표시할 견적이 없습니다"
+          }
+          description="검색·필터를 조정하거나 새 견적을 추가해 보세요."
         />
       ) : null}
 
-      {filteredQuotes.map((quote) => {
+      {processedQuotes.map((quote) => {
         const customer = quote.customer
+        const validityHint = getQuoteValidityHint(quote.validUntil, quote.status)
 
         return (
-          <Card key={quote.id} className="border-border/70">
-            <CardHeader>
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <CardTitle>{quote.title}</CardTitle>
-                  <CardDescription className="mt-1">
-                    {quote.quoteNumber} · {customer?.companyName ?? customer?.name}
+          <Card
+            key={quote.id}
+            className={cn(
+              "overflow-hidden border-border/70 transition-shadow hover:shadow-md",
+              validityHint === "past_due" && "border-destructive/40 bg-destructive/[0.03]",
+              validityHint === "due_soon" && "border-amber-500/35 bg-amber-500/[0.04]"
+            )}
+          >
+            <CardHeader className="space-y-3 pb-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-xs font-semibold text-muted-foreground tabular-nums">
+                      {quote.quoteNumber}
+                    </span>
+                    <QuoteStatusBadge status={quote.status} />
+                    {validityHint === "past_due" ? (
+                      <Badge variant="destructive" className="text-[10px]">
+                        유효기한 경과
+                      </Badge>
+                    ) : null}
+                    {validityHint === "due_soon" ? (
+                      <Badge className="border-amber-500/50 bg-amber-500/15 text-[10px] text-amber-950 dark:text-amber-50">
+                        유효기한 임박
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <CardTitle className="text-lg leading-snug">{quote.title}</CardTitle>
+                  <CardDescription className="text-sm font-medium text-foreground/80">
+                    {customerPrimaryLabel(customer)}
+                    {customer?.email ? (
+                      <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                        {customer.email}
+                      </span>
+                    ) : null}
                   </CardDescription>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <QuoteStatusBadge status={quote.status} />
+                <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                   <Select
                     value={quote.status}
-                    onValueChange={(value) =>
-                      changeStatus(
-                        quote.id,
-                        (value as QuoteStatus | null) ?? quote.status,
-                        quote.customerId
-                      )
-                    }
+                    onValueChange={(value) => {
+                      const next = (value as QuoteStatus | null) ?? quote.status
+                      if (next === quote.status) {
+                        return
+                      }
+                      setStatusConfirm({ quote, next })
+                    }}
                   >
-                    <SelectTrigger className="w-[132px]">
+                    <SelectTrigger className="h-9 w-[min(100%,140px)]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1237,58 +1632,130 @@ function QuotesBoardPanel({
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button variant="outline" size="sm" type="button" onClick={() => openEdit(quote)}>
+                  <Button variant="outline" size="sm" className="h-9 gap-1" type="button" onClick={() => openEdit(quote)}>
                     <Pencil className="size-4" />
                     수정
                   </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      className={cn(
+                        buttonVariants({ variant: "outline", size: "sm" }),
+                        "inline-flex h-9 gap-1 px-2"
+                      )}
+                    >
+                      <MoreHorizontal className="size-4" />
+                      <span className="sr-only">추가 작업</span>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-52">
+                      <DropdownMenuItem
+                        className="gap-2"
+                        onClick={() => runDuplicateQuote(quote)}
+                      >
+                        <Copy className="size-4" />
+                        복제
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="gap-2"
+                        onClick={() =>
+                          window.open(`/quotes/${quote.id}/print`, "_blank", "noopener,noreferrer")
+                        }
+                      >
+                        <Download className="size-4" />
+                        견적서 보기·PDF
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="gap-2" onClick={() => copyQuotePrintLink(quote.id)}>
+                        <Link2 className="size-4" />
+                        견적서 링크 복사
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="gap-2" onClick={() => openSendPrep(quote.id)}>
+                        <Send className="size-4" />
+                        발송 준비
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="gap-2 text-destructive focus:text-destructive"
+                        onClick={() => setDeleteTarget(quote)}
+                      >
+                        <Trash2 className="size-4" />
+                        삭제
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm leading-6 text-muted-foreground">{quote.summary}</p>
-              <div className="grid gap-3 md:grid-cols-3">
-                <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
-                  <p className="text-xs text-muted-foreground">총액</p>
-                  <p className="mt-2 text-xl font-semibold">
-                    {formatCurrency(quote.total)}
+            <CardContent className="space-y-4 border-t border-border/40 bg-muted/5 pt-4">
+              {quote.summary?.trim() ? (
+                <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">{quote.summary}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground">요약 없음</p>
+              )}
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-xl border border-border/60 bg-background/80 p-3">
+                  <p className="text-[11px] font-medium text-muted-foreground">총액</p>
+                  <p className="mt-1 text-lg font-bold tabular-nums text-primary">{formatCurrency(quote.total)}</p>
+                </div>
+                <div className="rounded-xl border border-border/60 bg-background/80 p-3">
+                  <p className="text-[11px] font-medium text-muted-foreground">공급가 / 부가세</p>
+                  <p className="mt-1 text-sm font-semibold tabular-nums">
+                    {formatCurrency(quote.subtotal)} · {formatCurrency(quote.tax)}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
-                  <p className="text-xs text-muted-foreground">발송일</p>
-                  <p className="mt-2 text-xl font-semibold">
-                    {formatDate(quote.sentAt)}
-                  </p>
+                <div className="rounded-xl border border-border/60 bg-background/80 p-3">
+                  <p className="text-[11px] font-medium text-muted-foreground">작성일</p>
+                  <p className="mt-1 text-sm font-semibold tabular-nums">{formatDate(quote.createdAt)}</p>
                 </div>
-                <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
-                  <p className="text-xs text-muted-foreground">유효기한</p>
-                  <p className="mt-2 text-xl font-semibold">
-                    {formatDate(quote.validUntil)}
-                  </p>
+                <div className="rounded-xl border border-border/60 bg-background/80 p-3">
+                  <p className="text-[11px] font-medium text-muted-foreground">유효기한</p>
+                  <p className="mt-1 text-sm font-semibold tabular-nums">{formatDate(quote.validUntil)}</p>
                 </div>
               </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">항목 요약</p>
-                <div className="space-y-2">
-                  {quote.items.map((item) => (
-                    <div
+              <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+                <p className="mb-2 text-xs font-semibold text-muted-foreground">항목</p>
+                <ul className="space-y-2">
+                  {quote.items.slice(0, 4).map((item) => (
+                    <li
                       key={item.id}
-                      className="flex items-center justify-between rounded-xl border border-border/70 px-3 py-2"
+                      className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border/30 pb-2 text-sm last:border-0 last:pb-0"
                     >
-                      <div>
-                        <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          수량 {item.quantity} · {formatCurrency(item.unitPrice)}
-                        </p>
-                      </div>
-                      <p className="font-medium">{formatCurrency(item.lineTotal)}</p>
-                    </div>
+                      <span className="min-w-0 font-medium">
+                        {item.name}
+                        <span className="mt-0.5 block text-xs font-normal text-muted-foreground tabular-nums">
+                          {item.quantity} × {formatCurrency(item.unitPrice)}
+                        </span>
+                      </span>
+                      <span className="shrink-0 font-semibold tabular-nums">{formatCurrency(item.lineTotal)}</span>
+                    </li>
                   ))}
-                </div>
+                </ul>
+                {quote.items.length > 4 ? (
+                  <p className="mt-2 text-xs text-muted-foreground">외 {quote.items.length - 4}개 항목</p>
+                ) : null}
               </div>
             </CardContent>
           </Card>
         )
       })}
+
+        </div>
+
+        <QuoteDraftAssistant
+          hasInquiries={hasInquiries}
+          quotesEmpty={!hasQuotes}
+          onApplyToNewQuote={(payload) => {
+            setEditingQuoteId(null)
+            setErrorMessage("")
+            setForm({
+              ...createEmptyForm(customers, defaultQuoteSummary),
+              title: payload.title,
+              summary: payload.summary,
+              items: payload.items.length ? payload.items : [createEmptyItem()],
+            })
+            onOpenChange(true)
+            toast.success("초안을 견적 작성 화면에 반영했습니다. 단가·수량을 확인해 주세요.")
+          }}
+        />
+      </div>
 
       <Dialog
         open={editingQuoteId !== null}
@@ -1303,7 +1770,7 @@ function QuotesBoardPanel({
             <DialogHeader className="gap-1">
               <DialogTitle className="text-lg">견적 수정</DialogTitle>
               <DialogDescription className="text-xs leading-relaxed">
-                동일한 흐름으로 수정합니다. 저장 시 DB에 반영됩니다.
+                동일한 흐름으로 수정합니다. 저장하면 목록·고객 타임라인에 반영됩니다.
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -1318,7 +1785,7 @@ function QuotesBoardPanel({
                   요약 힌트를 볼 수 있습니다.
                 </span>
               ) : (
-                <>수정 내용을 저장하면 DB에 반영됩니다.</>
+                <>수정 내용을 저장하면 목록과 활동 기록에 반영됩니다.</>
               )}
             </p>
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -1357,7 +1824,81 @@ function QuotesBoardPanel({
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+
+      <Dialog
+        open={statusConfirm !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setStatusConfirm(null)
+          }
+        }}
+      >
+        <DialogContent className="max-w-md sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>견적 상태 변경</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
+              {statusConfirm ? (
+                <>
+                  「{statusConfirm.quote.title}」 상태를{" "}
+                  <span className="font-semibold text-foreground">
+                    {quoteStatusOptions.find((o) => o.value === statusConfirm.next)?.label ??
+                      statusConfirm.next}
+                  </span>
+                  로 바꿀까요? 활동 기록에 반영됩니다.
+                </>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => setStatusConfirm(null)}>
+              취소
+            </Button>
+            <Button type="button" onClick={confirmStatusChange} disabled={isPending} className="gap-2">
+              {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+              변경
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null)
+          }
+        }}
+      >
+        <DialogContent className="max-w-md sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>견적 삭제</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
+              {deleteTarget ? (
+                <>
+                  「{deleteTarget.title}」({deleteTarget.quoteNumber})을 삭제합니다. 청구서에 연결된
+                  견적은 참조만 해제될 수 있습니다. 이 작업은 되돌릴 수 없습니다.
+                </>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>
+              취소
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={runDeleteQuote}
+              disabled={isPending}
+              className="gap-2"
+            >
+              {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+              삭제
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
@@ -1366,6 +1907,7 @@ export function QuotesWorkspace({
   customers,
   inquiries,
   defaultQuoteSummary,
+  nextQuoteNumberPreview,
   deepLinkCustomerId,
   deepLinkOpenCreate = false,
 }: {
@@ -1373,6 +1915,7 @@ export function QuotesWorkspace({
   customers: Customer[]
   inquiries: InquiryWithCustomer[]
   defaultQuoteSummary: string
+  nextQuoteNumberPreview: string
   deepLinkCustomerId?: string
   deepLinkOpenCreate?: boolean
 }) {
@@ -1385,7 +1928,7 @@ export function QuotesWorkspace({
     <div className="space-y-4 md:space-y-5">
       <PageHeader
         title="견적 관리"
-        description="문의를 연결해 견적을 만들고, 항목·금액·발송 상태를 한곳에서 다룹니다."
+        description="견적서를 만들고, 상태·금액·유효기한을 추적하며 고객에게 발송까지 연결합니다."
         action={
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
             {hasInquiries ? (
@@ -1434,20 +1977,18 @@ export function QuotesWorkspace({
         }
       />
 
-      <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr] xl:items-start">
-        <QuotesBoardPanel
-          quotes={quotes}
-          customers={customers}
-          inquiries={inquiries}
-          defaultQuoteSummary={defaultQuoteSummary}
-          isCreateOpen={isCreateOpen}
-          onOpenChange={setIsCreateOpen}
-          createOpenSourceRef={createOpenSourceRef}
-          deepLinkCustomerId={deepLinkCustomerId}
-          deepLinkOpenCreate={deepLinkOpenCreate}
-        />
-        <QuoteDraftAssistant hasInquiries={hasInquiries} quotesEmpty={!hasQuotes} />
-      </div>
+      <QuotesBoardPanel
+        quotes={quotes}
+        customers={customers}
+        inquiries={inquiries}
+        defaultQuoteSummary={defaultQuoteSummary}
+        isCreateOpen={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        createOpenSourceRef={createOpenSourceRef}
+        deepLinkCustomerId={deepLinkCustomerId}
+        deepLinkOpenCreate={deepLinkOpenCreate}
+        nextQuoteNumberPreview={nextQuoteNumberPreview}
+      />
     </div>
   )
 }
