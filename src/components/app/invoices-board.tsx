@@ -206,7 +206,8 @@ function InvoicesBoardPanel({
   >("all")
   const [quickQuoteId, setQuickQuoteId] = useState(quotes[0]?.id ?? "")
   const [form, setForm] = useState<InvoiceFormState>(() => createEmptyInvoiceForm(customers))
-  const amountUserEditedRef = useRef(false)
+  /** true면 견적·청구 타입 변경 시 금액 제안을 자동 반영, false면 사용자가 금액을 직접 조정한 상태 */
+  const [amountFollowsSuggestion, setAmountFollowsSuggestion] = useState(true)
   const [reminderForm, setReminderForm] = useState<{
     channel: ReminderChannel
     message: string
@@ -234,7 +235,7 @@ function InvoicesBoardPanel({
     if (createOpenSourceRef.current === "header") {
       setEditingInvoiceId(null)
       setErrorMessage("")
-      amountUserEditedRef.current = false
+      setAmountFollowsSuggestion(true)
       setForm(createEmptyInvoiceForm(customers))
     }
     createOpenSourceRef.current = null
@@ -268,6 +269,13 @@ function InvoicesBoardPanel({
       invoicedSumForSelectedQuote
     )
   }, [selectedQuote, form.invoiceType, invoicedSumForSelectedQuote])
+
+  const amountDiffersFromSuggestion = useMemo(() => {
+    if (suggestedAmountValue == null || !selectedQuote) {
+      return false
+    }
+    return parseAmountInput(form.amount) !== suggestedAmountValue
+  }, [suggestedAmountValue, selectedQuote, form.amount])
 
   const formValidation = useMemo(() => {
     const issues: { key: string; text: string }[] = []
@@ -325,21 +333,21 @@ function InvoicesBoardPanel({
   }, [invoices, paymentQuickFilter, paymentStatusFilter])
 
   const resetInvoiceForm = () => {
-    amountUserEditedRef.current = false
+    setAmountFollowsSuggestion(true)
     setForm(createEmptyInvoiceForm(customers))
     setEditingInvoiceId(null)
     setErrorMessage("")
   }
 
   const openEdit = (invoice: InvoiceWithReminders) => {
-    amountUserEditedRef.current = true
+    setAmountFollowsSuggestion(false)
     setEditingInvoiceId(invoice.id)
     setErrorMessage("")
     setForm(toInvoiceForm(invoice))
   }
 
   const openCreateFresh = () => {
-    amountUserEditedRef.current = false
+    setAmountFollowsSuggestion(true)
     setEditingInvoiceId(null)
     setErrorMessage("")
     setForm(createEmptyInvoiceForm(customers))
@@ -351,7 +359,7 @@ function InvoicesBoardPanel({
     if (!q) {
       return
     }
-    amountUserEditedRef.current = false
+    setAmountFollowsSuggestion(true)
     setEditingInvoiceId(null)
     setErrorMessage("")
     setForm({
@@ -467,14 +475,14 @@ function InvoicesBoardPanel({
   }
 
   const formFields = (
-    <div className="grid gap-6">
+    <div className="grid gap-4">
       {!formValidation.ok ? (
         <div
-          className="rounded-lg border border-amber-500/35 bg-amber-500/[0.08] px-3 py-2.5 text-xs text-amber-950 dark:text-amber-50"
+          className="rounded-lg border border-amber-500/35 bg-amber-500/[0.08] px-3 py-2 text-xs text-amber-950 dark:text-amber-50"
           role="status"
         >
-          <p className="font-semibold">저장하려면 아래를 확인해 주세요</p>
-          <ul className="mt-1.5 list-inside list-disc space-y-0.5 marker:text-amber-600">
+          <p className="font-semibold">저장 전 확인</p>
+          <ul className="mt-1 list-inside list-disc space-y-0.5 marker:text-amber-600">
             {formValidation.issues.map((issue) => (
               <li key={issue.key}>{issue.text}</li>
             ))}
@@ -482,21 +490,48 @@ function InvoicesBoardPanel({
         </div>
       ) : null}
 
-      <section className="rounded-lg border border-border/60 bg-muted/10 px-3 py-3 sm:px-4">
-        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <section className="rounded-lg border border-border/60 bg-muted/10 px-3 py-2.5 sm:px-4">
+        <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           1) 고객 · 연결 견적
         </p>
-        <p className="mb-3 text-[11px] leading-snug text-muted-foreground">
-          고객을 확인한 뒤, 이번 청구에 맞는 견적을 고릅니다. 견적을 고르면 거래처가 견적과 동일하게 맞춰집니다.
-        </p>
-        <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
+        <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-md border border-border/50 bg-background/60 px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
+          <span className="shrink-0 rounded bg-primary/12 px-1.5 py-0.5 text-[9px] font-semibold text-primary">
+            동기화
+          </span>
+          <span>
+            목록은 <span className="font-medium text-foreground/85">선택한 고객의 견적만</span> 표시됩니다.
+            견적을 고르면 고객이 견적과 맞춰지고, 견적 연결 중에는 고객을 바꿀 수 없습니다.
+          </span>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-2 lg:gap-5">
           <div className="space-y-1.5 sm:border-l-2 sm:border-primary/35 sm:pl-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="text-sm font-semibold">거래처(고객)</label>
-              <span className="text-destructive">*</span>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="text-sm font-semibold">거래처(고객)</label>
+                <span className="text-destructive">*</span>
+                {form.quoteId ? (
+                  <span className="rounded border border-primary/30 bg-primary/10 px-1.5 py-px text-[9px] font-semibold text-primary">
+                    견적과 동일
+                  </span>
+                ) : null}
+              </div>
+              {form.quoteId ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-[10px] text-muted-foreground"
+                  onClick={() => {
+                    setAmountFollowsSuggestion(true)
+                    setForm((c) => ({ ...c, quoteId: "" }))
+                  }}
+                >
+                  견적 연결 해제
+                </Button>
+              ) : null}
             </div>
-            <p className="text-[11px] text-muted-foreground">
-              청구서에 표시되는 상대입니다. 이름·회사·연락처가 함께 보입니다.
+            <p className="text-[10px] leading-snug text-muted-foreground">
+              연락처 정보는 목록과 동일하게 보입니다.
             </p>
             {customers.length === 0 ? (
               <div className="flex min-h-9 items-center rounded-lg border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
@@ -505,8 +540,9 @@ function InvoicesBoardPanel({
             ) : (
               <Select
                 value={form.customerId}
+                disabled={Boolean(form.quoteId) && customers.length > 0}
                 onValueChange={(value) => {
-                  amountUserEditedRef.current = false
+                  setAmountFollowsSuggestion(true)
                   setForm((current) => ({
                     ...current,
                     customerId: value ?? current.customerId,
@@ -514,7 +550,17 @@ function InvoicesBoardPanel({
                   }))
                 }}
               >
-                <SelectTrigger className="h-auto min-h-10 w-full justify-between py-2 text-left">
+                <SelectTrigger
+                  className={cn(
+                    "h-auto min-h-10 w-full justify-between py-2 text-left",
+                    form.quoteId ? "bg-muted/40 opacity-[0.92]" : ""
+                  )}
+                  title={
+                    form.quoteId
+                      ? "견적이 연결되어 있어 고객은 견적과 동일하게 고정됩니다. 바꾸려면 「견적 연결 해제」를 누르세요."
+                      : undefined
+                  }
+                >
                   <SelectValue className="sr-only">
                     {selectedCustomerLines?.primary ?? "고객 선택"}
                   </SelectValue>
@@ -558,11 +604,16 @@ function InvoicesBoardPanel({
             <div className="flex flex-wrap items-center gap-2">
               <label className="text-sm font-semibold">연결 견적</label>
               {availableQuotes.length > 0 ? <span className="text-destructive">*</span> : null}
+              {form.quoteId && selectedQuote ? (
+                <span className="rounded border border-border/60 bg-muted/50 px-1.5 py-px text-[9px] font-medium text-muted-foreground">
+                  선택한 견적 기준
+                </span>
+              ) : null}
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-[10px] leading-snug text-muted-foreground">
               {form.customerId
-                ? "선택한 고객의 견적만 목록에 나옵니다. 제목·금액·상태로 구분할 수 있습니다."
-                : "먼저 고객을 선택하면 해당 고객의 견적만 표시됩니다."}
+                ? "위 고객 견적만 나옵니다. 고르면 고객·금액이 이 견적에 맞춰집니다."
+                : "고객을 먼저 고르면 견적 목록이 열립니다."}
             </p>
             {!form.customerId ? (
               <div className="flex min-h-9 items-center rounded-lg border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
@@ -582,7 +633,7 @@ function InvoicesBoardPanel({
                 value={form.quoteId || undefined}
                 onValueChange={(value) => {
                   const q = quotes.find((quote) => quote.id === value)
-                  amountUserEditedRef.current = false
+                  setAmountFollowsSuggestion(true)
                   if (!q) {
                     setForm((current) => ({
                       ...current,
@@ -602,6 +653,10 @@ function InvoicesBoardPanel({
                     customerId: q.customerId,
                     amount: String(nextAmt),
                   }))
+                  toast.message("견적에 맞춰 반영", {
+                    description: "고객·금액이 갱신되었습니다. 금액은 언제든 수정 가능합니다.",
+                    duration: 2200,
+                  })
                 }}
               >
                 <SelectTrigger className="h-auto min-h-10 w-full justify-between py-2 text-left">
@@ -642,14 +697,14 @@ function InvoicesBoardPanel({
         </div>
       </section>
 
-      <section className="rounded-lg border border-border/60 bg-muted/5 px-3 py-3 sm:px-4">
-        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <section className="rounded-lg border border-border/60 bg-muted/5 px-3 py-2.5 sm:px-4">
+        <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           2) 청구 타입 · 결제 상태 · 금액
         </p>
-        <p className="mb-4 text-[11px] leading-snug text-muted-foreground">
-          타입과 견적을 기준으로 금액을 제안합니다. 숫자만 입력해도 되고, 쉼표는 자동으로 정리됩니다.
+        <p className="mb-3 text-[10px] leading-snug text-muted-foreground">
+          타입·견적 기준으로 금액을 제안합니다. 숫자만 입력해도 되며 쉼표는 저장 시 정리됩니다.
         </p>
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-3 lg:grid-cols-3">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               <label className="text-sm font-semibold">청구 타입</label>
@@ -663,7 +718,7 @@ function InvoicesBoardPanel({
                     (value as InvoiceFormInput["invoiceType"] | null) ?? current.invoiceType
                   const q = quotes.find((x) => x.id === current.quoteId)
                   let nextAmount = current.amount
-                  if (q && !amountUserEditedRef.current) {
+                  if (q && amountFollowsSuggestion) {
                     const sum = sumInvoiceAmountsForQuote(
                       invoices,
                       q.id,
@@ -688,7 +743,7 @@ function InvoicesBoardPanel({
               </SelectContent>
             </Select>
             <p className="text-[10px] text-muted-foreground">
-              선금: 견적 총액의 50% 제안 · 잔금/최종: 견적 대비 남은 금액 제안
+              선금 ≈ 총액 50% · 잔금/최종 = 총액 − 이미 청구된 합계
             </p>
           </div>
           <div className="space-y-1.5">
@@ -734,7 +789,7 @@ function InvoicesBoardPanel({
                 value={formatAmountDigitsDisplay(form.amount)}
                 onChange={(event) => {
                   const digits = event.target.value.replace(/\D/g, "")
-                  amountUserEditedRef.current = true
+                  setAmountFollowsSuggestion(false)
                   setForm((current) => ({ ...current, amount: digits }))
                 }}
                 inputMode="numeric"
@@ -746,43 +801,74 @@ function InvoicesBoardPanel({
               </span>
             </div>
             {suggestedAmountValue != null && selectedQuote ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-[10px] text-muted-foreground">
-                  제안: {formatCurrency(suggestedAmountValue)} (견적 총액 {formatCurrency(selectedQuote.total)})
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-[11px]"
-                  onClick={() => {
-                    amountUserEditedRef.current = false
-                    setForm((c) => ({ ...c, amount: String(suggestedAmountValue) }))
-                  }}
-                >
-                  제안 금액 적용
-                </Button>
+              <div className="rounded-lg border border-primary/25 bg-primary/[0.05] p-2.5">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="rounded border border-primary/35 bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold text-primary">
+                        견적 기준 자동 제안
+                      </span>
+                      {amountFollowsSuggestion && !amountDiffersFromSuggestion ? (
+                        <span className="text-[9px] text-muted-foreground">· 타입 바꾸면 금액도 따라갑니다</span>
+                      ) : null}
+                      {!amountFollowsSuggestion || amountDiffersFromSuggestion ? (
+                        <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-medium text-amber-950 dark:text-amber-100">
+                          수동 입력 · 수정 가능
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="text-[10px] leading-snug text-muted-foreground">
+                      {form.invoiceType === "deposit" ? (
+                        <>
+                          선금 제안: 견적 총액의 약 50% →{" "}
+                          <span className="font-medium text-foreground">{formatCurrency(suggestedAmountValue)}</span>
+                          {" "}(총액 {formatCurrency(selectedQuote.total)})
+                        </>
+                      ) : (
+                        <>
+                          잔여 제안: 총액 {formatCurrency(selectedQuote.total)} − 기청구{" "}
+                          {formatCurrency(invoicedSumForSelectedQuote)} →{" "}
+                          <span className="font-medium text-foreground">{formatCurrency(suggestedAmountValue)}</span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  {(!amountFollowsSuggestion || amountDiffersFromSuggestion) && suggestedAmountValue > 0 ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="h-8 shrink-0 text-xs font-medium"
+                      onClick={() => {
+                        setAmountFollowsSuggestion(true)
+                        setForm((c) => ({ ...c, amount: String(suggestedAmountValue) }))
+                      }}
+                    >
+                      제안으로 맞추기
+                    </Button>
+                  ) : null}
+                </div>
               </div>
             ) : null}
           </div>
         </div>
       </section>
 
-      <section className="rounded-lg border border-border/60 bg-muted/5 px-3 py-3 sm:px-4">
-        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <section className="rounded-lg border border-border/60 bg-muted/5 px-3 py-2.5 sm:px-4">
+        <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           3) 청구일 · 입금 기한
         </p>
-        <p className="mb-3 text-[11px] leading-snug text-muted-foreground">
-          청구를 발행한 날과 입금 마감일을 먼저 정합니다. 실제 입금일은 아래 &quot;결제 처리 정보&quot;에서
-          입력합니다.
+        <p className="mb-2 text-[10px] leading-snug text-muted-foreground">
+          발행일·납부 마감을 먼저 정합니다. 실제 입금일은 아래 <span className="font-medium">결제 처리 정보</span>
+          (추가)에서 입력합니다.
         </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <label className="text-sm font-semibold">청구일</label>
               <span className="text-destructive">*</span>
             </div>
-            <p className="text-[10px] text-muted-foreground">청구서·기록상 요청일(발행일)입니다.</p>
+            <p className="text-[10px] text-muted-foreground">발행·요청일</p>
             <Input
               type="date"
               className="h-10 max-w-full sm:max-w-xs"
@@ -792,9 +878,9 @@ function InvoicesBoardPanel({
               }
             />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <label className="text-sm font-semibold">입금 기한</label>
-            <p className="text-[10px] text-muted-foreground">고객에게 안내하는 납부 마감일입니다.</p>
+            <p className="text-[10px] text-muted-foreground">납부 마감일</p>
             <Input
               type="date"
               className="h-10 max-w-full sm:max-w-xs"
@@ -807,20 +893,26 @@ function InvoicesBoardPanel({
         </div>
       </section>
 
-      <details className="rounded-lg border border-border/50 bg-muted/15 [&_summary]:cursor-pointer [&_summary]:select-none">
-        <summary className="px-3 py-2.5 text-xs font-medium text-muted-foreground">
+      <details
+        className={cn(
+          "rounded-lg border [&_summary]:cursor-pointer [&_summary]:select-none",
+          showPaidAtField
+            ? "border-primary/30 bg-primary/[0.06] shadow-sm"
+            : "border-border/50 bg-muted/15"
+        )}
+      >
+        <summary className="px-3 py-2 text-xs font-medium text-muted-foreground">
           결제 처리 정보
+          <span className="ml-1.5 font-normal text-[10px] text-muted-foreground/90">(추가)</span>
           {showPaidAtField ? (
-            <span className="ml-2 font-normal text-foreground/70">— 입금일 입력</span>
+            <span className="ml-2 font-semibold text-primary">— 입금일 입력</span>
           ) : null}
         </summary>
-        <div className="space-y-3 border-t border-border/40 px-3 py-3">
+        <div className="space-y-2 border-t border-border/40 px-3 py-2.5">
           {showPaidAtField ? (
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label className="text-sm font-semibold">실제 입금일</label>
-              <p className="text-[10px] text-muted-foreground">
-                입금이 확인된 날짜입니다. 미수 추적과 맞추려면 정확히 입력해 주세요.
-              </p>
+              <p className="text-[10px] text-muted-foreground">입금 확인일(미수·정산 참고)</p>
               <Input
                 type="date"
                 className="h-10 max-w-xs"
@@ -836,31 +928,29 @@ function InvoicesBoardPanel({
               />
             </div>
           ) : (
-            <p className="text-[11px] leading-relaxed text-muted-foreground">
-              결제 상태를 <strong className="font-medium text-foreground/90">입금 완료</strong>,{" "}
-              <strong className="font-medium text-foreground/90">선금 입금</strong>,{" "}
-              <strong className="font-medium text-foreground/90">부분 입금</strong> 중 하나로 바꾸면
-              입금일을 입력할 수 있습니다.
+            <p className="text-[10px] leading-snug text-muted-foreground">
+              상태를 <span className="font-medium text-foreground/85">입금 완료·선금 입금·부분 입금</span>으로
+              바꾸면 입금일을 넣을 수 있습니다.
             </p>
           )}
         </div>
       </details>
 
-      <section className="rounded-lg border border-border/60 bg-muted/5 px-3 py-3 sm:px-4">
-        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <section className="rounded-lg border border-border/60 bg-muted/5 px-3 py-2.5 sm:px-4">
+        <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           메모 (선택)
         </p>
-        <p className="mb-2 text-[11px] leading-snug text-muted-foreground">
-          입금 안내 문구, 분할 납부 조건, 고객에게 전달할 메모나 내부 참고 사항을 남길 수 있습니다. 청구
-          상세·리마인드 작성 시 함께 참고합니다.
+        <p className="mb-1.5 text-[10px] leading-snug text-muted-foreground">
+          입금 안내·분할 조건·내부 참고(청구·리마인드 시 참고)
         </p>
         <Textarea
           value={form.notes}
           onChange={(event) =>
             setForm((current) => ({ ...current, notes: event.target.value }))
           }
-          className="min-h-[5.5rem] text-sm"
-          placeholder="예: 선금 50% 입금 후 착수 · 잔금은 납품 검수 후 7일 이내"
+          rows={2}
+          className="min-h-[3.25rem] resize-y text-sm"
+          placeholder="예: 선금 50% 후 착수, 잔금 검수 후 7일"
         />
       </section>
 
@@ -887,27 +977,25 @@ function InvoicesBoardPanel({
           <div className="shrink-0 border-b border-border/60 px-4 pb-3 pt-4 pr-12 sm:px-6 sm:pr-14">
             <DialogHeader className="gap-1">
               <DialogTitle className="text-lg">청구 생성</DialogTitle>
-              <DialogDescription className="text-xs leading-relaxed">
-                고객·견적을 확인하고, 청구 금액과 기한을 정한 뒤 저장합니다. 필수 항목은 빨간 별(
-                <span className="text-destructive">*</span>)로 표시됩니다.
+              <DialogDescription className="text-[11px] leading-snug">
+                필수는 <span className="text-destructive">*</span> · 견적 고르면 고객·금액이 맞춰집니다.
               </DialogDescription>
             </DialogHeader>
           </div>
-          <div className="min-h-[min(44vh,360px)] flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+          <div className="min-h-[min(40vh,300px)] flex-1 overflow-y-auto overscroll-contain px-4 py-3 sm:px-6">
             {formFields}
           </div>
-          <div className="flex shrink-0 flex-col gap-2 border-t border-border/60 bg-background/95 px-4 py-3 shadow-[0_-6px_16px_rgba(0,0,0,0.06)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:shadow-[0_-6px_20px_rgba(0,0,0,0.25)]">
-            <p className="text-[11px] leading-snug text-muted-foreground sm:max-w-[58%]">
+          <div className="flex shrink-0 flex-col gap-2.5 border-t border-border/60 bg-background/95 px-4 py-3 shadow-[0_-6px_16px_rgba(0,0,0,0.06)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 dark:shadow-[0_-6px_20px_rgba(0,0,0,0.25)]">
+            <p className="text-[11px] leading-snug text-muted-foreground sm:max-w-[56%] sm:min-w-0">
               {!formValidation.ok ? (
                 <span className="font-medium text-amber-900 dark:text-amber-100">
-                  위쪽 노란색 안내를 채우면 저장할 수 있습니다. 저장 버튼에 마우스를 올리면 요약을 볼 수
-                  있습니다.
+                  노란 박스 항목을 채우면 저장됩니다. 저장 버튼에 마우스를 올리면 요약이 보입니다.
                 </span>
               ) : (
-                <>필수 항목이 모두 채워졌습니다. 저장하면 청구가 등록됩니다.</>
+                <span className="text-foreground/85">필수 입력이 완료되었습니다. 저장으로 청구를 등록합니다.</span>
               )}
             </p>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:justify-end sm:gap-2">
               <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
                 취소
               </Button>
@@ -1310,26 +1398,25 @@ function InvoicesBoardPanel({
           <div className="shrink-0 border-b border-border/60 px-4 pb-3 pt-4 pr-12 sm:px-6 sm:pr-14">
             <DialogHeader className="gap-1">
               <DialogTitle className="text-lg">청구 수정</DialogTitle>
-              <DialogDescription className="text-xs leading-relaxed">
-                금액·상태·기한·메모를 수정하면 DB에 반영됩니다. 필수 항목은 빨간 별(
-                <span className="text-destructive">*</span>)로 표시됩니다.
+              <DialogDescription className="text-[11px] leading-snug">
+                필수는 <span className="text-destructive">*</span> · 저장 시 DB에 반영됩니다.
               </DialogDescription>
             </DialogHeader>
           </div>
-          <div className="min-h-[min(44vh,360px)] flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+          <div className="min-h-[min(40vh,300px)] flex-1 overflow-y-auto overscroll-contain px-4 py-3 sm:px-6">
             {formFields}
           </div>
-          <div className="flex shrink-0 flex-col gap-2 border-t border-border/60 bg-background/95 px-4 py-3 shadow-[0_-6px_16px_rgba(0,0,0,0.06)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:shadow-[0_-6px_20px_rgba(0,0,0,0.25)]">
-            <p className="text-[11px] leading-snug text-muted-foreground sm:max-w-[58%]">
+          <div className="flex shrink-0 flex-col gap-2.5 border-t border-border/60 bg-background/95 px-4 py-3 shadow-[0_-6px_16px_rgba(0,0,0,0.06)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 dark:shadow-[0_-6px_20px_rgba(0,0,0,0.25)]">
+            <p className="text-[11px] leading-snug text-muted-foreground sm:max-w-[56%] sm:min-w-0">
               {!formValidation.ok ? (
                 <span className="font-medium text-amber-900 dark:text-amber-100">
-                  위쪽 노란색 안내를 채우면 저장할 수 있습니다.
+                  노란 박스를 채우면 저장됩니다.
                 </span>
               ) : (
-                <>수정 내용을 저장하면 청구에 반영됩니다.</>
+                <span className="text-foreground/85">저장하면 수정 내용이 청구에 반영됩니다.</span>
               )}
             </p>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:justify-end sm:gap-2">
               <Button variant="outline" type="button" onClick={resetInvoiceForm}>
                 닫기
               </Button>
