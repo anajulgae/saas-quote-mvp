@@ -117,6 +117,8 @@ function QuotesBoardPanel({
   isCreateOpen,
   onOpenChange,
   createOpenSourceRef,
+  deepLinkCustomerId,
+  deepLinkOpenCreate,
 }: {
   quotes: QuoteWithItems[]
   customers: Customer[]
@@ -126,6 +128,8 @@ function QuotesBoardPanel({
   onOpenChange: (open: boolean) => void
   /** 헤더「새 견적」으로 열 때만 빈 폼으로 초기화 */
   createOpenSourceRef: MutableRefObject<"header" | null>
+  deepLinkCustomerId?: string
+  deepLinkOpenCreate?: boolean
 }) {
   const router = useRouter()
   const flowRef = useRef<HTMLDivElement>(null)
@@ -140,6 +144,34 @@ function QuotesBoardPanel({
 
   const hasInquiries = inquiries.length > 0
   const hasQuotes = quotes.length > 0
+  const quoteDeepLinkDoneRef = useRef(false)
+
+  useEffect(() => {
+    if (quoteDeepLinkDoneRef.current) {
+      return
+    }
+    if (!deepLinkOpenCreate || !deepLinkCustomerId?.trim()) {
+      return
+    }
+    const id = deepLinkCustomerId.trim()
+    if (!customers.some((c) => c.id === id)) {
+      return
+    }
+    quoteDeepLinkDoneRef.current = true
+    setEditingQuoteId(null)
+    setErrorMessage("")
+    setForm({
+      ...createEmptyForm(customers, defaultQuoteSummary),
+      customerId: id,
+    })
+    onOpenChange(true)
+  }, [
+    deepLinkOpenCreate,
+    deepLinkCustomerId,
+    customers,
+    defaultQuoteSummary,
+    onOpenChange,
+  ])
 
   useEffect(() => {
     setQuickInquiryId((current) => {
@@ -827,11 +859,15 @@ export function QuotesWorkspace({
   customers,
   inquiries,
   defaultQuoteSummary,
+  deepLinkCustomerId,
+  deepLinkOpenCreate = false,
 }: {
   quotes: QuoteWithItems[]
   customers: Customer[]
   inquiries: InquiryWithCustomer[]
   defaultQuoteSummary: string
+  deepLinkCustomerId?: string
+  deepLinkOpenCreate?: boolean
 }) {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const createOpenSourceRef = useRef<"header" | null>(null)
@@ -900,6 +936,8 @@ export function QuotesWorkspace({
           isCreateOpen={isCreateOpen}
           onOpenChange={setIsCreateOpen}
           createOpenSourceRef={createOpenSourceRef}
+          deepLinkCustomerId={deepLinkCustomerId}
+          deepLinkOpenCreate={deepLinkOpenCreate}
         />
         <QuoteDraftAssistant hasInquiries={hasInquiries} quotesEmpty={!hasQuotes} />
       </div>

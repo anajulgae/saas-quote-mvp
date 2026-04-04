@@ -16,6 +16,7 @@ import { toUserFacingActionError } from "@/lib/action-errors"
 import { isDemoLoginEnabled, isDemoPasswordStrongEnoughForProduction } from "@/lib/demo-flags"
 import {
   createActivityLog,
+  createCustomerRecord,
   createInquiryRecord,
   createInvoiceRecord,
   createQuoteRecord,
@@ -36,6 +37,15 @@ import type {
   QuoteStatus,
   ReminderChannel,
 } from "@/types/domain"
+
+const customerCreateSchema = z.object({
+  name: z.string().trim().min(1, "고객 이름을 입력해 주세요."),
+  companyName: z.string().trim().optional(),
+  phone: z.string().trim().optional(),
+  email: z.string().trim().optional(),
+  notes: z.string().trim().optional(),
+  tagsRaw: z.string().trim().optional(),
+})
 
 const inquiryFormSchema = z.object({
   title: z.string().trim().min(1, "문의 제목을 입력해 주세요."),
@@ -298,6 +308,48 @@ export async function logoutAction() {
   }
 
   redirect("/login")
+}
+
+export async function createCustomerAction(input: {
+  name: string
+  companyName: string
+  phone: string
+  email: string
+  notes: string
+  tagsRaw: string
+}) {
+  try {
+    const parsed = customerCreateSchema.parse(input)
+    const tags = (parsed.tagsRaw ?? "")
+      .split(/[,，]/)
+      .map((t) => t.trim())
+      .filter(Boolean)
+
+    await createCustomerRecord({
+      name: parsed.name,
+      companyName: parsed.companyName,
+      phone: parsed.phone,
+      email: parsed.email,
+      notes: parsed.notes,
+      tags,
+    })
+
+    revalidatePath("/dashboard")
+    revalidatePath("/customers")
+    revalidatePath("/inquiries")
+    revalidatePath("/quotes")
+
+    return { ok: true as const }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { ok: false as const, error: error.issues[0]?.message ?? "입력값을 확인해 주세요." }
+    }
+
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "고객 등록에 실패했습니다."),
+    }
+  }
 }
 
 export async function createInquiryAction(input: {

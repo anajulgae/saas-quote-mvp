@@ -2,6 +2,7 @@ import type { ActivityKind } from "@/types/domain"
 
 const headlineByAction: Record<string, string> = {
   "auth.login_success": "로그인",
+  "customer.created": "고객 등록",
   "inquiry.created": "문의 등록",
   "inquiry.updated": "문의 수정",
   "quote.linked_to_inquiry": "견적·문의 연결",
@@ -21,6 +22,9 @@ const headlineByAction: Record<string, string> = {
 }
 
 export function resolveActivityKind(action: string): ActivityKind {
+  if (action.startsWith("customer.")) {
+    return "other"
+  }
   if (action.startsWith("inquiry.")) {
     return "inquiry"
   }

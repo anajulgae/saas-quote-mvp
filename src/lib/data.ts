@@ -342,6 +342,54 @@ export async function createInquiryRecord(input: {
   }
 }
 
+const CUSTOMER_INQUIRY_RECENT_DAYS = 14
+
+export async function createCustomerRecord(input: {
+  name: string
+  companyName?: string
+  phone?: string
+  email?: string
+  notes?: string
+  tags: string[]
+}) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return { mode: "demo" as const, customerId: null as string | null }
+  }
+
+  const { data, error } = await context.supabase
+    .from("customers")
+    .insert({
+      user_id: context.userId,
+      name: input.name,
+      company_name: input.companyName?.trim() ? input.companyName.trim() : null,
+      phone: input.phone?.trim() ? input.phone.trim() : null,
+      email: input.email?.trim() ? input.email.trim() : null,
+      notes: input.notes?.trim() ? input.notes.trim() : null,
+      tags: input.tags.length ? input.tags : [],
+    })
+    .select("id")
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  const row = data as { id: string }
+
+  await createActivityLog({
+    action: "customer.created",
+    description: `${input.companyName?.trim() || input.name} 고객을 등록했습니다.`,
+    customerId: row.id,
+    metadata: {
+      name: input.name,
+    },
+  })
+
+  return { mode: "supabase" as const, customerId: row.id }
+}
+
 export async function updateInquiryRecord(
   inquiryId: string,
   input: {
@@ -1109,9 +1157,9 @@ export async function getCustomersPageData(): Promise<{
       .from("customers")
       .select("*")
       .order("created_at", { ascending: false }),
-    context.supabase.from("inquiries").select("id, customer_id"),
-    context.supabase.from("quotes").select("id, customer_id"),
-    context.supabase.from("invoices").select("id, customer_id"),
+    context.supabase.from("inquiries").select("id, customer_id, created_at"),
+    context.supabase.from("quotes").select("id, customer_id, status"),
+    context.supabase.from("invoices").select("id, customer_id, payment_status"),
   ])
 
   if (customerError) {
@@ -1131,24 +1179,50 @@ export async function getCustomersPageData(): Promise<{
   }
 
   const customerRowsSafe = (customerRows ?? []) as CustomerRow[]
-  const inquiryRowsSafe = (inquiryRows ?? []) as Array<{ id: string; customer_id: string }>
-  const quoteRowsSafe = (quoteRows ?? []) as Array<{ id: string; customer_id: string }>
-  const invoiceRowsSafe = (invoiceRows ?? []) as Array<{ id: string; customer_id: string }>
+  const inquiryRowsSafe = (inquiryRows ?? []) as Array<{
+    id: string
+    customer_id: string
+    created_at: string
+  }>
+  const quoteRowsSafe = (quoteRows ?? []) as Array<{
+    id: string
+    customer_id: string
+    status: string
+  }>
+  const invoiceRowsSafe = (invoiceRows ?? []) as Array<{
+    id: string
+    customer_id: string
+    payment_status: string
+  }>
+
+  const recentCutoff = Date.now() - CUSTOMER_INQUIRY_RECENT_DAYS * 24 * 60 * 60 * 1000
 
   return {
     customers: customerRowsSafe.map((row) => {
       const customer = mapCustomer(row)
+      const custInquiries = inquiryRowsSafe.filter((item) => item.customer_id === customer.id)
+      const custQuotes = quoteRowsSafe.filter((item) => item.customer_id === customer.id)
+      const custInvoices = invoiceRowsSafe.filter((item) => item.customer_id === customer.id)
+
+      const hasRecentInquiry = custInquiries.some((item) => {
+        const t = new Date(item.created_at).getTime()
+        return Number.isFinite(t) && t >= recentCutoff
+      })
+      const hasActiveQuote = custQuotes.some(
+        (item) => item.status === "draft" || item.status === "sent"
+      )
+      const hasOverdueInvoice = custInvoices.some((item) => item.payment_status === "overdue")
+      const hasOpenReceivable = custInvoices.some((item) => item.payment_status !== "paid")
 
       return {
         ...customer,
-        inquiryCount: inquiryRowsSafe.filter(
-          (item) => item.customer_id === customer.id
-        ).length,
-        quoteCount: quoteRowsSafe.filter((item) => item.customer_id === customer.id)
-          .length,
-        invoiceCount: invoiceRowsSafe.filter(
-          (item) => item.customer_id === customer.id
-        ).length,
+        inquiryCount: custInquiries.length,
+        quoteCount: custQuotes.length,
+        invoiceCount: custInvoices.length,
+        hasRecentInquiry,
+        hasActiveQuote,
+        hasOpenReceivable,
+        hasOverdueInvoice,
       }
     }),
   }

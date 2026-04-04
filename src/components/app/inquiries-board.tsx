@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useRef, useState, useTransition } from "react"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ListOrdered, Pencil, Plus, Search, Sparkles, UserPlus } from "lucide-react"
@@ -53,10 +53,15 @@ export function InquiriesBoard({
   inquiries,
   customers,
   stageSummary,
+  initialCustomerId,
+  initialCreateOpen = false,
 }: {
   inquiries: InquiryWithCustomer[]
   customers: Customer[]
   stageSummary: Record<"new" | "qualified" | "quoted", number>
+  /** 고객 카드 등에서 전달: `/inquiries?customer=uuid&new=1` */
+  initialCustomerId?: string
+  initialCreateOpen?: boolean
 }) {
   const router = useRouter()
   const flowStepsRef = useRef<HTMLDivElement>(null)
@@ -65,6 +70,8 @@ export function InquiriesBoard({
   const [isPending, startTransition] = useTransition()
   const [errorMessage, setErrorMessage] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const deepLinkAppliedRef = useRef(false)
+
   const [form, setForm] = useState({
     title: "",
     customerId: customers[0]?.id ?? "",
@@ -92,6 +99,24 @@ export function InquiriesBoard({
     () => inquiries.find((item) => item.id === editingId) ?? null,
     [editingId, inquiries]
   )
+
+  useEffect(() => {
+    if (deepLinkAppliedRef.current) {
+      return
+    }
+    if (!initialCreateOpen || !initialCustomerId?.trim()) {
+      return
+    }
+    const id = initialCustomerId.trim()
+    if (!customers.some((c) => c.id === id)) {
+      return
+    }
+    deepLinkAppliedRef.current = true
+    setForm((current) => ({ ...current, customerId: id }))
+    setErrorMessage("")
+    setEditingId(null)
+    setIsCreateOpen(true)
+  }, [initialCreateOpen, initialCustomerId, customers])
 
   const filteredInquiries = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()

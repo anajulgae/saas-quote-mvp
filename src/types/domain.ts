@@ -166,6 +166,14 @@ export interface CustomerSummary extends Customer {
   inquiryCount: number
   quoteCount: number
   invoiceCount: number
+  /** 최근 14일 이내 문의 존재 */
+  hasRecentInquiry: boolean
+  /** 초안·발송 등 진행 중 견적 */
+  hasActiveQuote: boolean
+  /** 입금 완료 전 청구 존재 */
+  hasOpenReceivable: boolean
+  /** 연체 청구 존재 */
+  hasOverdueInvoice: boolean
 }
 
 export interface InquiryWithCustomer extends Inquiry {

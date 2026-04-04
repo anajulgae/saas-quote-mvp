@@ -1,9 +1,16 @@
 import { QuotesWorkspace } from "@/components/app/quotes-board"
 import { getQuotesPageData } from "@/lib/data"
 
-export default async function QuotesPage() {
+export default async function QuotesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ customer?: string; new?: string }>
+}) {
+  const sp = await searchParams
   const { quotes, customers, inquiries, defaultQuoteSummary } =
     await getQuotesPageData()
+
+  const initialCreateOpen = sp.new === "1" || sp.new === "true"
 
   return (
     <QuotesWorkspace
@@ -11,6 +18,8 @@ export default async function QuotesPage() {
       customers={customers}
       inquiries={inquiries}
       defaultQuoteSummary={defaultQuoteSummary}
+      deepLinkCustomerId={sp.customer}
+      deepLinkOpenCreate={initialCreateOpen}
     />
   )
 }
