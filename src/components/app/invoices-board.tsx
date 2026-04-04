@@ -45,6 +45,7 @@ import { Textarea } from "@/components/ui/textarea"
 import {
   invoiceTypeOptions,
   paymentStatusOptions,
+  quoteStatusOptions,
   reminderChannelOptions,
 } from "@/lib/constants"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
@@ -80,7 +81,7 @@ function createEmptyInvoiceForm(customers: Customer[]): InvoiceFormState {
     amount: "",
     paymentStatus: "pending",
     dueDate: "",
-    requestedAt: "",
+    requestedAt: todayDateInput(),
     paidAt: "",
     notes: "",
   }
@@ -99,6 +100,75 @@ function toInvoiceForm(invoice: InvoiceWithReminders): InvoiceFormState {
     notes: invoice.notes ?? "",
   }
 }
+
+function todayDateInput(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function parseAmountInput(raw: string): number {
+  return Number(String(raw ?? "").replace(/,/g, "").replace(/[\s원₩]/g, "").trim())
+}
+
+function formatAmountDigitsDisplay(digits: string): string {
+  if (!digits) {
+    return ""
+  }
+  if (!/^\d+$/.test(digits)) {
+    return digits
+  }
+  return Number(digits).toLocaleString("ko-KR")
+}
+
+function formatCustomerLines(customer: Customer): { primary: string; secondary: string } {
+  const primary = customer.companyName?.trim() || customer.name
+  const secondary = [
+    customer.companyName ? customer.name : null,
+    customer.email?.trim() || null,
+    customer.phone?.trim() || null,
+  ]
+    .filter(Boolean)
+    .join(" · ")
+  return { primary, secondary }
+}
+
+function formatQuoteLines(quote: Quote, customers: Customer[]): { primary: string; secondary: string } {
+  const cust = customers.find((c) => c.id === quote.customerId)
+  const custLine = cust?.companyName?.trim() || cust?.name || "고객"
+  const st = quoteStatusOptions.find((o) => o.value === quote.status)?.label ?? ""
+  return {
+    primary: quote.title.trim() || quote.quoteNumber,
+    secondary: `${quote.quoteNumber} · ${custLine} · ${formatCurrency(quote.total)}${st ? ` · ${st}` : ""}`,
+  }
+}
+
+function sumInvoiceAmountsForQuote(
+  invoices: InvoiceWithReminders[],
+  quoteId: string,
+  excludeInvoiceId: string | null
+): number {
+  return invoices
+    .filter(
+      (inv) =>
+        inv.quoteId === quoteId && (!excludeInvoiceId || inv.id !== excludeInvoiceId)
+    )
+    .reduce((sum, inv) => sum + inv.amount, 0)
+}
+
+function suggestedAmountForQuote(
+  quote: Quote,
+  invoiceType: InvoiceFormInput["invoiceType"],
+  invoicedSum: number
+): number {
+  if (invoiceType === "deposit") {
+    return Math.round(quote.total * 0.5)
+  }
+  return Math.max(0, quote.total - invoicedSum)
+}
+
+const invoiceFormDialogClass = cn(
+  "!flex !h-auto !max-h-[100dvh] !w-full !max-w-full !translate-x-0 !translate-y-0 !flex-col !gap-0 !overflow-hidden !rounded-none !p-0 sm:!left-1/2 sm:!top-1/2 sm:!h-auto sm:!max-h-[min(92vh,920px)] sm:!w-full sm:!max-w-[min(56rem,calc(100vw-1.5rem))] sm:!-translate-x-1/2 sm:!-translate-y-1/2 sm:!rounded-xl",
+  "max-sm:!inset-x-2 max-sm:!top-3 max-sm:!bottom-auto max-sm:!max-h-[calc(100dvh-1.5rem)]"
+)
 
 const flowSteps = [
   { step: 1, title: "견적 확인", hint: "금액·항목이 확정된 견적을 고릅니다" },
@@ -136,6 +206,7 @@ function InvoicesBoardPanel({
   >("all")
   const [quickQuoteId, setQuickQuoteId] = useState(quotes[0]?.id ?? "")
   const [form, setForm] = useState<InvoiceFormState>(() => createEmptyInvoiceForm(customers))
+  const amountUserEditedRef = useRef(false)
   const [reminderForm, setReminderForm] = useState<{
     channel: ReminderChannel
     message: string
@@ -163,6 +234,7 @@ function InvoicesBoardPanel({
     if (createOpenSourceRef.current === "header") {
       setEditingInvoiceId(null)
       setErrorMessage("")
+      amountUserEditedRef.current = false
       setForm(createEmptyInvoiceForm(customers))
     }
     createOpenSourceRef.current = null
@@ -172,6 +244,67 @@ function InvoicesBoardPanel({
     () => quotes.filter((quote) => !form.customerId || quote.customerId === form.customerId),
     [form.customerId, quotes]
   )
+
+  const selectedQuote = useMemo(
+    () => quotes.find((q) => q.id === form.quoteId) ?? null,
+    [quotes, form.quoteId]
+  )
+
+  const invoicedSumForSelectedQuote = useMemo(
+    () =>
+      form.quoteId
+        ? sumInvoiceAmountsForQuote(invoices, form.quoteId, editingInvoiceId)
+        : 0,
+    [form.quoteId, invoices, editingInvoiceId]
+  )
+
+  const suggestedAmountValue = useMemo(() => {
+    if (!selectedQuote) {
+      return null
+    }
+    return suggestedAmountForQuote(
+      selectedQuote,
+      form.invoiceType,
+      invoicedSumForSelectedQuote
+    )
+  }, [selectedQuote, form.invoiceType, invoicedSumForSelectedQuote])
+
+  const formValidation = useMemo(() => {
+    const issues: { key: string; text: string }[] = []
+    if (!form.customerId.trim()) {
+      issues.push({ key: "customer", text: "거래처(고객)를 선택해 주세요." })
+    }
+    const needsQuote = availableQuotes.length > 0
+    if (needsQuote && !form.quoteId.trim()) {
+      issues.push({ key: "quote", text: "연결 견적을 선택해 주세요." })
+    }
+    const amt = parseAmountInput(form.amount)
+    if (!Number.isFinite(amt) || amt <= 0) {
+      issues.push({ key: "amount", text: "청구 금액을 0보다 큰 숫자로 입력해 주세요." })
+    }
+    const reqDate = form.requestedAt?.trim() ?? ""
+    if (!reqDate) {
+      issues.push({ key: "requestedAt", text: "청구일(발행일)을 선택해 주세요." })
+    }
+    return { ok: issues.length === 0, issues }
+  }, [form.customerId, form.quoteId, form.amount, form.requestedAt, availableQuotes.length])
+
+  const validationSummaryForTitle = useMemo(
+    () => formValidation.issues.map((i) => i.text).join("\n"),
+    [formValidation.issues]
+  )
+
+  const selectedCustomerLines = useMemo(() => {
+    const c = customers.find((x) => x.id === form.customerId)
+    return c ? formatCustomerLines(c) : null
+  }, [customers, form.customerId])
+
+  const showPaidAtField = ["paid", "partially_paid", "deposit_paid"].includes(form.paymentStatus)
+
+  const invoiceTypeLabel =
+    invoiceTypeOptions.find((o) => o.value === form.invoiceType)?.label ?? form.invoiceType
+  const paymentStatusLabel =
+    paymentStatusOptions.find((o) => o.value === form.paymentStatus)?.label ?? form.paymentStatus
 
   const filteredInvoices = useMemo(() => {
     return invoices.filter((inv) => {
@@ -192,18 +325,21 @@ function InvoicesBoardPanel({
   }, [invoices, paymentQuickFilter, paymentStatusFilter])
 
   const resetInvoiceForm = () => {
+    amountUserEditedRef.current = false
     setForm(createEmptyInvoiceForm(customers))
     setEditingInvoiceId(null)
     setErrorMessage("")
   }
 
   const openEdit = (invoice: InvoiceWithReminders) => {
+    amountUserEditedRef.current = true
     setEditingInvoiceId(invoice.id)
     setErrorMessage("")
     setForm(toInvoiceForm(invoice))
   }
 
   const openCreateFresh = () => {
+    amountUserEditedRef.current = false
     setEditingInvoiceId(null)
     setErrorMessage("")
     setForm(createEmptyInvoiceForm(customers))
@@ -215,13 +351,14 @@ function InvoicesBoardPanel({
     if (!q) {
       return
     }
+    amountUserEditedRef.current = false
     setEditingInvoiceId(null)
     setErrorMessage("")
     setForm({
       ...createEmptyInvoiceForm(customers),
       customerId: q.customerId,
       quoteId: q.id,
-      amount: String(q.total),
+      amount: String(Math.round(q.total * 0.5)),
     })
     onOpenChange(true)
   }
@@ -330,167 +467,408 @@ function InvoicesBoardPanel({
   }
 
   const formFields = (
-    <div className="grid gap-4">
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">고객</label>
-          <Select
-            value={form.customerId}
-            onValueChange={(value) =>
-              setForm((current) => ({
-                ...current,
-                customerId: value ?? current.customerId,
-                quoteId: "",
-              }))
-            }
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="고객 선택" />
-            </SelectTrigger>
-            <SelectContent>
-              {customers.map((customer) => (
-                <SelectItem key={customer.id} value={customer.id}>
-                  {customer.companyName ?? customer.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+    <div className="grid gap-6">
+      {!formValidation.ok ? (
+        <div
+          className="rounded-lg border border-amber-500/35 bg-amber-500/[0.08] px-3 py-2.5 text-xs text-amber-950 dark:text-amber-50"
+          role="status"
+        >
+          <p className="font-semibold">저장하려면 아래를 확인해 주세요</p>
+          <ul className="mt-1.5 list-inside list-disc space-y-0.5 marker:text-amber-600">
+            {formValidation.issues.map((issue) => (
+              <li key={issue.key}>{issue.text}</li>
+            ))}
+          </ul>
         </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">연결 견적</label>
-          <Select
-            value={form.quoteId || undefined}
-            onValueChange={(value) => {
-              const selectedQuote = quotes.find((quote) => quote.id === value)
+      ) : null}
 
-              setForm((current) => ({
-                ...current,
-                quoteId: value ?? "",
-                amount:
-                  selectedQuote && !current.amount
-                    ? String(selectedQuote.total)
-                    : current.amount,
-              }))
-            }}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="견적 선택 안 함" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableQuotes.map((quote) => (
-                <SelectItem key={quote.id} value={quote.id}>
-                  {quote.quoteNumber} · {quote.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      <section className="rounded-lg border border-border/60 bg-muted/10 px-3 py-3 sm:px-4">
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          1) 고객 · 연결 견적
+        </p>
+        <p className="mb-3 text-[11px] leading-snug text-muted-foreground">
+          고객을 확인한 뒤, 이번 청구에 맞는 견적을 고릅니다. 견적을 고르면 거래처가 견적과 동일하게 맞춰집니다.
+        </p>
+        <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
+          <div className="space-y-1.5 sm:border-l-2 sm:border-primary/35 sm:pl-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-sm font-semibold">거래처(고객)</label>
+              <span className="text-destructive">*</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              청구서에 표시되는 상대입니다. 이름·회사·연락처가 함께 보입니다.
+            </p>
+            {customers.length === 0 ? (
+              <div className="flex min-h-9 items-center rounded-lg border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+                등록된 고객이 없습니다. 고객을 먼저 등록해 주세요.
+              </div>
+            ) : (
+              <Select
+                value={form.customerId}
+                onValueChange={(value) => {
+                  amountUserEditedRef.current = false
+                  setForm((current) => ({
+                    ...current,
+                    customerId: value ?? current.customerId,
+                    quoteId: "",
+                  }))
+                }}
+              >
+                <SelectTrigger className="h-auto min-h-10 w-full justify-between py-2 text-left">
+                  <SelectValue className="sr-only">
+                    {selectedCustomerLines?.primary ?? "고객 선택"}
+                  </SelectValue>
+                  <span className="line-clamp-3 flex-1 pr-1 text-left text-sm leading-snug">
+                    {selectedCustomerLines ? (
+                      <span className="flex flex-col gap-0.5">
+                        <span className="font-medium text-foreground">
+                          {selectedCustomerLines.primary}
+                        </span>
+                        {selectedCustomerLines.secondary ? (
+                          <span className="text-[11px] text-muted-foreground">
+                            {selectedCustomerLines.secondary}
+                          </span>
+                        ) : null}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">고객을 선택하세요</span>
+                    )}
+                  </span>
+                </SelectTrigger>
+                <SelectContent className="max-w-[min(100vw-2rem,36rem)]">
+                  {customers.map((customer) => {
+                    const lines = formatCustomerLines(customer)
+                    return (
+                      <SelectItem key={customer.id} value={customer.id}>
+                        <span className="flex flex-col gap-0.5 py-0.5 text-left">
+                          <span className="font-medium">{lines.primary}</span>
+                          {lines.secondary ? (
+                            <span className="text-xs text-muted-foreground">{lines.secondary}</span>
+                          ) : null}
+                        </span>
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">청구 타입</label>
-          <Select
-            value={form.invoiceType}
-            onValueChange={(value) =>
-              setForm((current) => ({
-                ...current,
-                invoiceType: (value as InvoiceFormInput["invoiceType"] | null) ?? current.invoiceType,
-              }))
-            }
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {invoiceTypeOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-1.5 sm:border-l-2 sm:border-border/80 sm:pl-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-sm font-semibold">연결 견적</label>
+              {availableQuotes.length > 0 ? <span className="text-destructive">*</span> : null}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              {form.customerId
+                ? "선택한 고객의 견적만 목록에 나옵니다. 제목·금액·상태로 구분할 수 있습니다."
+                : "먼저 고객을 선택하면 해당 고객의 견적만 표시됩니다."}
+            </p>
+            {!form.customerId ? (
+              <div className="flex min-h-9 items-center rounded-lg border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+                왼쪽에서 고객을 먼저 선택해 주세요
+              </div>
+            ) : availableQuotes.length === 0 ? (
+              <div className="space-y-1.5">
+                <div className="flex min-h-9 items-center rounded-lg border border-border/60 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
+                  이 고객에 연결할 견적이 없습니다
+                </div>
+                <p className="text-[10px] leading-snug text-muted-foreground">
+                  견적 없이도 청구는 저장할 수 있습니다(선택 사항).
+                </p>
+              </div>
+            ) : (
+              <Select
+                value={form.quoteId || undefined}
+                onValueChange={(value) => {
+                  const q = quotes.find((quote) => quote.id === value)
+                  amountUserEditedRef.current = false
+                  if (!q) {
+                    setForm((current) => ({
+                      ...current,
+                      quoteId: value ?? "",
+                    }))
+                    return
+                  }
+                  const sum = sumInvoiceAmountsForQuote(
+                    invoices,
+                    q.id,
+                    editingInvoiceId
+                  )
+                  const nextAmt = suggestedAmountForQuote(q, form.invoiceType, sum)
+                  setForm((current) => ({
+                    ...current,
+                    quoteId: value ?? "",
+                    customerId: q.customerId,
+                    amount: String(nextAmt),
+                  }))
+                }}
+              >
+                <SelectTrigger className="h-auto min-h-10 w-full justify-between py-2 text-left">
+                  <SelectValue className="sr-only">
+                    {selectedQuote ? formatQuoteLines(selectedQuote, customers).primary : "견적 선택"}
+                  </SelectValue>
+                  <span className="line-clamp-4 flex-1 pr-1 text-left text-sm leading-snug">
+                    {selectedQuote ? (
+                      <span className="flex flex-col gap-0.5">
+                        <span className="font-medium text-foreground">
+                          {formatQuoteLines(selectedQuote, customers).primary}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">
+                          {formatQuoteLines(selectedQuote, customers).secondary}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">견적을 선택하세요</span>
+                    )}
+                  </span>
+                </SelectTrigger>
+                <SelectContent className="max-w-[min(100vw-2rem,40rem)]">
+                  {availableQuotes.map((quote) => {
+                    const lines = formatQuoteLines(quote, customers)
+                    return (
+                      <SelectItem key={quote.id} value={quote.id}>
+                        <span className="flex flex-col gap-0.5 py-0.5 text-left">
+                          <span className="font-medium">{lines.primary}</span>
+                          <span className="text-xs text-muted-foreground">{lines.secondary}</span>
+                        </span>
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
         </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">결제 상태</label>
-          <Select
-            value={form.paymentStatus}
-            onValueChange={(value) =>
-              setForm((current) => ({
-                ...current,
-                paymentStatus: (value as PaymentStatus | null) ?? current.paymentStatus,
-              }))
-            }
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {paymentStatusOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">청구 금액</label>
-          <Input
-            value={form.amount}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, amount: event.target.value }))
-            }
-            inputMode="numeric"
-          />
-        </div>
-      </div>
+      </section>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">청구일</label>
-          <Input
-            type="date"
-            value={form.requestedAt ? form.requestedAt.slice(0, 10) : ""}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, requestedAt: event.target.value }))
-            }
-          />
+      <section className="rounded-lg border border-border/60 bg-muted/5 px-3 py-3 sm:px-4">
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          2) 청구 타입 · 결제 상태 · 금액
+        </p>
+        <p className="mb-4 text-[11px] leading-snug text-muted-foreground">
+          타입과 견적을 기준으로 금액을 제안합니다. 숫자만 입력해도 되고, 쉼표는 자동으로 정리됩니다.
+        </p>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-sm font-semibold">청구 타입</label>
+              <span className="text-destructive">*</span>
+            </div>
+            <Select
+              value={form.invoiceType}
+              onValueChange={(value) => {
+                setForm((current) => {
+                  const nextType =
+                    (value as InvoiceFormInput["invoiceType"] | null) ?? current.invoiceType
+                  const q = quotes.find((x) => x.id === current.quoteId)
+                  let nextAmount = current.amount
+                  if (q && !amountUserEditedRef.current) {
+                    const sum = sumInvoiceAmountsForQuote(
+                      invoices,
+                      q.id,
+                      editingInvoiceId
+                    )
+                    nextAmount = String(suggestedAmountForQuote(q, nextType, sum))
+                  }
+                  return { ...current, invoiceType: nextType, amount: nextAmount }
+                })
+              }}
+            >
+              <SelectTrigger className="h-10 w-full justify-between text-left">
+                <SelectValue className="sr-only">{invoiceTypeLabel}</SelectValue>
+                <span className="line-clamp-2 flex-1 text-left text-sm">{invoiceTypeLabel}</span>
+              </SelectTrigger>
+              <SelectContent>
+                {invoiceTypeOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground">
+              선금: 견적 총액의 50% 제안 · 잔금/최종: 견적 대비 남은 금액 제안
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-sm font-semibold">결제 상태</label>
+              <span className="text-destructive">*</span>
+            </div>
+            <Select
+              value={form.paymentStatus}
+              onValueChange={(value) => {
+                setForm((current) => {
+                  const next = (value as PaymentStatus | null) ?? current.paymentStatus
+                  const keepPaidAt = ["paid", "partially_paid", "deposit_paid"].includes(next)
+                  return {
+                    ...current,
+                    paymentStatus: next,
+                    paidAt: keepPaidAt ? current.paidAt : "",
+                  }
+                })
+              }}
+            >
+              <SelectTrigger className="h-10 w-full justify-between text-left">
+                <SelectValue className="sr-only">{paymentStatusLabel}</SelectValue>
+                <span className="line-clamp-2 flex-1 text-left text-sm">{paymentStatusLabel}</span>
+              </SelectTrigger>
+              <SelectContent>
+                {paymentStatusOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5 lg:col-span-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-sm font-semibold">청구 금액</label>
+              <span className="text-destructive">*</span>
+            </div>
+            <div className="relative">
+              <Input
+                className="h-10 pr-10 tabular-nums"
+                value={formatAmountDigitsDisplay(form.amount)}
+                onChange={(event) => {
+                  const digits = event.target.value.replace(/\D/g, "")
+                  amountUserEditedRef.current = true
+                  setForm((current) => ({ ...current, amount: digits }))
+                }}
+                inputMode="numeric"
+                placeholder="예: 3300000"
+                aria-invalid={!formValidation.ok && formValidation.issues.some((i) => i.key === "amount")}
+              />
+              <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-foreground">
+                원
+              </span>
+            </div>
+            {suggestedAmountValue != null && selectedQuote ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-[10px] text-muted-foreground">
+                  제안: {formatCurrency(suggestedAmountValue)} (견적 총액 {formatCurrency(selectedQuote.total)})
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-[11px]"
+                  onClick={() => {
+                    amountUserEditedRef.current = false
+                    setForm((c) => ({ ...c, amount: String(suggestedAmountValue) }))
+                  }}
+                >
+                  제안 금액 적용
+                </Button>
+              </div>
+            ) : null}
+          </div>
         </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">입금 기한</label>
-          <Input
-            type="date"
-            value={form.dueDate}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, dueDate: event.target.value }))
-            }
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">입금일</label>
-          <Input
-            type="date"
-            value={form.paidAt ? form.paidAt.slice(0, 10) : ""}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, paidAt: event.target.value }))
-            }
-          />
-        </div>
-      </div>
+      </section>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">메모</label>
+      <section className="rounded-lg border border-border/60 bg-muted/5 px-3 py-3 sm:px-4">
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          3) 청구일 · 입금 기한
+        </p>
+        <p className="mb-3 text-[11px] leading-snug text-muted-foreground">
+          청구를 발행한 날과 입금 마감일을 먼저 정합니다. 실제 입금일은 아래 &quot;결제 처리 정보&quot;에서
+          입력합니다.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-sm font-semibold">청구일</label>
+              <span className="text-destructive">*</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground">청구서·기록상 요청일(발행일)입니다.</p>
+            <Input
+              type="date"
+              className="h-10 max-w-full sm:max-w-xs"
+              value={form.requestedAt ? form.requestedAt.slice(0, 10) : ""}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, requestedAt: event.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-semibold">입금 기한</label>
+            <p className="text-[10px] text-muted-foreground">고객에게 안내하는 납부 마감일입니다.</p>
+            <Input
+              type="date"
+              className="h-10 max-w-full sm:max-w-xs"
+              value={form.dueDate}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, dueDate: event.target.value }))
+              }
+            />
+          </div>
+        </div>
+      </section>
+
+      <details className="rounded-lg border border-border/50 bg-muted/15 [&_summary]:cursor-pointer [&_summary]:select-none">
+        <summary className="px-3 py-2.5 text-xs font-medium text-muted-foreground">
+          결제 처리 정보
+          {showPaidAtField ? (
+            <span className="ml-2 font-normal text-foreground/70">— 입금일 입력</span>
+          ) : null}
+        </summary>
+        <div className="space-y-3 border-t border-border/40 px-3 py-3">
+          {showPaidAtField ? (
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold">실제 입금일</label>
+              <p className="text-[10px] text-muted-foreground">
+                입금이 확인된 날짜입니다. 미수 추적과 맞추려면 정확히 입력해 주세요.
+              </p>
+              <Input
+                type="date"
+                className="h-10 max-w-xs"
+                value={form.paidAt ? form.paidAt.slice(0, 10) : ""}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    paidAt: event.target.value
+                      ? new Date(`${event.target.value}T12:00:00`).toISOString()
+                      : "",
+                  }))
+                }
+              />
+            </div>
+          ) : (
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              결제 상태를 <strong className="font-medium text-foreground/90">입금 완료</strong>,{" "}
+              <strong className="font-medium text-foreground/90">선금 입금</strong>,{" "}
+              <strong className="font-medium text-foreground/90">부분 입금</strong> 중 하나로 바꾸면
+              입금일을 입력할 수 있습니다.
+            </p>
+          )}
+        </div>
+      </details>
+
+      <section className="rounded-lg border border-border/60 bg-muted/5 px-3 py-3 sm:px-4">
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          메모 (선택)
+        </p>
+        <p className="mb-2 text-[11px] leading-snug text-muted-foreground">
+          입금 안내 문구, 분할 납부 조건, 고객에게 전달할 메모나 내부 참고 사항을 남길 수 있습니다. 청구
+          상세·리마인드 작성 시 함께 참고합니다.
+        </p>
         <Textarea
           value={form.notes}
           onChange={(event) =>
             setForm((current) => ({ ...current, notes: event.target.value }))
           }
-          className="min-h-24"
+          className="min-h-[5.5rem] text-sm"
+          placeholder="예: 선금 50% 입금 후 착수 · 잔금은 납품 검수 후 7일 이내"
         />
-      </div>
+      </section>
 
-      {errorMessage ? <p className="text-sm text-destructive">{errorMessage}</p> : null}
+      {errorMessage ? (
+        <p className="rounded-lg border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {errorMessage}
+        </p>
+      ) : null}
     </div>
   )
 
@@ -505,21 +883,60 @@ function InvoicesBoardPanel({
           }
         }}
       >
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>청구 생성</DialogTitle>
-            <DialogDescription>선금/잔금 청구를 실제 데이터로 저장합니다.</DialogDescription>
-          </DialogHeader>
-          {formFields}
-          <DialogFooter>
-            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
-              취소
-            </Button>
-            <Button type="button" onClick={saveCreate} disabled={isPending} className="gap-2">
-              {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
-              저장
-            </Button>
-          </DialogFooter>
+        <DialogContent className={invoiceFormDialogClass}>
+          <div className="shrink-0 border-b border-border/60 px-4 pb-3 pt-4 pr-12 sm:px-6 sm:pr-14">
+            <DialogHeader className="gap-1">
+              <DialogTitle className="text-lg">청구 생성</DialogTitle>
+              <DialogDescription className="text-xs leading-relaxed">
+                고객·견적을 확인하고, 청구 금액과 기한을 정한 뒤 저장합니다. 필수 항목은 빨간 별(
+                <span className="text-destructive">*</span>)로 표시됩니다.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="min-h-[min(44vh,360px)] flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+            {formFields}
+          </div>
+          <div className="flex shrink-0 flex-col gap-2 border-t border-border/60 bg-background/95 px-4 py-3 shadow-[0_-6px_16px_rgba(0,0,0,0.06)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:shadow-[0_-6px_20px_rgba(0,0,0,0.25)]">
+            <p className="text-[11px] leading-snug text-muted-foreground sm:max-w-[58%]">
+              {!formValidation.ok ? (
+                <span className="font-medium text-amber-900 dark:text-amber-100">
+                  위쪽 노란색 안내를 채우면 저장할 수 있습니다. 저장 버튼에 마우스를 올리면 요약을 볼 수
+                  있습니다.
+                </span>
+              ) : (
+                <>필수 항목이 모두 채워졌습니다. 저장하면 청구가 등록됩니다.</>
+              )}
+            </p>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+                취소
+              </Button>
+              <span
+                className={cn(
+                  "inline-flex",
+                  !formValidation.ok && !isPending ? "cursor-help" : ""
+                )}
+                title={
+                  !formValidation.ok && !isPending
+                    ? validationSummaryForTitle || "필수 항목을 채워 주세요"
+                    : undefined
+                }
+              >
+                <Button
+                  type="button"
+                  onClick={saveCreate}
+                  disabled={isPending || !formValidation.ok}
+                  className="gap-2"
+                  title={
+                    formValidation.ok && !isPending ? "입력한 내용으로 청구를 저장합니다" : undefined
+                  }
+                >
+                  {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+                  저장
+                </Button>
+              </span>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -621,12 +1038,18 @@ function InvoicesBoardPanel({
                       <SelectTrigger className="h-8 w-full text-sm">
                         <SelectValue placeholder="견적 선택" />
                       </SelectTrigger>
-                      <SelectContent>
-                        {quotes.map((quote) => (
-                          <SelectItem key={quote.id} value={quote.id}>
-                            {quote.quoteNumber} · {quote.title}
-                          </SelectItem>
-                        ))}
+                      <SelectContent className="max-w-[min(100vw-2rem,40rem)]">
+                        {quotes.map((quote) => {
+                          const lines = formatQuoteLines(quote, customers)
+                          return (
+                            <SelectItem key={quote.id} value={quote.id}>
+                              <span className="flex flex-col gap-0.5 py-0.5 text-left">
+                                <span className="font-medium">{lines.primary}</span>
+                                <span className="text-xs text-muted-foreground">{lines.secondary}</span>
+                              </span>
+                            </SelectItem>
+                          )
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
@@ -883,23 +1306,61 @@ function InvoicesBoardPanel({
           }
         }}
       >
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>청구 수정</DialogTitle>
-            <DialogDescription>
-              금액, 상태, 기한과 메모를 실제 DB에 저장합니다.
-            </DialogDescription>
-          </DialogHeader>
-          {formFields}
-          <DialogFooter>
-            <Button variant="outline" type="button" onClick={resetInvoiceForm}>
-              닫기
-            </Button>
-            <Button type="button" onClick={saveEdit} disabled={isPending || !editingInvoice} className="gap-2">
-              {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
-              저장
-            </Button>
-          </DialogFooter>
+        <DialogContent className={invoiceFormDialogClass}>
+          <div className="shrink-0 border-b border-border/60 px-4 pb-3 pt-4 pr-12 sm:px-6 sm:pr-14">
+            <DialogHeader className="gap-1">
+              <DialogTitle className="text-lg">청구 수정</DialogTitle>
+              <DialogDescription className="text-xs leading-relaxed">
+                금액·상태·기한·메모를 수정하면 DB에 반영됩니다. 필수 항목은 빨간 별(
+                <span className="text-destructive">*</span>)로 표시됩니다.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="min-h-[min(44vh,360px)] flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+            {formFields}
+          </div>
+          <div className="flex shrink-0 flex-col gap-2 border-t border-border/60 bg-background/95 px-4 py-3 shadow-[0_-6px_16px_rgba(0,0,0,0.06)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:shadow-[0_-6px_20px_rgba(0,0,0,0.25)]">
+            <p className="text-[11px] leading-snug text-muted-foreground sm:max-w-[58%]">
+              {!formValidation.ok ? (
+                <span className="font-medium text-amber-900 dark:text-amber-100">
+                  위쪽 노란색 안내를 채우면 저장할 수 있습니다.
+                </span>
+              ) : (
+                <>수정 내용을 저장하면 청구에 반영됩니다.</>
+              )}
+            </p>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button variant="outline" type="button" onClick={resetInvoiceForm}>
+                닫기
+              </Button>
+              <span
+                className={cn(
+                  "inline-flex",
+                  !formValidation.ok && !isPending ? "cursor-help" : ""
+                )}
+                title={
+                  !formValidation.ok && !isPending
+                    ? validationSummaryForTitle || "필수 항목을 채워 주세요"
+                    : undefined
+                }
+              >
+                <Button
+                  type="button"
+                  onClick={saveEdit}
+                  disabled={isPending || !editingInvoice || !formValidation.ok}
+                  className="gap-2"
+                  title={
+                    formValidation.ok && !isPending && editingInvoice
+                      ? "수정한 내용을 저장합니다"
+                      : undefined
+                  }
+                >
+                  {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+                  저장
+                </Button>
+              </span>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

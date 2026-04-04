@@ -180,6 +180,14 @@ function normalizeQuoteInput(input: {
   })
 }
 
+function parseInvoiceAmountString(raw: string): number {
+  const s = String(raw ?? "")
+    .replace(/,/g, "")
+    .replace(/[\s원₩]/g, "")
+    .trim()
+  return Number(s)
+}
+
 function normalizeInvoiceInput(input: {
   customerId: string
   quoteId: string
@@ -195,7 +203,7 @@ function normalizeInvoiceInput(input: {
     customerId: input.customerId,
     quoteId: input.quoteId || undefined,
     invoiceType: input.invoiceType,
-    amount: Number(input.amount),
+    amount: parseInvoiceAmountString(input.amount),
     paymentStatus: input.paymentStatus,
     dueDate: input.dueDate || undefined,
     requestedAt: input.requestedAt || undefined,

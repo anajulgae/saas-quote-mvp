@@ -25,7 +25,7 @@ export const quoteStatusOptions = [
 export const invoiceTypeOptions = [
   { value: "deposit", label: "선금" },
   { value: "balance", label: "잔금" },
-  { value: "final", label: "최종 청구" },
+  { value: "final", label: "최종(잔여) 청구" },
 ] as const
 
 export const reminderChannelOptions = [
