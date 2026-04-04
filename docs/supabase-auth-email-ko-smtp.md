@@ -11,7 +11,7 @@
 ## 1. 발신 주소를 바꾸려면 (필수: 커스텀 SMTP)
 
 Supabase가 대신 보내는 기본 채널에서는 **임의의 From 주소만 바꿀 수 없습니다.**  
-`admin@bill-io.com`으로내려면:
+메일 발신을 `admin@bill-io.com`처럼 브랜드 주소로 맞추려면:
 
 1. **`bill-io.com` 도메인**에서 실제로 메일을 발송할 수 있게 준비합니다.  
    - 예: **Google Workspace**, **Microsoft 365**, **Zoho Mail**, 또는 **Resend / SendGrid / AWS SES** 등 트랜잭션 메일 + 도메인 인증(SPF/DKIM).
@@ -142,3 +142,30 @@ SMTP 호스트·포트·계정은 **선택한 서비스마다 다릅니다.** (R
 | 링크가 bill-io.com으로 열림 | **URL Configuration** + 앱 `NEXT_PUBLIC_SITE_URL` |
 
 **`admin@bill-io.com` “만들기”**는 Supabase가 아니라 **도메인 메일/트랜잭션 메일 서비스**에서 사서함 또는 발송 도메인을 등록하면 됩니다.
+
+---
+
+## 5. Supabase SMTP 화면이 “All fields must be filled”일 때
+
+**Sender details**와 **SMTP provider** 아래 **빈 칸이 하나라도 있으면** 저장되지 않거나 경고가 납니다. 아래를 **전부** 채운 뒤 **Save changes** 하세요.
+
+| 필드 | Gmail(개인 계정) 예시 | 비고 |
+|------|------------------------|------|
+| **Sender email address** | 보통 **로그인에 쓰는 Gmail과 동일** (`you@gmail.com`) | Gmail은 **인증에 쓴 주소와 다른 From**을 쓰면 거부되거나 스팸 처리되기 쉽습니다. |
+| **Sender name** | `FlowBill` 등 표시 이름 | 받는 사람함에 보이는 이름 |
+| **Host** | `smtp.gmail.com` | |
+| **Port number** | `465` (SSL) 또는 `587` (STARTTLS) | 둘 중 하나; 막히면 다른 쪽 시도 |
+| **Username** | **전체 Gmail 주소** (`you@gmail.com`) | 스크린샷처럼 이메일 형식이 맞습니다. |
+| **Password** | **앱 비밀번호** (16자) | 일반 Gmail 비밀번호가 아닙니다. [Google 계정 → 보안 → 2단계 인증](https://myaccount.google.com/security) 켠 뒤 **앱 비밀번호** 생성. |
+| **Minimum interval per user** | `60` 등 기본값 유지 가능 | 동일 사용자에게 너무 자주 메일 나가지 않게 하는 값 |
+
+### Gmail로는 `admin@bill-io.com`을 From에 넣기 어렵습니다
+
+- **Sender email**에 `admin@bill-io.com`만 넣고 **Username**은 Gmail로 두면, Gmail SMTP가 **발신 거부**하거나 수신 측에서 **스팸/위조**로 분류할 수 있습니다.
+- **상용 서비스**에서 `admin@bill-io.com` 같은 브랜드 발신을 쓰려면 **Resend·SendGrid·AWS SES** 등에 `bill-io.com` 도메인을 등록하고, 그쪽이 알려주는 **Host / Port / User / Password**를 Supabase SMTP에 넣는 방식이 맞습니다.
+
+### 저장 후 확인
+
+1. **Save changes** 후 경고가 사라지는지 확인합니다.  
+2. **Authentication → Email Templates** 에서 한글 템플릿을 적용했는지 확인합니다.  
+3. 테스트 회원가입으로 **인증 메일**이 오는지, **스팸함**도 확인합니다.
