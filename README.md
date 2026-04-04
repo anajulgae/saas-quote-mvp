@@ -3,7 +3,8 @@
 국내 1인 사업자용 **문의 · 견적 · 청구 · 수금** 관리 MVP입니다. Next.js App Router, TypeScript, Tailwind, Supabase를 사용합니다.
 
 **실전 배포 실행 순서(체크리스트)**: **[docs/deploy-runbook.md](./docs/deploy-runbook.md)**  
-**배포 상세 가이드**(환경변수·Auth URL·마이그레이션·데모·RC·흔한 실수): **[docs/deployment.md](./docs/deployment.md)**
+**배포 상세 가이드**(환경변수·Auth URL·마이그레이션·데모·RC·흔한 실수): **[docs/deployment.md](./docs/deployment.md)**  
+**비공개 베타 운영**(이벤트 로그 확인·피드백·즉시 대응 신호): **[docs/beta-operations.md](./docs/beta-operations.md)**
 
 ---
 

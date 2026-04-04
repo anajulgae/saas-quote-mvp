@@ -2,6 +2,7 @@ import Link from "next/link"
 import { ArrowRight, Clock3, FileText } from "lucide-react"
 
 import { ActivityEntry } from "@/components/app/activity-entry"
+import { BetaOnboardingBanner } from "@/components/app/beta-onboarding-banner"
 import { EmptyState } from "@/components/app/empty-state"
 import { MetricCard } from "@/components/app/metric-card"
 import { PageHeader } from "@/components/app/page-header"
@@ -21,11 +22,12 @@ const pipelineColumns = [
 ] as const
 
 export default async function DashboardPage() {
-  const { metrics, followUps, overdueInvoices, recentActivities, pipelineSummary } =
+  const { metrics, followUps, overdueInvoices, recentActivities, pipelineSummary, showBetaOnboarding } =
     await getDashboardPageData()
 
   return (
     <div className="space-y-6">
+      {showBetaOnboarding ? <BetaOnboardingBanner /> : null}
       <PageHeader
         title="대시보드"
         description="이번 달 견적, 수금 현황, 오늘 처리할 후속조치를 한 번에 확인합니다."
@@ -180,8 +182,23 @@ export default async function DashboardPage() {
             {!recentActivities.length ? (
               <EmptyState
                 title="최근 활동이 없습니다"
-                description="견적·청구·리마인드를 처리하면 여기에 기록됩니다."
-              />
+                description="문의를 등록하고 견적·청구를 만들면 타임라인이 쌓입니다. 아래부터 시작해 보세요."
+              >
+                <Link
+                  href="/inquiries"
+                  className={cn(buttonVariants({ size: "sm" }), "inline-flex gap-1")}
+                >
+                  첫 문의 만들기
+                  <ArrowRight className="size-3.5" />
+                </Link>
+                <Link
+                  href="/quotes"
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "inline-flex gap-1")}
+                >
+                  견적 화면으로
+                  <ArrowRight className="size-3.5" />
+                </Link>
+              </EmptyState>
             ) : (
               recentActivities.map((activity) => (
                 <ActivityEntry

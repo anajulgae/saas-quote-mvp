@@ -5,8 +5,10 @@ import Link from "next/link"
 import { ArrowRight, Search } from "lucide-react"
 
 import { EmptyState } from "@/components/app/empty-state"
+import { buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
 import type { CustomerSummary } from "@/types/domain"
 
 export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) {
@@ -49,7 +51,25 @@ export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) 
       </div>
 
       {!customers.length ? (
-        <EmptyState title="고객이 없습니다" description="문의나 견적에서 고객을 먼저 연결해 보세요." />
+        <EmptyState
+          title="고객이 없습니다"
+          description="문의·견적·청구에 모두 고객이 필요합니다. 베타에서는 운영자 안내에 따라 첫 고객을 등록한 뒤 문의부터 이어가 주세요."
+        >
+          <Link
+            href="/inquiries"
+            className={cn(buttonVariants({ variant: "default" }), "inline-flex items-center gap-1")}
+          >
+            문의 화면으로
+            <ArrowRight className="size-3.5" />
+          </Link>
+          <Link
+            href="/dashboard"
+            className={cn(buttonVariants({ variant: "outline" }), "inline-flex items-center gap-1")}
+          >
+            대시보드
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </EmptyState>
       ) : !filtered.length ? (
         <EmptyState
           title="검색 결과가 없습니다"

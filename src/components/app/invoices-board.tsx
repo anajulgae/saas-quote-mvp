@@ -1,7 +1,8 @@
 "use client"
 
+import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
-import { BellRing, Loader2, Pencil, Plus } from "lucide-react"
+import { ArrowRight, BellRing, Loader2, Pencil, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
@@ -13,7 +14,7 @@ import {
 } from "@/app/actions"
 import { EmptyState } from "@/components/app/empty-state"
 import { PaymentStatusBadge } from "@/components/app/status-badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
@@ -39,6 +40,7 @@ import {
   reminderChannelOptions,
 } from "@/lib/constants"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import type {
   Customer,
   InvoiceFormInput,
@@ -496,8 +498,20 @@ export function InvoicesBoard({
       {!invoices.length ? (
         <EmptyState
           title="청구가 없습니다"
-          description="새 청구를 만들면 카드가 표시됩니다."
-        />
+          description="견적이 수락된 뒤 선금·잔금 청구를 만들고, 입금 상태를 여기서 갱신합니다."
+        >
+          <Button type="button" onClick={() => setIsCreateOpen(true)}>
+            <Plus className="size-4" />
+            첫 청구 만들기
+          </Button>
+          <Link
+            href="/quotes"
+            className={cn(buttonVariants({ variant: "outline" }), "inline-flex items-center gap-1")}
+          >
+            견적 보기
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </EmptyState>
       ) : !filteredInvoices.length ? (
         <EmptyState
           title="조건에 맞는 청구가 없습니다"

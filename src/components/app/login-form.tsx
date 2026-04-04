@@ -28,7 +28,14 @@ export function LoginForm({
         <div className="space-y-1">
           <CardTitle className="text-2xl">로그인</CardTitle>
           <CardDescription>
-            고객 문의부터 견적, 청구, 수금 리마인드까지 한 번에 관리하세요.
+            {isDemoMode ? (
+              <>고객 문의부터 견적, 청구, 수금 리마인드까지 한 번에 관리하세요.</>
+            ) : (
+              <>
+                로그인 후 <strong className="text-foreground">대시보드</strong>에서 시작 순서를 확인한 다음,{" "}
+                <strong className="text-foreground">고객 → 문의 → 견적 → 청구</strong> 순으로 입력해 보세요.
+              </>
+            )}
           </CardDescription>
         </div>
       </CardHeader>

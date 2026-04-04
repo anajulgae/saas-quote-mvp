@@ -745,6 +745,14 @@ export async function updateInvoiceRecord(invoiceId: string, input: InvoiceFormI
     return { mode: "demo" as const }
   }
 
+  const { data: prevData } = await context.supabase
+    .from("invoices")
+    .select("payment_status")
+    .eq("id", invoiceId)
+    .maybeSingle()
+  const prevPaymentStatus = (prevData as { payment_status: Invoice["paymentStatus"] } | null)
+    ?.payment_status
+
   const paidAt =
     input.paymentStatus === "paid" || input.paymentStatus === "deposit_paid"
       ? input.paidAt ?? new Date().toISOString()
@@ -774,6 +782,20 @@ export async function updateInvoiceRecord(invoiceId: string, input: InvoiceFormI
   }
 
   const invoice = data as InvoiceRow
+
+  if (prevPaymentStatus !== undefined && prevPaymentStatus !== input.paymentStatus) {
+    await createActivityLog({
+      action: "invoice.payment_status_changed",
+      description: `${invoice.invoice_number} 결제 상태가 변경되었습니다.`,
+      customerId: invoice.customer_id,
+      quoteId: invoice.quote_id ?? undefined,
+      invoiceId,
+      metadata: {
+        from: prevPaymentStatus,
+        to: input.paymentStatus,
+      },
+    })
+  }
 
   await createActivityLog({
     action: "invoice.updated",
@@ -875,7 +897,7 @@ export async function createReminderRecord(input: ReminderFormInput) {
   }
 
   await createActivityLog({
-    action: "invoice.reminder_sent",
+    action: "reminder.created",
     description: `${invoice?.invoice_number ?? "청구"}에 리마인드가 기록되었습니다.`,
     customerId: invoice?.customer_id ?? undefined,
     quoteId: invoice?.quote_id ?? undefined,
@@ -929,6 +951,14 @@ export async function saveBusinessSettingsRecord(input: {
   if (error) {
     throw error
   }
+
+  await createActivityLog({
+    action: "settings.saved",
+    description: "사업장·청구 기본 설정이 저장되었습니다.",
+    metadata: {
+      businessName: input.businessName,
+    },
+  })
 
   return {
     mode: "supabase" as const,
@@ -1502,6 +1532,8 @@ export async function getDashboardPageData(): Promise<{
   overdueInvoices: InvoiceWithReminders[]
   recentActivities: ActivityLog[]
   pipelineSummary: Record<"new" | "qualified" | "quoted" | "won", number>
+  /** 고객·문의·견적이 모두 없을 때 베타 온보딩 배너 표시 */
+  showBetaOnboarding: boolean
 }> {
   const context = await getDataContext()
 
@@ -1529,6 +1561,7 @@ export async function getDashboardPageData(): Promise<{
         quoted: demoInquiries.filter((item) => item.stage === "quoted").length,
         won: demoInquiries.filter((item) => item.stage === "won").length,
       },
+      showBetaOnboarding: false,
     }
   }
 
@@ -1627,5 +1660,7 @@ export async function getDashboardPageData(): Promise<{
       quoted: inquiries.filter((item) => item.stage === "quoted").length,
       won: inquiries.filter((item) => item.stage === "won").length,
     },
+    showBetaOnboarding:
+      customers.length === 0 && inquiries.length === 0 && quotes.length === 0,
   }
 }

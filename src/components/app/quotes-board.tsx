@@ -1,7 +1,8 @@
 "use client"
 
 import { useMemo, useState, useTransition } from "react"
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import Link from "next/link"
+import { ArrowRight, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
@@ -12,7 +13,7 @@ import {
 } from "@/app/actions"
 import { EmptyState } from "@/components/app/empty-state"
 import { QuoteStatusBadge } from "@/components/app/status-badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
@@ -37,6 +38,7 @@ import {
   quoteStatusOptions,
 } from "@/lib/constants"
 import { formatCurrency, formatDate } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import type { Customer, InquiryWithCustomer, QuoteStatus, QuoteWithItems } from "@/types/domain"
 
 type QuoteItemForm = {
@@ -507,8 +509,20 @@ export function QuotesBoard({
       {!quotes.length ? (
         <EmptyState
           title="견적이 없습니다"
-          description="새 견적을 만들면 여기에 카드가 표시됩니다."
-        />
+          description="문의를 바탕으로 금액과 항목을 채운 뒤 견적을 저장하면 여기에 쌓입니다. 먼저 문의가 있다면 연결해 보세요."
+        >
+          <Button type="button" onClick={() => setIsCreateOpen(true)}>
+            <Plus className="size-4" />
+            첫 견적 만들기
+          </Button>
+          <Link
+            href="/inquiries"
+            className={cn(buttonVariants({ variant: "outline" }), "inline-flex items-center gap-1")}
+          >
+            문의 목록
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </EmptyState>
       ) : !filteredQuotes.length ? (
         <EmptyState
           title="해당 상태의 견적이 없습니다"

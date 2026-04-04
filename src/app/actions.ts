@@ -7,6 +7,7 @@ import { z } from "zod"
 
 import {
   createSupabaseServerClient,
+  ensureUserProfile,
   getDemoCredentials,
   getDemoSessionCookieName,
   isSupabaseConfigured,
@@ -14,6 +15,7 @@ import {
 import { toUserFacingActionError } from "@/lib/action-errors"
 import { isDemoLoginEnabled } from "@/lib/demo-flags"
 import {
+  createActivityLog,
   createInquiryRecord,
   createInvoiceRecord,
   createQuoteRecord,
@@ -261,6 +263,19 @@ export async function loginAction(_: { error?: string } | undefined, formData: F
     return {
       error: toUserFacingActionError(error, "로그인에 실패했습니다. 잠시 후 다시 시도해 주세요."),
     }
+  }
+
+  const {
+    data: { user: signedInUser },
+  } = await supabase.auth.getUser()
+
+  if (signedInUser) {
+    await ensureUserProfile(supabase, signedInUser)
+    await createActivityLog({
+      action: "auth.login_success",
+      description: "로그인에 성공했습니다.",
+      metadata: { source: "password" },
+    })
   }
 
   redirect("/dashboard")

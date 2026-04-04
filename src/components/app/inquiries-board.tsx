@@ -1,14 +1,15 @@
 "use client"
 
 import { useMemo, useState, useTransition } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Pencil, Plus, Search, Sparkles } from "lucide-react"
+import { ArrowRight, Pencil, Plus, Search, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 
 import { createInquiryAction, updateInquiryAction } from "@/app/actions"
 import { EmptyState } from "@/components/app/empty-state"
 import { InquiryStageBadge } from "@/components/app/status-badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { inquiryStageOptions } from "@/lib/constants"
 import { formatCurrency, formatDateTime } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import type { Customer, InquiryWithCustomer, InquiryStage } from "@/types/domain"
 
 function toLocalDateTimeValue(value?: string) {
@@ -343,7 +345,29 @@ export function InquiriesBoard({
       </div>
 
       {!inquiries.length ? (
-        <EmptyState title="문의가 없습니다" description="새 문의를 등록해 보세요." />
+        <EmptyState
+          title="문의가 없습니다"
+          description={
+            customers.length
+              ? "상단의 새 문의로 첫 건을 등록해 보세요. 등록 후 견적·청구 메뉴에서 이어서 만들 수 있습니다."
+              : "문의를 만들려면 먼저 연결할 고객이 필요합니다. 운영 안내에 따라 고객을 추가한 뒤 다시 시도해 주세요."
+          }
+        >
+          {customers.length ? (
+            <Button type="button" onClick={() => setIsCreateOpen(true)}>
+              <Plus className="size-4" />
+              첫 문의 등록
+            </Button>
+          ) : (
+            <Link
+              href="/dashboard"
+              className={cn(buttonVariants({ variant: "outline" }), "inline-flex items-center gap-1")}
+            >
+              대시보드 안내 보기
+              <ArrowRight className="size-3.5" />
+            </Link>
+          )}
+        </EmptyState>
       ) : !filteredInquiries.length ? (
         <EmptyState
           title="검색 결과가 없습니다"

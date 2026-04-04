@@ -19,7 +19,8 @@ export async function createSupabaseServerClient() {
   return createServerSupabaseClient()
 }
 
-async function ensureUserProfile(
+/** 로그인 직후 등 `public.users` 행이 필요할 때 (activity_logs FK 등) */
+export async function ensureUserProfile(
   supabase: NonNullable<Awaited<ReturnType<typeof createServerSupabaseClient>>>,
   user: {
     id: string
