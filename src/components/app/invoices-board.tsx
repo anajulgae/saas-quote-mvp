@@ -1,8 +1,15 @@
 "use client"
 
 import Link from "next/link"
-import { useMemo, useState, useTransition } from "react"
-import { ArrowRight, BellRing, Loader2, Pencil, Plus } from "lucide-react"
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+  type MutableRefObject,
+} from "react"
+import { ArrowRight, BellRing, ListOrdered, Loader2, Pencil, Plus, Receipt } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
@@ -13,6 +20,7 @@ import {
   updateInvoicePaymentStatusAction,
 } from "@/app/actions"
 import { EmptyState } from "@/components/app/empty-state"
+import { PageHeader } from "@/components/app/page-header"
 import { PaymentStatusBadge } from "@/components/app/status-badge"
 import { Button } from "@/components/ui/button"
 import { buttonVariants } from "@/components/ui/button-variants"
@@ -24,7 +32,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import {
@@ -93,20 +100,32 @@ function toInvoiceForm(invoice: InvoiceWithReminders): InvoiceFormState {
   }
 }
 
-export function InvoicesBoard({
+const flowSteps = [
+  { step: 1, title: "견적 확인", hint: "금액·항목이 확정된 견적을 고릅니다" },
+  { step: 2, title: "선금·잔금 청구", hint: "청구 타입과 금액을 나눠 기록합니다" },
+  { step: 3, title: "결제·리마인드", hint: "입금 상태를 바꾸고 미수 알림을 남깁니다" },
+] as const
+
+function InvoicesBoardPanel({
   invoices,
   customers,
   quotes,
   defaultReminderMessage,
+  isCreateOpen,
+  onOpenChange,
+  createOpenSourceRef,
 }: {
   invoices: InvoiceWithReminders[]
   customers: Customer[]
   quotes: Quote[]
   defaultReminderMessage: string
+  isCreateOpen: boolean
+  onOpenChange: (open: boolean) => void
+  createOpenSourceRef: MutableRefObject<"header" | null>
 }) {
   const router = useRouter()
+  const flowRef = useRef<HTMLDivElement>(null)
   const [isPending, startTransition] = useTransition()
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null)
   const [reminderInvoiceId, setReminderInvoiceId] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState("")
@@ -115,6 +134,7 @@ export function InvoicesBoard({
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<
     PaymentStatus | "all"
   >("all")
+  const [quickQuoteId, setQuickQuoteId] = useState(quotes[0]?.id ?? "")
   const [form, setForm] = useState<InvoiceFormState>(() => createEmptyInvoiceForm(customers))
   const [reminderForm, setReminderForm] = useState<{
     channel: ReminderChannel
@@ -123,6 +143,30 @@ export function InvoicesBoard({
     channel: "kakao",
     message: "",
   })
+
+  const hasQuotes = quotes.length > 0
+  const hasInvoices = invoices.length > 0
+
+  useEffect(() => {
+    setQuickQuoteId((current) => {
+      if (current && quotes.some((q) => q.id === current)) {
+        return current
+      }
+      return quotes[0]?.id ?? ""
+    })
+  }, [quotes])
+
+  useEffect(() => {
+    if (!isCreateOpen) {
+      return
+    }
+    if (createOpenSourceRef.current === "header") {
+      setEditingInvoiceId(null)
+      setErrorMessage("")
+      setForm(createEmptyInvoiceForm(customers))
+    }
+    createOpenSourceRef.current = null
+  }, [isCreateOpen, customers, createOpenSourceRef])
 
   const availableQuotes = useMemo(
     () => quotes.filter((quote) => !form.customerId || quote.customerId === form.customerId),
@@ -159,6 +203,31 @@ export function InvoicesBoard({
     setForm(toInvoiceForm(invoice))
   }
 
+  const openCreateFresh = () => {
+    setEditingInvoiceId(null)
+    setErrorMessage("")
+    setForm(createEmptyInvoiceForm(customers))
+    onOpenChange(true)
+  }
+
+  const openCreateWithQuote = (quoteId: string) => {
+    const q = quotes.find((item) => item.id === quoteId)
+    if (!q) {
+      return
+    }
+    setEditingInvoiceId(null)
+    setErrorMessage("")
+    setForm({
+      ...createEmptyInvoiceForm(customers),
+      customerId: q.customerId,
+      quoteId: q.id,
+      amount: String(q.total),
+    })
+    onOpenChange(true)
+  }
+
+  const scrollToFlow = () => flowRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+
   const saveCreate = () => {
     setErrorMessage("")
 
@@ -172,7 +241,7 @@ export function InvoicesBoard({
       }
 
       toast.success("청구가 저장되었습니다.")
-      setIsCreateOpen(false)
+      onOpenChange(false)
       resetInvoiceForm()
       router.refresh()
     })
@@ -218,6 +287,16 @@ export function InvoicesBoard({
       router.refresh()
     })
   }
+
+  const editingInvoice = useMemo(
+    () => invoices.find((i) => i.id === editingInvoiceId) ?? null,
+    [editingInvoiceId, invoices]
+  )
+
+  const reminderInvoice = useMemo(
+    () => invoices.find((i) => i.id === reminderInvoiceId) ?? null,
+    [reminderInvoiceId, invoices]
+  )
 
   const saveReminder = () => {
     if (!reminderInvoiceId) {
@@ -416,103 +495,221 @@ export function InvoicesBoard({
   )
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-muted/30 p-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm font-medium">청구 관리 흐름</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            견적 기반 청구 생성, 결제 상태 변경, 리마인드 기록을 한 화면에서 관리합니다.
-          </p>
-        </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger render={<Button />}>
-            <Plus className="size-4" />새 청구
-          </DialogTrigger>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>청구 생성</DialogTitle>
-              <DialogDescription>선금/잔금 청구를 실제 데이터로 저장합니다.</DialogDescription>
-            </DialogHeader>
-            {formFields}
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
-                취소
-              </Button>
-              <Button onClick={saveCreate} disabled={isPending} className="gap-2">
-                {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
-                저장
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+    <div className="space-y-3 md:space-y-4">
+      <Dialog
+        open={isCreateOpen}
+        onOpenChange={(open) => {
+          onOpenChange(open)
+          if (!open) {
+            resetInvoiceForm()
+          }
+        }}
+      >
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>청구 생성</DialogTitle>
+            <DialogDescription>선금/잔금 청구를 실제 데이터로 저장합니다.</DialogDescription>
+          </DialogHeader>
+          {formFields}
+          <DialogFooter>
+            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+              취소
+            </Button>
+            <Button type="button" onClick={saveCreate} disabled={isPending} className="gap-2">
+              {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+              저장
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      <div className="space-y-3 rounded-2xl border border-border/70 bg-muted/20 p-4">
-        <p className="text-sm font-medium text-muted-foreground">빠른 필터</p>
-        <div className="flex flex-wrap gap-2">
-          {(
-            [
-              { key: "all" as const, label: "전체" },
-              { key: "unpaid" as const, label: "미수금" },
-              { key: "overdue" as const, label: "연체" },
-              { key: "paid" as const, label: "입금완료" },
-            ] as const
-          ).map(({ key, label }) => (
-            <Button
-              key={key}
-              type="button"
-              size="sm"
-              variant={paymentQuickFilter === key ? "default" : "outline"}
-              onClick={() => {
-                setPaymentQuickFilter(key)
-                setPaymentStatusFilter("all")
+      {hasInvoices ? (
+        <div className="rounded-lg border border-border/60 bg-muted/15 px-3 py-2 text-xs text-muted-foreground">
+          선금·잔금을 나눠 청구하고, 입금 상태를 바꾸며 미수 시 리마인드를 남길 수 있습니다.
+        </div>
+      ) : null}
+
+      {hasInvoices ? (
+        <div className="space-y-2 rounded-lg border border-border/60 bg-muted/10 p-3">
+          <p className="text-xs font-medium text-muted-foreground">빠른 필터</p>
+          <div className="flex flex-wrap gap-1.5">
+            {(
+              [
+                { key: "all" as const, label: "전체" },
+                { key: "unpaid" as const, label: "미수금" },
+                { key: "overdue" as const, label: "연체" },
+                { key: "paid" as const, label: "입금완료" },
+              ] as const
+            ).map(({ key, label }) => (
+              <Button
+                key={key}
+                type="button"
+                size="sm"
+                className="h-8"
+                variant={paymentQuickFilter === key ? "default" : "outline"}
+                onClick={() => {
+                  setPaymentQuickFilter(key)
+                  setPaymentStatusFilter("all")
+                }}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
+            <label className="text-xs font-medium text-muted-foreground">상세 상태</label>
+            <Select
+              value={paymentStatusFilter}
+              onValueChange={(value) => {
+                setPaymentStatusFilter((value as PaymentStatus | "all") ?? "all")
+                setPaymentQuickFilter("all")
               }}
             >
-              {label}
-            </Button>
-          ))}
+              <SelectTrigger className="h-8 w-full sm:w-[200px]">
+                <SelectValue placeholder="전체" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 (상세)</SelectItem>
+                {paymentStatusOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <label className="text-sm font-medium text-muted-foreground">상세 상태</label>
-          <Select
-            value={paymentStatusFilter}
-            onValueChange={(value) => {
-              setPaymentStatusFilter((value as PaymentStatus | "all") ?? "all")
-              setPaymentQuickFilter("all")
-            }}
-          >
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <SelectValue placeholder="전체" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체 (상세)</SelectItem>
-              {paymentStatusOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      ) : null}
 
       {!invoices.length ? (
-        <EmptyState
-          title="청구가 없습니다"
-          description="견적이 수락된 뒤 선금·잔금 청구를 만들고, 입금 상태를 여기서 갱신합니다."
-        >
-          <Button type="button" onClick={() => setIsCreateOpen(true)}>
-            <Plus className="size-4" />
-            첫 청구 만들기
-          </Button>
-          <Link
-            href="/quotes"
-            className={cn(buttonVariants({ variant: "outline" }), "inline-flex items-center gap-1")}
-          >
-            견적 보기
-            <ArrowRight className="size-3.5" />
-          </Link>
-        </EmptyState>
+        <>
+          <Card className="border border-primary/30 bg-gradient-to-b from-primary/[0.05] to-background shadow-sm">
+            <CardContent className="space-y-2.5 p-3 sm:p-4">
+              <div className="flex flex-wrap gap-1.5">
+                <span className="rounded-md border border-border/60 bg-muted/30 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  선금·잔금 분리
+                </span>
+                <span className="rounded-md border border-border/60 bg-muted/30 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  미수·연체 추적
+                </span>
+                <span className="rounded-md border border-border/60 bg-muted/30 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  리마인드 기록
+                </span>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">시작하기</p>
+                <h2 className="text-base font-bold tracking-tight sm:text-lg">
+                  {hasQuotes
+                    ? "견적을 확인한 뒤 첫 청구를 만들어보세요"
+                    : "견적을 먼저 준비한 뒤 청구를 시작하세요"}
+                </h2>
+                <p className="text-[13px] leading-snug text-muted-foreground">
+                  청구는 견적을 바탕으로 선금·잔금 요청을 만들고, 결제 상태와 리마인드 이력을 관리합니다.
+                </p>
+              </div>
+
+              {hasQuotes ? (
+                <div className="flex flex-col gap-2 rounded-md border border-border/60 bg-background/80 p-2.5 sm:flex-row sm:items-end">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <label className="text-[11px] font-medium text-muted-foreground">
+                      빠른 시작 · 견적 선택
+                    </label>
+                    <Select
+                      value={quickQuoteId}
+                      onValueChange={(value) => setQuickQuoteId(value ?? "")}
+                    >
+                      <SelectTrigger className="h-9 w-full">
+                        <SelectValue placeholder="견적 선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {quotes.map((quote) => (
+                          <SelectItem key={quote.id} value={quote.id}>
+                            {quote.quoteNumber} · {quote.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-9 w-full shrink-0 sm:w-auto"
+                    disabled={!quickQuoteId}
+                    onClick={() => openCreateWithQuote(quickQuoteId)}
+                  >
+                    이 견적으로 청구 만들기
+                  </Button>
+                </div>
+              ) : null}
+
+              <div ref={flowRef} className="rounded-md border border-border/60 bg-muted/15 p-2 sm:p-2.5">
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  진행 순서
+                </p>
+                <ol className="grid gap-1.5 sm:grid-cols-3">
+                  {flowSteps.map((item) => (
+                    <li
+                      key={item.step}
+                      className="flex gap-1.5 rounded-md border border-border/50 bg-background/70 px-2 py-1.5 text-[12px]"
+                    >
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/12 text-[10px] font-bold text-primary">
+                        {item.step}
+                      </span>
+                      <div>
+                        <p className="font-semibold leading-tight">{item.title}</p>
+                        <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
+                          {item.hint}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap">
+                <Link
+                  href="/quotes"
+                  className={cn(
+                    buttonVariants({ size: "sm", variant: hasQuotes ? "outline" : "default" }),
+                    "inline-flex h-9 items-center justify-center gap-1.5 font-semibold"
+                  )}
+                >
+                  견적 보기
+                  <ArrowRight className="size-3.5" />
+                </Link>
+                <Button type="button" size="sm" variant="outline" className="h-9 gap-1.5" onClick={scrollToFlow}>
+                  <ListOrdered className="size-3.5" />
+                  청구 흐름 보기
+                </Button>
+                {hasQuotes ? (
+                  <Button type="button" size="sm" className="h-9 gap-1.5 font-semibold" onClick={openCreateFresh}>
+                    <Plus className="size-3.5" />
+                    첫 청구 만들기
+                  </Button>
+                ) : (
+                  <span title="청구 생성 전에 먼저 견적을 준비해주세요">
+                    <Button type="button" size="sm" className="h-9 gap-1.5" disabled>
+                      <Plus className="size-3.5" />
+                      첫 청구 만들기
+                    </Button>
+                  </span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex gap-2.5 rounded-lg border border-dashed border-border/60 bg-muted/10 px-3 py-2.5">
+            <Receipt className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+            <div className="min-w-0 space-y-0.5">
+              <p className="text-sm font-medium text-foreground">아직 생성된 청구가 없습니다</p>
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                {hasQuotes
+                  ? "청구를 저장하면 이 영역에 카드가 쌓이고, 입금·리마인드를 한곳에서 관리할 수 있어요."
+                  : "견적이 생기면 위에서 바로 선금·잔금 청구를 만들 수 있어요."}
+              </p>
+            </div>
+          </div>
+        </>
       ) : !filteredInvoices.length ? (
         <EmptyState
           title="조건에 맞는 청구가 없습니다"
@@ -563,129 +760,25 @@ export function InvoicesBoard({
                       ))}
                     </SelectContent>
                   </Select>
-                  <Dialog
-                    open={editingInvoiceId === invoice.id}
-                    onOpenChange={(open) => {
-                      if (!open) {
-                        resetInvoiceForm()
-                      }
+                  <Button variant="outline" size="sm" type="button" onClick={() => openEdit(invoice)}>
+                    <Pencil className="size-4" />
+                    수정
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    onClick={() => {
+                      setReminderInvoiceId(invoice.id)
+                      setReminderForm({
+                        channel: "kakao",
+                        message: defaultReminderMessage,
+                      })
                     }}
                   >
-                    <DialogTrigger
-                      render={<Button variant="outline" size="sm" />}
-                      onClick={() => openEdit(invoice)}
-                    >
-                      <Pencil className="size-4" />
-                      수정
-                    </DialogTrigger>
-                    <DialogContent className="max-w-3xl">
-                      <DialogHeader>
-                        <DialogTitle>청구 수정</DialogTitle>
-                        <DialogDescription>
-                          금액, 상태, 기한과 메모를 실제 DB에 저장합니다.
-                        </DialogDescription>
-                      </DialogHeader>
-                      {formFields}
-                      <DialogFooter>
-                        <Button variant="outline" onClick={resetInvoiceForm}>
-                          닫기
-                        </Button>
-                        <Button onClick={saveEdit} disabled={isPending} className="gap-2">
-                          {isPending ? (
-                            <Loader2 className="size-4 animate-spin" aria-hidden />
-                          ) : null}
-                          저장
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                  <Dialog
-                    open={reminderInvoiceId === invoice.id}
-                    onOpenChange={(open) => {
-                      if (!open) {
-                        setReminderInvoiceId(null)
-                        setReminderForm({ channel: "kakao", message: "" })
-                      }
-                    }}
-                  >
-                    <DialogTrigger
-                      render={<Button variant="outline" size="sm" />}
-                      onClick={() => {
-                        setReminderInvoiceId(invoice.id)
-                        setReminderForm({
-                          channel: "kakao",
-                          message: defaultReminderMessage,
-                        })
-                      }}
-                    >
-                      <BellRing className="size-4" />
-                      리마인드
-                    </DialogTrigger>
-                    <DialogContent className="max-w-xl">
-                      <DialogHeader>
-                        <DialogTitle>리마인드 기록 추가</DialogTitle>
-                        <DialogDescription>
-                          발송 채널과 내용을 저장하면 활동 로그에도 남습니다.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">채널</label>
-                          <Select
-                            value={reminderForm.channel}
-                            onValueChange={(value) =>
-                              setReminderForm((current) => ({
-                                ...current,
-                                channel:
-                                  (value as ReminderChannel | null) ?? current.channel,
-                              }))
-                            }
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {reminderChannelOptions.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">메시지</label>
-                          <Textarea
-                            value={reminderForm.message}
-                            onChange={(event) =>
-                              setReminderForm((current) => ({
-                                ...current,
-                                message: event.target.value,
-                              }))
-                            }
-                            className="min-h-28"
-                          />
-                        </div>
-                        {errorMessage ? (
-                          <p className="text-sm text-destructive">{errorMessage}</p>
-                        ) : null}
-                      </div>
-                      <DialogFooter>
-                        <Button
-                          variant="outline"
-                          onClick={() => setReminderInvoiceId(null)}
-                        >
-                          취소
-                        </Button>
-                        <Button onClick={saveReminder} disabled={isPending} className="gap-2">
-                          {isPending ? (
-                            <Loader2 className="size-4 animate-spin" aria-hidden />
-                          ) : null}
-                          저장
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                    <BellRing className="size-4" />
+                    리마인드
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -751,6 +844,182 @@ export function InvoicesBoard({
           </Card>
         )
       })}
+
+      <Dialog
+        open={editingInvoiceId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            resetInvoiceForm()
+          }
+        }}
+      >
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>청구 수정</DialogTitle>
+            <DialogDescription>
+              금액, 상태, 기한과 메모를 실제 DB에 저장합니다.
+            </DialogDescription>
+          </DialogHeader>
+          {formFields}
+          <DialogFooter>
+            <Button variant="outline" type="button" onClick={resetInvoiceForm}>
+              닫기
+            </Button>
+            <Button type="button" onClick={saveEdit} disabled={isPending || !editingInvoice} className="gap-2">
+              {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+              저장
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={reminderInvoiceId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReminderInvoiceId(null)
+            setReminderForm({ channel: "kakao", message: "" })
+          }
+        }}
+      >
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>리마인드 기록 추가</DialogTitle>
+            <DialogDescription>
+              발송 채널과 내용을 저장하면 활동 로그에도 남습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">채널</label>
+              <Select
+                value={reminderForm.channel}
+                onValueChange={(value) =>
+                  setReminderForm((current) => ({
+                    ...current,
+                    channel: (value as ReminderChannel | null) ?? current.channel,
+                  }))
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {reminderChannelOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">메시지</label>
+              <Textarea
+                value={reminderForm.message}
+                onChange={(event) =>
+                  setReminderForm((current) => ({
+                    ...current,
+                    message: event.target.value,
+                  }))
+                }
+                className="min-h-28"
+              />
+            </div>
+            {errorMessage ? <p className="text-sm text-destructive">{errorMessage}</p> : null}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" type="button" onClick={() => setReminderInvoiceId(null)}>
+              취소
+            </Button>
+            <Button type="button" onClick={saveReminder} disabled={isPending || !reminderInvoice} className="gap-2">
+              {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+              저장
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+export function InvoicesWorkspace({
+  invoices,
+  customers,
+  quotes,
+  defaultReminderMessage,
+}: {
+  invoices: InvoiceWithReminders[]
+  customers: Customer[]
+  quotes: Quote[]
+  defaultReminderMessage: string
+}) {
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const createOpenSourceRef = useRef<"header" | null>(null)
+  const hasQuotes = quotes.length > 0
+
+  return (
+    <div className="space-y-4 md:space-y-5">
+      <PageHeader
+        title="청구 및 수금"
+        description="선금·잔금 청구, 입금 상태, 미수 리마인드 이력을 한곳에서 다룹니다."
+        action={
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+            {hasQuotes ? (
+              <Button
+                type="button"
+                className="h-9 w-full gap-2 sm:w-auto"
+                onClick={() => {
+                  createOpenSourceRef.current = "header"
+                  setIsCreateOpen(true)
+                }}
+              >
+                <Plus className="size-4" />
+                새 청구
+              </Button>
+            ) : (
+              <div className="w-full rounded-lg border border-border/60 bg-muted/20 p-2.5 sm:w-auto sm:min-w-[17rem]">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-2">
+                  <Link
+                    href="/quotes"
+                    className={cn(
+                      buttonVariants({ size: "sm" }),
+                      "inline-flex h-9 flex-1 items-center justify-center gap-2 font-medium"
+                    )}
+                  >
+                    견적 만들기
+                    <ArrowRight className="size-3.5" />
+                  </Link>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled
+                    className="h-9 flex-1 cursor-not-allowed opacity-50 sm:max-w-[8.5rem]"
+                    title="청구 생성 전에 먼저 견적을 준비해주세요"
+                  >
+                    <Plus className="size-3.5" />
+                    새 청구
+                  </Button>
+                </div>
+                <p className="mt-1.5 border-t border-border/40 pt-1.5 text-center text-[11px] leading-snug text-muted-foreground sm:text-left">
+                  청구 생성 전에 먼저 견적을 준비해주세요
+                </p>
+              </div>
+            )}
+          </div>
+        }
+      />
+
+      <InvoicesBoardPanel
+        invoices={invoices}
+        customers={customers}
+        quotes={quotes}
+        defaultReminderMessage={defaultReminderMessage}
+        isCreateOpen={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        createOpenSourceRef={createOpenSourceRef}
+      />
     </div>
   )
 }
