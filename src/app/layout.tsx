@@ -16,8 +16,12 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "FlowBill AI",
-  description: "국내 1인 사업자를 위한 견적-청구-수금 관리 SaaS MVP",
+  title: {
+    default: "Bill-IO",
+    template: "%s · Bill-IO",
+  },
+  description:
+    "프리랜서·소규모 사업자를 위한 견적·청구·수금 관리. 문의부터 입금까지 한 흐름으로 정리합니다.",
 }
 
 export default function RootLayout({

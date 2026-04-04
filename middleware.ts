@@ -50,9 +50,12 @@ export function middleware(request: NextRequest) {
   const isAuthenticated = hasSessionCookie(request)
 
   if (pathname === "/") {
-    const nextUrl = request.nextUrl.clone()
-    nextUrl.pathname = isAuthenticated ? "/dashboard" : "/login"
-    return stripStaleDemoCookie(request, NextResponse.redirect(nextUrl))
+    if (isAuthenticated) {
+      const nextUrl = request.nextUrl.clone()
+      nextUrl.pathname = "/dashboard"
+      return stripStaleDemoCookie(request, NextResponse.redirect(nextUrl))
+    }
+    return stripStaleDemoCookie(request, NextResponse.next())
   }
 
   if (!isPublic && !isAuthenticated) {
