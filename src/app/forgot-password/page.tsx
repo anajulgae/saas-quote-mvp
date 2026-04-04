@@ -1,14 +1,16 @@
+import Link from "next/link"
+
 import { ForgotPasswordForm } from "@/components/app/forgot-password-form"
 import { isSupabaseConfigured } from "@/lib/auth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import Link from "next/link"
 
 export default function ForgotPasswordPage() {
   const ok = isSupabaseConfigured()
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#ffffff,#f4f4f5_50%,#eef2ff)] px-4 py-12 sm:py-16">
-      <div className="mx-auto w-full max-w-md">
+      <div className="mx-auto w-full max-w-md space-y-5">
+        <p className="text-center text-xs font-medium text-muted-foreground">계정 · 비밀번호 재설정</p>
         {!ok ? (
           <Card className="border-destructive/25 bg-destructive/5 shadow-md">
             <CardHeader>

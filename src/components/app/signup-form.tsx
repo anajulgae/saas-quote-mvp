@@ -23,8 +23,8 @@ export function SignupForm() {
         </div>
         <div className="space-y-1.5 pt-1">
           <CardTitle className="text-2xl font-semibold tracking-tight">회원가입</CardTitle>
-          <CardDescription className="text-sm leading-relaxed">
-            무료로 시작하고, 견적·청구·수금을 한곳에서 관리하세요.
+          <CardDescription className="text-sm leading-relaxed text-muted-foreground">
+            제출 후 인증 메일이 발송됩니다. 메일의 링크로 인증을 마친 뒤 로그인해 주세요.
           </CardDescription>
         </div>
       </CardHeader>
@@ -45,15 +45,20 @@ export function SignupForm() {
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="signup-businessName" className="text-sm font-medium text-foreground">
-              사업장명 <span className="font-normal text-muted-foreground">(선택)</span>
-            </label>
+            <div className="flex flex-wrap items-baseline justify-between gap-1">
+              <label htmlFor="signup-businessName" className="text-sm font-medium text-foreground">
+                사업장명 <span className="font-normal text-muted-foreground">(선택)</span>
+              </label>
+            </div>
+            <p className="text-xs leading-snug text-muted-foreground">
+              비워 두면 이름이 사업장명으로 저장됩니다. 청구서·견적에 쓰일 표기입니다.
+            </p>
             <Input
               id="signup-businessName"
               name="businessName"
               type="text"
               autoComplete="organization"
-              placeholder="비어 있으면 이름으로 설정됩니다"
+              placeholder="예: 스튜디오 오션"
               className="h-11"
             />
           </div>
@@ -71,35 +76,47 @@ export function SignupForm() {
               className="h-11"
             />
           </div>
-          <div className="space-y-2">
-            <label htmlFor="signup-password" className="text-sm font-medium text-foreground">
-              비밀번호
-            </label>
-            <Input
-              id="signup-password"
-              name="password"
-              type="password"
-              autoComplete="new-password"
-              placeholder="8자 이상"
-              required
-              minLength={8}
-              className="h-11"
-            />
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="signup-confirm" className="text-sm font-medium text-foreground">
-              비밀번호 확인
-            </label>
-            <Input
-              id="signup-confirm"
-              name="confirmPassword"
-              type="password"
-              autoComplete="new-password"
-              placeholder="비밀번호 재입력"
-              required
-              minLength={8}
-              className="h-11"
-            />
+          <div className="space-y-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-3">
+            <p
+              id="signup-password-hint"
+              className="text-xs leading-relaxed text-muted-foreground"
+            >
+              <span className="font-medium text-foreground">비밀번호 조건</span>
+              <br />
+              8자 이상 필수이며, 영문과 숫자를 함께 쓰는 것을 권장합니다.
+            </p>
+            <div className="space-y-2">
+              <label htmlFor="signup-password" className="text-sm font-medium text-foreground">
+                비밀번호
+              </label>
+              <Input
+                id="signup-password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                placeholder="8자 이상 입력"
+                required
+                minLength={8}
+                className="h-11 bg-background"
+                aria-describedby="signup-password-hint"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="signup-confirm" className="text-sm font-medium text-foreground">
+                비밀번호 확인
+              </label>
+              <Input
+                id="signup-confirm"
+                name="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                placeholder="위와 동일하게 입력"
+                required
+                minLength={8}
+                className="h-11 bg-background"
+                aria-describedby="signup-password-hint"
+              />
+            </div>
           </div>
           {state?.error ? (
             <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">

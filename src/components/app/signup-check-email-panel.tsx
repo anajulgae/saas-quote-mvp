@@ -15,22 +15,32 @@ export function SignupCheckEmailPanel() {
   return (
     <Card className="border-border/80 bg-background/95 shadow-md ring-1 ring-border/40">
       <CardHeader className="space-y-2 pb-2">
-        <div className="flex size-11 items-center justify-center rounded-xl bg-muted text-foreground">
+        <div className="flex size-11 items-center justify-center rounded-xl bg-foreground text-background">
           <Mail className="size-5" aria-hidden />
         </div>
-        <CardTitle className="text-xl font-semibold tracking-tight">이메일을 확인해 주세요</CardTitle>
-        <CardDescription className="text-sm leading-relaxed">
-          가입하신 주소로 인증 메일을 보냈습니다. 메일의 링크를 눌러 인증을 완료한 뒤 로그인할 수
-          있습니다. 메일이 보이지 않으면 스팸함을 확인해 주세요.
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          가입 완료 · 다음 단계
+        </p>
+        <CardTitle className="text-xl font-semibold tracking-tight">이메일 인증을 마쳐 주세요</CardTitle>
+        <CardDescription className="text-sm leading-relaxed text-muted-foreground">
+          방금 가입하신 주소로 인증 메일을 보냈습니다. 메일의 링크를 눌러 인증을 완료한 뒤, 로그인
+          화면에서 접속하면 대시보드로 이어집니다.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="rounded-lg border border-border/80 bg-muted/30 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-          인증을 마치면 자동으로 서비스에 들어가며, 프로필과 사업장 정보는 가입 시 입력한 값으로
-          초기화됩니다.
-        </div>
+        <ol className="list-inside list-decimal space-y-1.5 rounded-lg border border-border/60 bg-muted/20 px-3 py-3 text-xs leading-relaxed text-muted-foreground">
+          <li className="text-foreground">
+            <span className="font-medium">메일함</span>에서 발신 메일을 엽니다.
+          </li>
+          <li>
+            <span className="font-medium text-foreground">인증 링크</span>를 눌러 완료합니다.
+          </li>
+          <li>
+            이 화면을 닫고 <span className="font-medium text-foreground">로그인</span>으로 들어갑니다.
+          </li>
+        </ol>
         <form action={formAction} className="space-y-3">
-          <p className="text-sm font-medium text-foreground">인증 메일을 받지 못하셨나요?</p>
+          <p className="text-sm font-medium text-foreground">메일이 오지 않았나요?</p>
           <div className="space-y-2">
             <label htmlFor="resend-email" className="sr-only">
               이메일
@@ -46,10 +56,14 @@ export function SignupCheckEmailPanel() {
             />
           </div>
           {state?.error ? (
-            <p className="text-sm text-destructive">{state.error}</p>
+            <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {state.error}
+            </p>
           ) : null}
           {state?.ok ? (
-            <p className="text-sm text-emerald-700 dark:text-emerald-400">인증 메일을 다시 보냈습니다.</p>
+            <p className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-200">
+              인증 메일을 다시 보냈습니다. 메일함을 확인해 주세요.
+            </p>
           ) : null}
           <Button type="submit" variant="outline" className="h-10 w-full" disabled={isPending}>
             {isPending ? (

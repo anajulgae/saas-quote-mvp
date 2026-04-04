@@ -20,42 +20,54 @@ export function UpdatePasswordForm() {
         </div>
         <div className="space-y-1.5 pt-1">
           <CardTitle className="text-2xl font-semibold tracking-tight">새 비밀번호 설정</CardTitle>
-          <CardDescription className="text-sm leading-relaxed">
-            새 비밀번호를 입력하고 저장하면 바로 서비스를 이용할 수 있습니다.
+          <CardDescription className="text-sm leading-relaxed text-muted-foreground">
+            메일 링크로 들어온 경우에만 이 화면이 표시됩니다. 저장 후 대시보드로 이동합니다.
           </CardDescription>
         </div>
       </CardHeader>
       <CardContent className="space-y-5 pt-0">
         <form action={formAction} className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="new-password" className="text-sm font-medium text-foreground">
-              새 비밀번호
-            </label>
-            <Input
-              id="new-password"
-              name="password"
-              type="password"
-              autoComplete="new-password"
-              placeholder="8자 이상"
-              required
-              minLength={8}
-              className="h-11"
-            />
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="new-password-confirm" className="text-sm font-medium text-foreground">
-              새 비밀번호 확인
-            </label>
-            <Input
-              id="new-password-confirm"
-              name="confirmPassword"
-              type="password"
-              autoComplete="new-password"
-              placeholder="비밀번호 재입력"
-              required
-              minLength={8}
-              className="h-11"
-            />
+          <div className="space-y-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-3">
+            <p
+              id="update-password-hint"
+              className="text-xs leading-relaxed text-muted-foreground"
+            >
+              <span className="font-medium text-foreground">비밀번호 조건</span>
+              <br />
+              8자 이상 필수이며, 영문과 숫자를 함께 쓰는 것을 권장합니다.
+            </p>
+            <div className="space-y-2">
+              <label htmlFor="new-password" className="text-sm font-medium text-foreground">
+                새 비밀번호
+              </label>
+              <Input
+                id="new-password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                placeholder="8자 이상 입력"
+                required
+                minLength={8}
+                className="h-11 bg-background"
+                aria-describedby="update-password-hint"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="new-password-confirm" className="text-sm font-medium text-foreground">
+                새 비밀번호 확인
+              </label>
+              <Input
+                id="new-password-confirm"
+                name="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                placeholder="위와 동일하게 입력"
+                required
+                minLength={8}
+                className="h-11 bg-background"
+                aria-describedby="update-password-hint"
+              />
+            </div>
           </div>
           {state?.error ? (
             <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">

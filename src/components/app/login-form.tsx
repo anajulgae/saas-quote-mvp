@@ -38,8 +38,8 @@ export function LoginForm({
         </div>
         <div className="space-y-1.5 pt-1">
           <CardTitle className="text-2xl font-semibold tracking-tight">로그인</CardTitle>
-          <CardDescription className="text-sm leading-relaxed">
-            계정에 로그인해 견적·청구·수금 흐름을 이어서 관리하세요.
+          <CardDescription className="text-sm leading-relaxed text-muted-foreground">
+            이메일과 비밀번호로 로그인하면 이전 작업을 이어서 진행할 수 있습니다.
           </CardDescription>
         </div>
       </CardHeader>
@@ -100,22 +100,24 @@ export function LoginForm({
           </Button>
         </form>
         {showAccountLinks ? (
-          <div className="space-y-3 border-t border-border/60 pt-4 text-center text-sm">
-            <Link
-              href="/forgot-password"
-              className="block text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-            >
-              비밀번호를 잊으셨나요?
-            </Link>
-            <p className="text-muted-foreground">
-              계정이 없으신가요?{" "}
+          <div className="border-t border-border/60 pt-4">
+            <div className="flex flex-col gap-3 text-center text-sm sm:flex-row sm:items-center sm:justify-between sm:text-left">
               <Link
-                href="/signup"
-                className="font-semibold text-foreground underline-offset-4 hover:underline"
+                href="/forgot-password"
+                className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
               >
-                무료로 시작하기
+                비밀번호를 잊으셨나요?
               </Link>
-            </p>
+              <p className="text-muted-foreground">
+                계정이 없으신가요?{" "}
+                <Link
+                  href="/signup"
+                  className="font-semibold text-foreground underline-offset-4 hover:underline"
+                >
+                  회원가입
+                </Link>
+              </p>
+            </div>
           </div>
         ) : null}
         {reviewHintsMode === "local-sandbox" ? (

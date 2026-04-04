@@ -7,9 +7,9 @@ import { isSupabaseConfigured } from "@/lib/auth"
 import { isDemoLoginEnabled } from "@/lib/demo-flags"
 
 const bullets = [
-  "가입 후 바로 문의·견적·청구 흐름을 시작할 수 있습니다.",
-  "사업장명과 연락처는 설정에서 언제든 수정할 수 있습니다.",
-  "데이터는 계정별로 분리되어 저장됩니다.",
+  "가입 후 받은 메일에서 인증만 마치면 바로 로그인할 수 있습니다.",
+  "문의·견적·청구 흐름을 대시보드에서 이어서 시작합니다.",
+  "사업장 정보와 연락처는 설정에서 언제든 바꿀 수 있습니다.",
 ]
 
 export default function SignupPage() {
@@ -26,12 +26,22 @@ export default function SignupPage() {
             무료로 시작하기
           </div>
           <div className="space-y-2">
-            <h1 className="max-w-xl text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
-              몇 분 만에 계정을 만들고 운영을 시작하세요
+            <h1 className="max-w-md text-2xl font-semibold tracking-tight text-balance sm:max-w-xl sm:text-3xl">
+              몇 분이면 충분합니다.
+              <br className="hidden sm:block" />{" "}
+              <span className="text-balance">계정을 만들고 바로 시작하세요</span>
             </h1>
             <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-              이메일 인증 후 로그인하면 대시보드에서 바로 업무를 이어갈 수 있습니다.
+              제출 후 안내 메일이 갑니다. 메일 속 링크로 인증을 완료한 뒤 로그인하면 됩니다.
             </p>
+          </div>
+          <div className="max-w-md rounded-xl border border-border/80 bg-background/90 px-4 py-3 text-xs leading-relaxed text-muted-foreground shadow-sm">
+            <p className="font-medium text-foreground">가입 후 진행 순서</p>
+            <ol className="mt-2 list-inside list-decimal space-y-1">
+              <li>오른쪽 양식 작성 후 제출</li>
+              <li>이메일함에서 인증 링크 확인(스팸함 포함)</li>
+              <li>인증 완료 후 로그인 → 대시보드</li>
+            </ol>
           </div>
           <ul className="max-w-md space-y-2 rounded-2xl border border-border/70 bg-background/85 p-4 shadow-sm">
             {bullets.map((item) => (

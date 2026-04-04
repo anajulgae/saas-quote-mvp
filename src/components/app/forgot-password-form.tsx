@@ -20,8 +20,8 @@ export function ForgotPasswordForm() {
         </div>
         <div className="space-y-1.5 pt-1">
           <CardTitle className="text-2xl font-semibold tracking-tight">비밀번호 찾기</CardTitle>
-          <CardDescription className="text-sm leading-relaxed">
-            가입에 사용한 이메일을 입력하세요. 재설정 링크가 메일로 전송됩니다.
+          <CardDescription className="text-sm leading-relaxed text-muted-foreground">
+            로그인에 쓰는 이메일을 입력하세요. 잠시 후 메일로 재설정 링크가 전송됩니다.
           </CardDescription>
         </div>
       </CardHeader>

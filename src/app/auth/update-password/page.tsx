@@ -1,12 +1,12 @@
 import Link from "next/link"
 
 import { UpdatePasswordForm } from "@/components/app/update-password-form"
-
-export const dynamic = "force-dynamic"
 import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { createServerSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/server"
+
+export const dynamic = "force-dynamic"
 
 export default async function UpdatePasswordPage() {
   if (!isSupabaseConfigured()) {
@@ -57,11 +57,12 @@ export default async function UpdatePasswordPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#ffffff,#f4f4f5_50%,#eef2ff)] px-4 py-12 sm:py-16">
-        <div className="mx-auto w-full max-w-md">
+        <div className="mx-auto w-full max-w-md space-y-5">
+          <p className="text-center text-xs font-medium text-muted-foreground">비밀번호 재설정</p>
           <Card className="border-border/80 bg-background/95 shadow-md ring-1 ring-border/40">
             <CardHeader>
               <CardTitle className="text-xl font-semibold tracking-tight">유효한 링크가 필요합니다</CardTitle>
-              <CardDescription className="text-sm leading-relaxed">
+              <CardDescription className="text-sm leading-relaxed text-muted-foreground">
                 비밀번호 재설정 메일에 포함된 링크로 접속해 주세요. 링크는 일정 시간 후 만료될 수
                 있습니다.
               </CardDescription>
@@ -82,7 +83,8 @@ export default async function UpdatePasswordPage() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#ffffff,#f4f4f5_50%,#eef2ff)] px-4 py-12 sm:py-16">
-      <div className="mx-auto w-full max-w-md">
+      <div className="mx-auto w-full max-w-md space-y-5">
+        <p className="text-center text-xs font-medium text-muted-foreground">비밀번호 재설정</p>
         <UpdatePasswordForm />
       </div>
     </div>

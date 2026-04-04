@@ -61,11 +61,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             견적·청구·수금을 한 화면에서
           </div>
           <div className="space-y-3">
-            <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-              프리랜서와 소규모 서비스업을 위한 운영 툴
+            <h1 className="max-w-md text-3xl font-semibold tracking-tight text-balance sm:text-4xl sm:max-w-xl">
+              소규모 사업자를 위한
+              <br className="hidden sm:block" />{" "}
+              <span className="text-balance">견적·청구·수금 관리</span>
             </h1>
             <p className="max-w-md text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-              문의부터 견적 발송, 청구와 입금 상태까지 끊기지 않게 이어 관리하세요.
+              문의부터 견적·청구·입금까지 한 흐름으로 이어 관리합니다.
             </p>
           </div>
           <ul className="max-w-md space-y-2.5 rounded-2xl border border-border/70 bg-background/85 p-4 shadow-sm">
@@ -80,35 +82,31 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             국내 1인 사업자·소규모 서비스업을 염두에 둔 견적·청구 관리입니다. 데이터는 본인 계정
             기준으로 안전하게 분리됩니다.
           </p>
-          <div className="flex flex-wrap gap-2 pt-1">
-            <a
-              href="#login-form"
-              className={cn(
-                buttonVariants({ variant: "outline", size: "sm" }),
-                "h-9 border-border/80 bg-background/80"
-              )}
-            >
-              로그인
-            </a>
-            {supabaseConfigured && !deploymentBlocked ? (
-              <Link
-                href="/signup"
-                className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
-              >
-                무료로 시작하기
-              </Link>
-            ) : null}
-            {contactEmail ? (
-              <a
-                href={`mailto:${contactEmail}?subject=${encodeURIComponent("문의하기")}`}
-                className={cn(
-                  buttonVariants({ variant: "ghost", size: "sm" }),
-                  "h-9 text-muted-foreground"
-                )}
-              >
-                문의하기
-              </a>
-            ) : null}
+          <div className="space-y-2 pt-1">
+            <p className="text-xs text-muted-foreground">
+              로그인은 오른쪽에서 진행합니다.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {supabaseConfigured && !deploymentBlocked ? (
+                <Link
+                  href="/signup"
+                  className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
+                >
+                  무료로 시작하기
+                </Link>
+              ) : null}
+              {contactEmail ? (
+                <a
+                  href={`mailto:${contactEmail}?subject=${encodeURIComponent("도입 문의")}`}
+                  className={cn(
+                    buttonVariants({ variant: "outline", size: "sm" }),
+                    "h-9 border-border/80 bg-background/80 text-muted-foreground"
+                  )}
+                >
+                  도입 문의
+                </a>
+              ) : null}
+            </div>
           </div>
         </section>
 
@@ -149,28 +147,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 authCallbackError={authCallbackError}
                 showAccountLinks={showAccountLinks}
               />
-              {showAccountLinks ? (
-                <p className="text-center text-xs text-muted-foreground">
-                  아직 계정이 없으신가요?{" "}
-                  <Link
-                    href="/signup"
-                    className="font-medium text-foreground underline-offset-4 hover:underline"
-                  >
-                    회원가입
-                  </Link>
-                  {contactEmail ? (
-                    <>
-                      {" · "}
-                      <a
-                        href={`mailto:${contactEmail}?subject=${encodeURIComponent("도입 문의")}`}
-                        className="font-medium text-foreground underline-offset-4 hover:underline"
-                      >
-                        도입 문의
-                      </a>
-                    </>
-                  ) : null}
-                </p>
-              ) : contactEmail ? (
+              {!showAccountLinks && contactEmail ? (
                 <p className="text-center text-xs text-muted-foreground">
                   도입 문의:{" "}
                   <a
