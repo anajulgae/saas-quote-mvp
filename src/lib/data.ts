@@ -1,28 +1,40 @@
+import { resolveActivityHeadline, resolveActivityKind } from "@/lib/activity-presentation"
 import {
   demoActivityLogs,
+  demoBusinessSettings,
   demoCustomers,
   demoInquiries,
   demoInvoices,
   demoQuoteItems,
   demoQuotes,
   demoReminders,
+  demoTemplates,
   getCustomerTimeline,
   getDashboardMetrics,
 } from "@/lib/demo-data"
 import { getAppSession } from "@/lib/auth"
+import {
+  defaultQuoteSummaryFromTemplates,
+  defaultReminderMessageFromTemplates,
+} from "@/lib/template-defaults"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import type {
   ActivityLog,
+  BusinessSettings,
   Customer,
   CustomerSummary,
   DashboardMetrics,
   Inquiry,
   InquiryWithCustomer,
   Invoice,
+  InvoiceFormInput,
   InvoiceWithReminders,
   Quote,
+  QuoteFormInput,
   QuoteItem,
   QuoteWithItems,
+  ReminderFormInput,
+  Template,
   TimelineEvent,
 } from "@/types/domain"
 import type { Database } from "@/types/supabase"
@@ -34,6 +46,8 @@ type QuoteItemRow = Database["public"]["Tables"]["quote_items"]["Row"]
 type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"]
 type ReminderRow = Database["public"]["Tables"]["reminders"]["Row"]
 type ActivityLogRow = Database["public"]["Tables"]["activity_logs"]["Row"]
+type BusinessSettingsRow = Database["public"]["Tables"]["business_settings"]["Row"]
+type TemplateRow = Database["public"]["Tables"]["templates"]["Row"]
 type QueryResult = {
   data: unknown
   error: Error | null
@@ -42,6 +56,8 @@ type QueryBuilderLike = PromiseLike<QueryResult> & {
   select: (...args: unknown[]) => QueryBuilderLike
   insert: (...args: unknown[]) => QueryBuilderLike
   update: (...args: unknown[]) => QueryBuilderLike
+  upsert: (...args: unknown[]) => QueryBuilderLike
+  delete: (...args: unknown[]) => QueryBuilderLike
   eq: (...args: unknown[]) => QueryBuilderLike
   order: (...args: unknown[]) => QueryBuilderLike
   limit: (...args: unknown[]) => QueryBuilderLike
@@ -51,6 +67,10 @@ type QueryBuilderLike = PromiseLike<QueryResult> & {
 type QueryableSupabase = {
   from: (table: string) => QueryBuilderLike
 }
+
+type AppDataContext =
+  | { mode: "demo"; userId: string; supabase: null }
+  | { mode: "supabase"; userId: string; supabase: QueryableSupabase }
 
 function mapCustomer(row: CustomerRow): Customer {
   return {
@@ -110,6 +130,7 @@ function mapQuoteItem(row: QuoteItemRow): QuoteItem {
   return {
     id: row.id,
     quoteId: row.quote_id,
+    sortOrder: row.sort_order,
     name: row.name,
     description: row.description ?? undefined,
     quantity: Number(row.quantity),
@@ -148,6 +169,32 @@ function mapReminder(row: ReminderRow) {
   }
 }
 
+function mapBusinessSettings(row: BusinessSettingsRow): BusinessSettings {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    businessName: row.business_name,
+    ownerName: row.owner_name,
+    email: row.email ?? "",
+    phone: row.phone ?? "",
+    paymentTerms: row.payment_terms ?? "",
+    bankAccount: row.bank_account ?? "",
+    reminderMessage: row.reminder_message ?? "",
+  }
+}
+
+function mapTemplate(row: TemplateRow): Template {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    type: row.type as "quote" | "reminder",
+    name: row.name,
+    content: row.content,
+    isDefault: row.is_default,
+    updatedAt: row.updated_at,
+  }
+}
+
 function mapActivityLog(row: ActivityLogRow): ActivityLog {
   return {
     id: row.id,
@@ -165,29 +212,15 @@ function mapActivityLog(row: ActivityLogRow): ActivityLog {
 function mapActivityToTimeline(log: ActivityLog): TimelineEvent {
   return {
     id: log.id,
-    label: timelineLabelByAction(log.action),
+    label: resolveActivityHeadline(log.action),
     description: log.description,
     createdAt: log.createdAt,
+    action: log.action,
+    kind: resolveActivityKind(log.action),
   }
 }
 
-function timelineLabelByAction(action: string) {
-  if (action.startsWith("inquiry.")) {
-    return "문의 활동"
-  }
-
-  if (action.startsWith("quote.")) {
-    return "견적 활동"
-  }
-
-  if (action.startsWith("invoice.")) {
-    return "청구 활동"
-  }
-
-  return "활동"
-}
-
-async function getDataContext() {
+async function getDataContext(): Promise<AppDataContext> {
   const session = await getAppSession()
 
   if (!session || session.mode === "demo") {
@@ -226,7 +259,7 @@ export async function createActivityLog(input: {
 }) {
   const context = await getDataContext()
 
-  if (context.mode === "demo" || !context.supabase) {
+  if (context.mode === "demo") {
     return
   }
 
@@ -255,7 +288,7 @@ export async function createInquiryRecord(input: {
 }) {
   const context = await getDataContext()
 
-  if (context.mode === "demo" || !context.supabase) {
+  if (context.mode === "demo") {
     return { mode: "demo" as const }
   }
 
@@ -325,7 +358,7 @@ export async function updateInquiryRecord(
 ) {
   const context = await getDataContext()
 
-  if (context.mode === "demo" || !context.supabase) {
+  if (context.mode === "demo") {
     return { mode: "demo" as const }
   }
 
@@ -368,6 +401,604 @@ export async function updateInquiryRecord(
   }
 }
 
+function buildQuoteTotals(items: QuoteFormInput["items"]) {
+  const normalizedItems = items.map((item, index) => {
+    const quantity = Number(item.quantity)
+    const unitPrice = Number(item.unitPrice)
+    const lineTotal = Math.round(quantity * unitPrice)
+
+    return {
+      sort_order: index,
+      name: item.name,
+      description: item.description ?? null,
+      quantity,
+      unit_price: unitPrice,
+      line_total: lineTotal,
+    }
+  })
+
+  const subtotal = normalizedItems.reduce((sum, item) => sum + item.line_total, 0)
+  const tax = Math.round(subtotal * 0.1)
+  const total = subtotal + tax
+
+  return {
+    normalizedItems,
+    subtotal,
+    tax,
+    total,
+  }
+}
+
+async function generateQuoteNumber(context: {
+  supabase: QueryableSupabase
+  userId: string
+}) {
+  const { data } = await context.supabase
+    .from("quotes")
+    .select("quote_number")
+    .order("created_at", { ascending: false })
+    .limit(1)
+
+  const rows = (data ?? []) as Array<{ quote_number: string }>
+  const currentYear = new Date().getFullYear()
+  const suffix =
+    rows.length > 0
+      ? String(Number(rows[0].quote_number.split("-").at(-1) ?? "0") + 1).padStart(3, "0")
+      : "001"
+
+  return `Q-${currentYear}-${suffix}`
+}
+
+async function generateInvoiceNumber(context: {
+  supabase: QueryableSupabase
+  userId: string
+}) {
+  const { data } = await context.supabase
+    .from("invoices")
+    .select("invoice_number")
+    .order("created_at", { ascending: false })
+    .limit(1)
+
+  const rows = (data ?? []) as Array<{ invoice_number: string }>
+  const currentYear = new Date().getFullYear()
+  const suffix =
+    rows.length > 0
+      ? String(Number(rows[0].invoice_number.split("-").at(-1) ?? "0") + 1).padStart(3, "0")
+      : "001"
+
+  return `I-${currentYear}-${suffix}`
+}
+
+async function syncInquiryQuotedState(
+  context: { supabase: QueryableSupabase },
+  inquiryId: string | undefined,
+  quoteId: string,
+  quoteTitle: string
+) {
+  if (!inquiryId) {
+    return
+  }
+
+  await context.supabase
+    .from("inquiries")
+    .update({
+      stage: "quoted",
+    })
+    .eq("id", inquiryId)
+
+  await createActivityLog({
+    action: "quote.linked_to_inquiry",
+    description: `${quoteTitle} 견적이 문의 흐름에 연결되었습니다.`,
+    inquiryId,
+    quoteId,
+  })
+}
+
+export async function createQuoteRecord(input: QuoteFormInput) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return { mode: "demo" as const }
+  }
+
+  const { normalizedItems, subtotal, tax, total } = buildQuoteTotals(input.items)
+  const quoteNumber = await generateQuoteNumber(context)
+  const sentAt =
+    input.status === "sent" && !input.sentAt ? new Date().toISOString() : input.sentAt
+
+  const { data: quoteData, error } = await context.supabase
+    .from("quotes")
+    .insert({
+      user_id: context.userId,
+      customer_id: input.customerId,
+      inquiry_id: input.inquiryId ?? null,
+      quote_number: quoteNumber,
+      title: input.title,
+      summary: input.summary,
+      status: input.status,
+      subtotal,
+      tax,
+      total,
+      sent_at: sentAt ?? null,
+      valid_until: input.validUntil ?? null,
+    })
+    .select("*")
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  const quote = quoteData as QuoteRow
+
+  if (normalizedItems.length > 0) {
+    await context.supabase.from("quote_items").insert(
+      normalizedItems.map((item) => ({
+        ...item,
+        quote_id: quote.id,
+      }))
+    )
+  }
+
+  await syncInquiryQuotedState(context, input.inquiryId, quote.id, input.title)
+
+  await createActivityLog({
+    action: "quote.created",
+    description: `${input.title} 견적이 생성되었습니다.`,
+    customerId: input.customerId,
+    inquiryId: input.inquiryId,
+    quoteId: quote.id,
+    metadata: {
+      status: input.status,
+      total,
+    },
+  })
+
+  return {
+    mode: "supabase" as const,
+    quote: mapQuote(quote),
+  }
+}
+
+export async function updateQuoteRecord(quoteId: string, input: QuoteFormInput) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return { mode: "demo" as const }
+  }
+
+  const { normalizedItems, subtotal, tax, total } = buildQuoteTotals(input.items)
+  const sentAt =
+    input.status === "sent" && !input.sentAt ? new Date().toISOString() : input.sentAt
+
+  const { data: quoteData, error } = await context.supabase
+    .from("quotes")
+    .update({
+      customer_id: input.customerId,
+      inquiry_id: input.inquiryId ?? null,
+      title: input.title,
+      summary: input.summary,
+      status: input.status,
+      subtotal,
+      tax,
+      total,
+      sent_at: sentAt ?? null,
+      valid_until: input.validUntil ?? null,
+    })
+    .eq("id", quoteId)
+    .select("*")
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  await context.supabase.from("quote_items").delete().eq("quote_id", quoteId)
+
+  if (normalizedItems.length > 0) {
+    await context.supabase.from("quote_items").insert(
+      normalizedItems.map((item) => ({
+        ...item,
+        quote_id: quoteId,
+      }))
+    )
+  }
+
+  await syncInquiryQuotedState(context, input.inquiryId, quoteId, input.title)
+
+  await createActivityLog({
+    action: "quote.updated",
+    description: `${input.title} 견적이 수정되었습니다.`,
+    customerId: input.customerId,
+    inquiryId: input.inquiryId,
+    quoteId,
+    metadata: {
+      status: input.status,
+      total,
+    },
+  })
+
+  return {
+    mode: "supabase" as const,
+    quote: mapQuote(quoteData as QuoteRow),
+  }
+}
+
+export async function updateQuoteStatusRecord(quoteId: string, status: Quote["status"]) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return { mode: "demo" as const }
+  }
+
+  const { data: existingQuoteData } = await context.supabase
+    .from("quotes")
+    .select("*")
+    .eq("id", quoteId)
+    .maybeSingle()
+  const existingQuote = existingQuoteData as QuoteRow | null
+  const sentAt =
+    status === "sent"
+      ? existingQuote?.sent_at ?? new Date().toISOString()
+      : existingQuote?.sent_at ?? null
+
+  const { data, error } = await context.supabase
+    .from("quotes")
+    .update({
+      status,
+      sent_at: sentAt,
+    })
+    .eq("id", quoteId)
+    .select("*")
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  const quote = data as QuoteRow
+
+  await createActivityLog({
+    action: "quote.status_changed",
+    description: `${quote.title} 견적 상태가 변경되었습니다.`,
+    customerId: quote.customer_id,
+    inquiryId: quote.inquiry_id ?? undefined,
+    quoteId,
+    metadata: {
+      status,
+    },
+  })
+
+  await syncInquiryQuotedState(
+    context,
+    quote.inquiry_id ?? undefined,
+    quoteId,
+    quote.title
+  )
+
+  return {
+    mode: "supabase" as const,
+    quote: mapQuote(quote),
+  }
+}
+
+export async function createInvoiceRecord(input: InvoiceFormInput) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return { mode: "demo" as const }
+  }
+
+  const invoiceNumber = await generateInvoiceNumber(context)
+  const requestedAt = input.requestedAt ?? new Date().toISOString()
+  const paidAt =
+    input.paymentStatus === "paid" || input.paymentStatus === "deposit_paid"
+      ? input.paidAt ?? new Date().toISOString()
+      : input.paidAt ?? null
+
+  const { data, error } = await context.supabase
+    .from("invoices")
+    .insert({
+      user_id: context.userId,
+      customer_id: input.customerId,
+      quote_id: input.quoteId ?? null,
+      invoice_number: invoiceNumber,
+      invoice_type: input.invoiceType,
+      amount: input.amount,
+      payment_status: input.paymentStatus,
+      due_date: input.dueDate ?? null,
+      requested_at: requestedAt,
+      paid_at: paidAt,
+      notes: input.notes,
+    })
+    .select("*")
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  const invoice = data as InvoiceRow
+
+  await createActivityLog({
+    action: "invoice.created",
+    description: `${invoice.invoice_number} 청구가 생성되었습니다.`,
+    customerId: invoice.customer_id,
+    quoteId: invoice.quote_id ?? undefined,
+    invoiceId: invoice.id,
+    metadata: {
+      paymentStatus: invoice.payment_status,
+      amount: invoice.amount,
+    },
+  })
+
+  return {
+    mode: "supabase" as const,
+    invoice: mapInvoice(invoice),
+  }
+}
+
+export async function updateInvoiceRecord(invoiceId: string, input: InvoiceFormInput) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return { mode: "demo" as const }
+  }
+
+  const paidAt =
+    input.paymentStatus === "paid" || input.paymentStatus === "deposit_paid"
+      ? input.paidAt ?? new Date().toISOString()
+      : input.paymentStatus === "partially_paid"
+        ? input.paidAt ?? null
+        : null
+
+  const { data, error } = await context.supabase
+    .from("invoices")
+    .update({
+      customer_id: input.customerId,
+      quote_id: input.quoteId ?? null,
+      invoice_type: input.invoiceType,
+      amount: input.amount,
+      payment_status: input.paymentStatus,
+      due_date: input.dueDate ?? null,
+      requested_at: input.requestedAt ?? new Date().toISOString(),
+      paid_at: paidAt,
+      notes: input.notes,
+    })
+    .eq("id", invoiceId)
+    .select("*")
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  const invoice = data as InvoiceRow
+
+  await createActivityLog({
+    action: "invoice.updated",
+    description: `${invoice.invoice_number} 청구가 수정되었습니다.`,
+    customerId: invoice.customer_id,
+    quoteId: invoice.quote_id ?? undefined,
+    invoiceId,
+    metadata: {
+      paymentStatus: invoice.payment_status,
+      amount: invoice.amount,
+    },
+  })
+
+  return {
+    mode: "supabase" as const,
+    invoice: mapInvoice(invoice),
+  }
+}
+
+export async function updateInvoicePaymentStatusRecord(
+  invoiceId: string,
+  status: Invoice["paymentStatus"]
+) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return { mode: "demo" as const }
+  }
+
+  const paidAt =
+    status === "paid" || status === "deposit_paid" ? new Date().toISOString() : null
+
+  const { data, error } = await context.supabase
+    .from("invoices")
+    .update({
+      payment_status: status,
+      paid_at: paidAt,
+    })
+    .eq("id", invoiceId)
+    .select("*")
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  const invoice = data as InvoiceRow
+
+  await createActivityLog({
+    action: "invoice.status_changed",
+    description: `${invoice.invoice_number} 결제 상태가 변경되었습니다.`,
+    customerId: invoice.customer_id,
+    quoteId: invoice.quote_id ?? undefined,
+    invoiceId,
+    metadata: {
+      paymentStatus: status,
+    },
+  })
+
+  return {
+    mode: "supabase" as const,
+    invoice: mapInvoice(invoice),
+  }
+}
+
+export async function createReminderRecord(input: ReminderFormInput) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return { mode: "demo" as const }
+  }
+
+  const { data: invoiceData, error: invoiceError } = await context.supabase
+    .from("invoices")
+    .select("*")
+    .eq("id", input.invoiceId)
+    .maybeSingle()
+
+  if (invoiceError) {
+    throw invoiceError
+  }
+
+  const invoice = invoiceData as InvoiceRow | null
+
+  const { data, error } = await context.supabase
+    .from("reminders")
+    .insert({
+      user_id: context.userId,
+      invoice_id: input.invoiceId,
+      channel: input.channel,
+      message: input.message,
+      sent_at: new Date().toISOString(),
+    })
+    .select("*")
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  await createActivityLog({
+    action: "invoice.reminder_sent",
+    description: `${invoice?.invoice_number ?? "청구"}에 리마인드가 기록되었습니다.`,
+    customerId: invoice?.customer_id ?? undefined,
+    quoteId: invoice?.quote_id ?? undefined,
+    invoiceId: input.invoiceId,
+    metadata: {
+      channel: input.channel,
+    },
+  })
+
+  return {
+    mode: "supabase" as const,
+    reminder: mapReminder(data as ReminderRow),
+  }
+}
+
+export async function saveBusinessSettingsRecord(input: {
+  businessName: string
+  ownerName: string
+  email: string
+  phone: string
+  paymentTerms: string
+  bankAccount: string
+  reminderMessage: string
+}) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return { mode: "demo" as const }
+  }
+
+  const { data, error } = await context.supabase
+    .from("business_settings")
+    .upsert(
+      {
+        user_id: context.userId,
+        business_name: input.businessName,
+        owner_name: input.ownerName,
+        email: input.email,
+        phone: input.phone,
+        payment_terms: input.paymentTerms,
+        bank_account: input.bankAccount,
+        reminder_message: input.reminderMessage,
+      },
+      {
+        onConflict: "user_id",
+      }
+    )
+    .select("*")
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return {
+    mode: "supabase" as const,
+    settings: mapBusinessSettings(data as BusinessSettingsRow),
+  }
+}
+
+export async function saveTemplatesRecord(
+  templates: Array<{
+    id?: string
+    type: "quote" | "reminder"
+    name: string
+    content: string
+    isDefault: boolean
+  }>
+) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return { mode: "demo" as const }
+  }
+
+  const savedTemplates: Template[] = []
+
+  for (const template of templates) {
+    if (template.id) {
+      const { data, error } = await context.supabase
+        .from("templates")
+        .update({
+          name: template.name,
+          content: template.content,
+          is_default: template.isDefault,
+        })
+        .eq("id", template.id)
+        .select("*")
+        .single()
+
+      if (error) {
+        throw error
+      }
+
+      savedTemplates.push(mapTemplate(data as TemplateRow))
+      continue
+    }
+
+    const { data, error } = await context.supabase
+      .from("templates")
+      .insert({
+        user_id: context.userId,
+        type: template.type,
+        name: template.name,
+        content: template.content,
+        is_default: template.isDefault,
+      })
+      .select("*")
+      .single()
+
+    if (error) {
+      throw error
+    }
+
+    savedTemplates.push(mapTemplate(data as TemplateRow))
+  }
+
+  return {
+    mode: "supabase" as const,
+    templates: savedTemplates,
+  }
+}
+
 export async function getInquiriesPageData(): Promise<{
   inquiries: InquiryWithCustomer[]
   customers: Customer[]
@@ -375,7 +1006,7 @@ export async function getInquiriesPageData(): Promise<{
 }> {
   const context = await getDataContext()
 
-  if (context.mode === "demo" || !context.supabase) {
+  if (context.mode === "demo") {
     return {
       inquiries: demoInquiries.map((inquiry) => ({
         ...inquiry,
@@ -438,7 +1069,7 @@ export async function getCustomersPageData(): Promise<{
 }> {
   const context = await getDataContext()
 
-  if (context.mode === "demo" || !context.supabase) {
+  if (context.mode === "demo") {
     return {
       customers: demoCustomers.map((customer) => ({
         ...customer,
@@ -513,7 +1144,7 @@ export async function getCustomerDetailData(customerId: string): Promise<{
 }> {
   const context = await getDataContext()
 
-  if (context.mode === "demo" || !context.supabase) {
+  if (context.mode === "demo") {
     const customer = demoCustomers.find((item) => item.id === customerId) ?? null
 
     return {
@@ -592,16 +1223,25 @@ export async function getCustomerDetailData(customerId: string): Promise<{
 
 export async function getQuotesPageData(): Promise<{
   quotes: QuoteWithItems[]
+  customers: Customer[]
+  inquiries: InquiryWithCustomer[]
+  defaultQuoteSummary: string
 }> {
   const context = await getDataContext()
 
-  if (context.mode === "demo" || !context.supabase) {
+  if (context.mode === "demo") {
     return {
       quotes: demoQuotes.map((quote) => ({
         ...quote,
         customer: demoCustomers.find((customer) => customer.id === quote.customerId),
         items: demoQuoteItems.filter((item) => item.quoteId === quote.id),
       })),
+      customers: demoCustomers,
+      inquiries: demoInquiries.map((inquiry) => ({
+        ...inquiry,
+        customer: demoCustomers.find((customer) => customer.id === inquiry.customerId),
+      })),
+      defaultQuoteSummary: defaultQuoteSummaryFromTemplates(demoTemplates),
     }
   }
 
@@ -609,6 +1249,8 @@ export async function getQuotesPageData(): Promise<{
     { data: customerRows, error: customerError },
     { data: quoteRows, error: quoteError },
     { data: itemRows, error: itemError },
+    { data: inquiryRows, error: inquiryError },
+    { data: templateRows, error: templateError },
   ] = await Promise.all([
     context.supabase.from("customers").select("*"),
     context.supabase
@@ -619,6 +1261,16 @@ export async function getQuotesPageData(): Promise<{
       .from("quote_items")
       .select("*")
       .order("sort_order", { ascending: true }),
+    context.supabase
+      .from("inquiries")
+      .select("*")
+      .order("created_at", { ascending: false }),
+    context.supabase
+      .from("templates")
+      .select("*")
+      .eq("user_id", context.userId)
+      .order("is_default", { ascending: false })
+      .order("created_at", { ascending: true }),
   ])
 
   if (customerError) {
@@ -633,9 +1285,19 @@ export async function getQuotesPageData(): Promise<{
     throw itemError
   }
 
+  if (inquiryError) {
+    throw inquiryError
+  }
+
+  if (templateError) {
+    throw templateError
+  }
+
   const customerRowsSafe = (customerRows ?? []) as CustomerRow[]
   const quoteRowsSafe = (quoteRows ?? []) as QuoteRow[]
   const itemRowsSafe = (itemRows ?? []) as QuoteItemRow[]
+  const inquiryRowsSafe = (inquiryRows ?? []) as InquiryRow[]
+  const templateRowsSafe = (templateRows ?? []) as TemplateRow[]
   const customerMap = new Map(
     customerRowsSafe.map((row) => [row.id, mapCustomer(row)])
   )
@@ -648,6 +1310,8 @@ export async function getQuotesPageData(): Promise<{
     itemsByQuote.set(item.quoteId, current)
   }
 
+  const mappedTemplates = templateRowsSafe.map(mapTemplate)
+
   return {
     quotes: quoteRowsSafe.map((row) => {
       const quote = mapQuote(row)
@@ -658,21 +1322,36 @@ export async function getQuotesPageData(): Promise<{
         items: itemsByQuote.get(quote.id) ?? [],
       }
     }),
+    customers: customerRowsSafe.map(mapCustomer),
+    inquiries: inquiryRowsSafe.map((row) => {
+      const inquiry = mapInquiry(row)
+      return {
+        ...inquiry,
+        customer: customerMap.get(inquiry.customerId),
+      }
+    }),
+    defaultQuoteSummary: defaultQuoteSummaryFromTemplates(mappedTemplates),
   }
 }
 
 export async function getInvoicesPageData(): Promise<{
   invoices: InvoiceWithReminders[]
+  customers: Customer[]
+  quotes: Quote[]
+  defaultReminderMessage: string
 }> {
   const context = await getDataContext()
 
-  if (context.mode === "demo" || !context.supabase) {
+  if (context.mode === "demo") {
     return {
       invoices: demoInvoices.map((invoice) => ({
         ...invoice,
         customer: demoCustomers.find((customer) => customer.id === invoice.customerId),
         reminders: demoReminders.filter((reminder) => reminder.invoiceId === invoice.id),
       })),
+      customers: demoCustomers,
+      quotes: demoQuotes,
+      defaultReminderMessage: defaultReminderMessageFromTemplates(demoTemplates),
     }
   }
 
@@ -680,6 +1359,8 @@ export async function getInvoicesPageData(): Promise<{
     { data: customerRows, error: customerError },
     { data: invoiceRows, error: invoiceError },
     { data: reminderRows, error: reminderError },
+    { data: quoteRows, error: quoteError },
+    { data: templateRows, error: templateError },
   ] = await Promise.all([
     context.supabase.from("customers").select("*"),
     context.supabase
@@ -690,6 +1371,16 @@ export async function getInvoicesPageData(): Promise<{
       .from("reminders")
       .select("*")
       .order("sent_at", { ascending: false }),
+    context.supabase
+      .from("quotes")
+      .select("*")
+      .order("created_at", { ascending: false }),
+    context.supabase
+      .from("templates")
+      .select("*")
+      .eq("user_id", context.userId)
+      .order("is_default", { ascending: false })
+      .order("created_at", { ascending: true }),
   ])
 
   if (customerError) {
@@ -704,9 +1395,19 @@ export async function getInvoicesPageData(): Promise<{
     throw reminderError
   }
 
+  if (quoteError) {
+    throw quoteError
+  }
+
+  if (templateError) {
+    throw templateError
+  }
+
   const customerRowsSafe = (customerRows ?? []) as CustomerRow[]
   const invoiceRowsSafe = (invoiceRows ?? []) as InvoiceRow[]
   const reminderRowsSafe = (reminderRows ?? []) as ReminderRow[]
+  const quoteRowsSafe = (quoteRows ?? []) as QuoteRow[]
+  const templateRowsSafe = (templateRows ?? []) as TemplateRow[]
   const customerMap = new Map(
     customerRowsSafe.map((row) => [row.id, mapCustomer(row)])
   )
@@ -719,6 +1420,8 @@ export async function getInvoicesPageData(): Promise<{
     remindersByInvoice.set(reminder.invoiceId, current)
   }
 
+  const mappedTemplates = templateRowsSafe.map(mapTemplate)
+
   return {
     invoices: invoiceRowsSafe.map((row) => {
       const invoice = mapInvoice(row)
@@ -729,6 +1432,67 @@ export async function getInvoicesPageData(): Promise<{
         reminders: remindersByInvoice.get(invoice.id) ?? [],
       }
     }),
+    customers: customerRowsSafe.map(mapCustomer),
+    quotes: quoteRowsSafe.map(mapQuote),
+    defaultReminderMessage: defaultReminderMessageFromTemplates(mappedTemplates),
+  }
+}
+
+export async function getSettingsPageData(): Promise<{
+  settings: BusinessSettings
+  templates: Template[]
+}> {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return {
+      settings: demoBusinessSettings,
+      templates: demoTemplates,
+    }
+  }
+
+  const [{ data: settingsRow, error: settingsError }, { data: templateRows, error: templateError }] =
+    await Promise.all([
+      context.supabase
+        .from("business_settings")
+        .select("*")
+        .eq("user_id", context.userId)
+        .maybeSingle(),
+      context.supabase
+        .from("templates")
+        .select("*")
+        .eq("user_id", context.userId)
+        .order("is_default", { ascending: false })
+        .order("created_at", { ascending: true }),
+    ])
+
+  if (settingsError) {
+    throw settingsError
+  }
+
+  if (templateError) {
+    throw templateError
+  }
+
+  const settings = settingsRow
+    ? mapBusinessSettings(settingsRow as BusinessSettingsRow)
+    : {
+        id: "",
+        userId: context.userId,
+        businessName: "",
+        ownerName: "",
+        email: "",
+        phone: "",
+        paymentTerms: "",
+        bankAccount: "",
+        reminderMessage: "",
+      }
+
+  const templates = ((templateRows ?? []) as TemplateRow[]).map(mapTemplate)
+
+  return {
+    settings,
+    templates,
   }
 }
 
@@ -741,11 +1505,12 @@ export async function getDashboardPageData(): Promise<{
 }> {
   const context = await getDataContext()
 
-  if (context.mode === "demo" || !context.supabase) {
+  if (context.mode === "demo") {
+    const todayKey = new Date().toISOString().slice(0, 10)
     return {
       metrics: getDashboardMetrics(),
       followUps: demoInquiries
-        .filter((item) => item.followUpAt?.startsWith("2026-04-02"))
+        .filter((item) => item.followUpAt?.startsWith(todayKey))
         .map((item) => ({
           ...item,
           customer: demoCustomers.find((customer) => customer.id === item.customerId),

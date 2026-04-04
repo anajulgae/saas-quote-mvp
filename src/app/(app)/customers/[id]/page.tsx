@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation"
 
+import { ActivityEntry } from "@/components/app/activity-entry"
 import { EmptyState } from "@/components/app/empty-state"
 import { PageHeader } from "@/components/app/page-header"
 import { InquiryStageBadge, PaymentStatusBadge, QuoteStatusBadge } from "@/components/app/status-badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getCustomerDetailData } from "@/lib/data"
-import { formatCurrency, formatDateTime } from "@/lib/format"
+import { formatCurrency } from "@/lib/format"
 
 export default async function CustomerDetailPage({
   params,
@@ -51,19 +52,23 @@ export default async function CustomerDetailPage({
           <CardHeader>
             <CardTitle>고객 타임라인</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {timeline.map((event) => (
-              <div key={event.id} className="flex gap-3">
-                <div className="mt-1 size-2 rounded-full bg-foreground" />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">{event.label}</p>
-                  <p className="text-sm text-muted-foreground">{event.description}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDateTime(event.createdAt)}
-                  </p>
-                </div>
-              </div>
-            ))}
+          <CardContent className="space-y-3">
+            {!timeline.length ? (
+              <p className="text-sm text-muted-foreground">
+                아직 기록된 활동이 없습니다. 문의·견적·청구를 진행하면 여기에 표시됩니다.
+              </p>
+            ) : (
+              timeline.map((event) => (
+                <ActivityEntry
+                  key={event.id}
+                  label={event.label}
+                  description={event.description}
+                  createdAt={event.createdAt}
+                  kind={event.kind ?? "other"}
+                  action={event.action}
+                />
+              ))
+            )}
           </CardContent>
         </Card>
       </section>

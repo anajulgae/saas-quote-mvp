@@ -2,9 +2,11 @@
 
 import { useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Pencil, Plus, Sparkles } from "lucide-react"
+import { Pencil, Plus, Search, Sparkles } from "lucide-react"
+import { toast } from "sonner"
 
 import { createInquiryAction, updateInquiryAction } from "@/app/actions"
+import { EmptyState } from "@/components/app/empty-state"
 import { InquiryStageBadge } from "@/components/app/status-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -49,6 +51,7 @@ export function InquiriesBoard({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [errorMessage, setErrorMessage] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
   const [form, setForm] = useState({
     title: "",
     customerId: customers[0]?.id ?? "",
@@ -65,6 +68,28 @@ export function InquiriesBoard({
     () => inquiries.find((item) => item.id === editingId) ?? null,
     [editingId, inquiries]
   )
+
+  const filteredInquiries = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) {
+      return inquiries
+    }
+    return inquiries.filter((inquiry) => {
+      const customer = inquiry.customer
+      const haystack = [
+        inquiry.title,
+        inquiry.details,
+        inquiry.serviceCategory,
+        inquiry.channel,
+        customer?.name,
+        customer?.companyName,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+      return haystack.includes(q)
+    })
+  }, [inquiries, searchQuery])
 
   const resetForm = () => {
     setForm({
@@ -90,9 +115,11 @@ export function InquiriesBoard({
 
       if (!result.ok) {
         setErrorMessage(result.error)
+        toast.error(result.error)
         return
       }
 
+      toast.success("문의가 등록되었습니다.")
       resetForm()
       setIsCreateOpen(false)
       router.refresh()
@@ -111,9 +138,11 @@ export function InquiriesBoard({
 
       if (!result.ok) {
         setErrorMessage(result.error)
+        toast.error(result.error)
         return
       }
 
+      toast.success("문의가 수정되었습니다.")
       resetForm()
       router.refresh()
     })
@@ -299,8 +328,31 @@ export function InquiriesBoard({
         </Dialog>
       </div>
 
+      <div className="relative">
+        <Search
+          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+          aria-hidden
+        />
+        <Input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="제목, 내용, 고객명, 회사명으로 검색…"
+          className="pl-10"
+          aria-label="문의 검색"
+        />
+      </div>
+
+      {!inquiries.length ? (
+        <EmptyState title="문의가 없습니다" description="새 문의를 등록해 보세요." />
+      ) : !filteredInquiries.length ? (
+        <EmptyState
+          title="검색 결과가 없습니다"
+          description="다른 검색어로 다시 시도해 보세요."
+        />
+      ) : null}
+
       <div className="grid gap-4">
-        {inquiries.map((inquiry) => {
+        {filteredInquiries.map((inquiry) => {
           const customer = inquiry.customer
 
           return (

@@ -2,11 +2,11 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
 import { demoUser } from "@/lib/demo-data"
+import { isDemoLoginEnabled } from "@/lib/demo-flags"
+import { FLOWBILL_DEMO_SESSION_COOKIE } from "@/lib/demo-session"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 
 export { isSupabaseConfigured } from "@/lib/supabase/server"
-
-const DEMO_SESSION_COOKIE = "flowbill-demo-session"
 
 export function getDemoCredentials() {
   return {
@@ -102,12 +102,16 @@ async function ensureUserProfile(
 
 export async function getAppSession() {
   const cookieStore = await cookies()
-  const demoSession = cookieStore.get(DEMO_SESSION_COOKIE)?.value
+  const demoSession = cookieStore.get(FLOWBILL_DEMO_SESSION_COOKIE)?.value
 
   if (demoSession === "1") {
-    return {
-      mode: "demo" as const,
-      user: demoUser,
+    if (!isDemoLoginEnabled()) {
+      cookieStore.delete(FLOWBILL_DEMO_SESSION_COOKIE)
+    } else {
+      return {
+        mode: "demo" as const,
+        user: demoUser,
+      }
     }
   }
 
@@ -122,6 +126,11 @@ export async function getAppSession() {
   } = await supabase.auth.getUser()
 
   if (!user) {
+    try {
+      await supabase.auth.signOut()
+    } catch {
+      // 쿠키 정리 실패는 무시; 다음 요청에서 미들웨어·로그인 흐름으로 복구
+    }
     return null
   }
 
@@ -150,5 +159,5 @@ export async function requireAppSession() {
 }
 
 export function getDemoSessionCookieName() {
-  return DEMO_SESSION_COOKIE
+  return FLOWBILL_DEMO_SESSION_COOKIE
 }

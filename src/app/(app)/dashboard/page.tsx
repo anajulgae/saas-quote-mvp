@@ -1,10 +1,15 @@
-import { ArrowRight, CircleAlert, Clock3, FileText, Wallet } from "lucide-react"
+import Link from "next/link"
+import { ArrowRight, Clock3, FileText } from "lucide-react"
 
+import { ActivityEntry } from "@/components/app/activity-entry"
+import { EmptyState } from "@/components/app/empty-state"
 import { MetricCard } from "@/components/app/metric-card"
 import { PageHeader } from "@/components/app/page-header"
 import { InquiryStageBadge, PaymentStatusBadge } from "@/components/app/status-badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
+import { resolveActivityHeadline, resolveActivityKind } from "@/lib/activity-presentation"
 import { getDashboardPageData } from "@/lib/data"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 
@@ -82,26 +87,32 @@ export default async function DashboardPage() {
             <CardDescription>연체 또는 즉시 확인이 필요한 건</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {overdueInvoices.map((invoice) => {
-              const customer = invoice.customer
+            {!overdueInvoices.length ? (
+              <p className="text-sm text-muted-foreground">
+                현재 연체로 표시된 청구가 없습니다.
+              </p>
+            ) : (
+              overdueInvoices.map((invoice) => {
+                const customer = invoice.customer
 
-              return (
-                <div
-                  key={invoice.id}
-                  className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-medium">{customer?.companyName ?? customer?.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {invoice.invoiceNumber} · {formatCurrency(invoice.amount)}
-                      </p>
+                return (
+                  <div
+                    key={invoice.id}
+                    className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4"
+                  >
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
+                        <p className="font-medium">{customer?.companyName ?? customer?.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {invoice.invoiceNumber} · {formatCurrency(invoice.amount)}
+                        </p>
+                      </div>
+                      <PaymentStatusBadge status={invoice.paymentStatus} />
                     </div>
-                    <PaymentStatusBadge status={invoice.paymentStatus} />
                   </div>
-                </div>
-              )
-            })}
+                )
+              })
+            )}
           </CardContent>
         </Card>
       </section>
@@ -113,14 +124,19 @@ export default async function DashboardPage() {
             <CardDescription>정해진 팔로업 일정 중심으로 정리</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {followUps.map((item) => {
-              const customer = item.customer
+            {!followUps.length ? (
+              <p className="text-sm text-muted-foreground">
+                오늘 예정된 팔로업 문의가 없습니다.
+              </p>
+            ) : (
+              followUps.map((item) => {
+                const customer = item.customer
 
-              return (
-                <div
-                  key={item.id}
-                  className="flex flex-col gap-3 rounded-2xl border border-border/70 p-4 md:flex-row md:items-center md:justify-between"
-                >
+                return (
+                  <div
+                    key={item.id}
+                    className="flex flex-col gap-3 rounded-2xl border border-border/70 p-4 md:flex-row md:items-center md:justify-between"
+                  >
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Clock3 className="size-4 text-muted-foreground" />
@@ -137,14 +153,21 @@ export default async function DashboardPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <InquiryStageBadge stage={item.stage} />
-                    <Button variant="outline" size="sm">
-                      고객 보기
+                    <Link
+                      href="/inquiries"
+                      className={cn(
+                        buttonVariants({ variant: "outline", size: "sm" }),
+                        "inline-flex gap-1.5"
+                      )}
+                    >
+                      문의로 이동
                       <ArrowRight className="size-4" />
-                    </Button>
+                    </Link>
                   </div>
                 </div>
-              )
-            })}
+                )
+              })
+            )}
           </CardContent>
         </Card>
 
@@ -153,26 +176,24 @@ export default async function DashboardPage() {
             <CardTitle>최근 활동</CardTitle>
             <CardDescription>견적, 입금, 리마인드 관련 주요 변경</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {recentActivities.map((activity) => (
-              <div key={activity.id} className="flex gap-3">
-                <div className="mt-1 rounded-full bg-muted p-2">
-                  {activity.action.includes("reminder") ? (
-                    <CircleAlert className="size-4 text-amber-600" />
-                  ) : activity.action.includes("deposit") ? (
-                    <Wallet className="size-4 text-emerald-600" />
-                  ) : (
-                    <FileText className="size-4 text-foreground" />
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">{activity.description}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDateTime(activity.createdAt)}
-                  </p>
-                </div>
-              </div>
-            ))}
+          <CardContent className="space-y-3">
+            {!recentActivities.length ? (
+              <EmptyState
+                title="최근 활동이 없습니다"
+                description="견적·청구·리마인드를 처리하면 여기에 기록됩니다."
+              />
+            ) : (
+              recentActivities.map((activity) => (
+                <ActivityEntry
+                  key={activity.id}
+                  label={resolveActivityHeadline(activity.action)}
+                  description={activity.description}
+                  createdAt={activity.createdAt}
+                  kind={resolveActivityKind(activity.action)}
+                  action={activity.action}
+                />
+              ))
+            )}
           </CardContent>
         </Card>
       </section>

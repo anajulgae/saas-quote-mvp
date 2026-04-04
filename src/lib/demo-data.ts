@@ -1,4 +1,5 @@
 import type {
+  ActivityKind,
   ActivityLog,
   AppUser,
   BusinessSettings,
@@ -319,6 +320,7 @@ export function getCustomerTimeline(customerId: string) {
       createdAt: item.createdAt,
       label: "문의 등록",
       description: item.title,
+      kind: "inquiry" as ActivityKind,
     }))
 
   const quoteEvents = demoQuotes
@@ -328,6 +330,7 @@ export function getCustomerTimeline(customerId: string) {
       createdAt: item.createdAt,
       label: "견적 생성",
       description: `${item.quoteNumber} · ${item.title}`,
+      kind: "quote" as ActivityKind,
     }))
 
   const invoiceEvents = demoInvoices
@@ -337,6 +340,7 @@ export function getCustomerTimeline(customerId: string) {
       createdAt: item.requestedAt ?? item.paidAt ?? item.dueDate ?? item.invoiceNumber,
       label: "청구 생성",
       description: `${item.invoiceNumber} · ${item.invoiceType}`,
+      kind: "invoice" as ActivityKind,
     }))
 
   return [...inquiryEvents, ...quoteEvents, ...invoiceEvents].sort((a, b) =>

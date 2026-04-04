@@ -61,6 +61,7 @@ export interface QuoteItem {
   quoteId: string
   name: string
   description?: string
+  sortOrder?: number
   quantity: number
   unitPrice: number
   lineTotal: number
@@ -129,6 +130,7 @@ export interface Template {
   name: string
   content: string
   isDefault: boolean
+  updatedAt?: string
 }
 
 export interface BusinessSettings {
@@ -143,11 +145,21 @@ export interface BusinessSettings {
   reminderMessage: string
 }
 
+export type ActivityKind =
+  | "inquiry"
+  | "quote"
+  | "invoice"
+  | "reminder"
+  | "other"
+
 export interface TimelineEvent {
   id: string
   label: string
   description: string
   createdAt: string
+  /** activity_logs.action (데모 타임라인 항목은 생략 가능) */
+  action?: string
+  kind?: ActivityKind
 }
 
 export interface CustomerSummary extends Customer {
@@ -175,4 +187,38 @@ export interface DashboardMetrics {
   outstandingAmount: number
   waitingPayments: number
   followUpsToday: number
+}
+
+export interface QuoteFormInput {
+  customerId: string
+  inquiryId?: string
+  title: string
+  summary: string
+  status: QuoteStatus
+  validUntil?: string
+  sentAt?: string
+  items: Array<{
+    name: string
+    description?: string
+    quantity: number
+    unitPrice: number
+  }>
+}
+
+export interface InvoiceFormInput {
+  customerId: string
+  quoteId?: string
+  invoiceType: InvoiceType
+  amount: number
+  paymentStatus: PaymentStatus
+  dueDate?: string
+  requestedAt?: string
+  paidAt?: string
+  notes: string
+}
+
+export interface ReminderFormInput {
+  invoiceId: string
+  channel: ReminderChannel
+  message: string
 }

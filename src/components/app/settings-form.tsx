@@ -1,8 +1,11 @@
 "use client"
 
-import { useState } from "react"
-import { Save } from "lucide-react"
+import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
+import { Loader2, Save } from "lucide-react"
+import { toast } from "sonner"
 
+import { saveSettingsAction } from "@/app/actions"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -16,8 +19,64 @@ export function SettingsForm({
   initialSettings: BusinessSettings
   templates: Template[]
 }) {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
   const [settings, setSettings] = useState(initialSettings)
-  const [savedMessage, setSavedMessage] = useState("")
+  const [templateState, setTemplateState] = useState<Template[]>(
+    templates.length
+      ? templates
+      : [
+          {
+            id: "",
+            userId: initialSettings.userId,
+            type: "quote",
+            name: "기본 견적 템플릿",
+            content: "",
+            isDefault: true,
+          },
+          {
+            id: "",
+            userId: initialSettings.userId,
+            type: "reminder",
+            name: "기본 리마인드 템플릿",
+            content: "",
+            isDefault: true,
+          },
+        ]
+  )
+  const [errorMessage, setErrorMessage] = useState("")
+
+  const handleSave = () => {
+    setErrorMessage("")
+
+    startTransition(async () => {
+      const result = await saveSettingsAction({
+        businessName: settings.businessName,
+        ownerName: settings.ownerName,
+        email: settings.email,
+        phone: settings.phone,
+        paymentTerms: settings.paymentTerms,
+        bankAccount: settings.bankAccount,
+        reminderMessage: settings.reminderMessage,
+        templates: templateState.map((template) => ({
+          id: template.id || undefined,
+          type: template.type,
+          name: template.name,
+          content: template.content,
+          isDefault: template.isDefault,
+        })),
+      })
+
+      if (!result.ok) {
+        setErrorMessage(result.error)
+        toast.error(result.error)
+        return
+      }
+
+      toast.success("설정과 템플릿이 저장되었습니다.")
+      router.refresh()
+    })
+  }
 
   return (
     <div className="space-y-4">
@@ -105,18 +164,20 @@ export function SettingsForm({
           </div>
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm text-muted-foreground">
-              현재는 로컬 상태로 저장됩니다. Phase 2에서 Supabase에 연결됩니다.
+              사업자 정보와 기본 문구는 실제 Supabase 데이터로 저장됩니다.
             </p>
-            <Button
-              onClick={() => setSavedMessage("로컬 데모 설정이 저장되었습니다.")}
-            >
-              <Save className="size-4" />
+            <Button onClick={handleSave} disabled={isPending} className="gap-2">
+              {isPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : (
+                <Save className="size-4" aria-hidden />
+              )}
               저장
             </Button>
           </div>
-          {savedMessage ? (
-            <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-              {savedMessage}
+          {errorMessage ? (
+            <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {errorMessage}
             </p>
           ) : null}
         </CardContent>
@@ -128,11 +189,25 @@ export function SettingsForm({
           <CardDescription>견적/리마인드 템플릿 초안을 빠르게 재사용합니다.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-          {templates.map((template) => (
-            <div key={template.id} className="rounded-2xl border border-border/70 p-4">
+          {templateState.map((template, index) => (
+            <div
+              key={`${template.id || template.type}-${index}`}
+              className="rounded-2xl border border-border/70 p-4"
+            >
               <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="font-medium">{template.name}</p>
+                <div className="flex-1 space-y-2">
+                  <Input
+                    value={template.name}
+                    onChange={(event) =>
+                      setTemplateState((current) =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === index
+                            ? { ...item, name: event.target.value }
+                            : item
+                        )
+                      )
+                    }
+                  />
                   <p className="text-sm text-muted-foreground">{template.type}</p>
                 </div>
                 {template.isDefault ? (
@@ -141,9 +216,19 @@ export function SettingsForm({
                   </span>
                 ) : null}
               </div>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                {template.content}
-              </p>
+              <Textarea
+                value={template.content}
+                onChange={(event) =>
+                  setTemplateState((current) =>
+                    current.map((item, itemIndex) =>
+                      itemIndex === index
+                        ? { ...item, content: event.target.value }
+                        : item
+                    )
+                  )
+                }
+                className="mt-3 min-h-28"
+              />
             </div>
           ))}
         </CardContent>

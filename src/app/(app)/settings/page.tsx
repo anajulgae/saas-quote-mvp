@@ -1,8 +1,10 @@
 import { PageHeader } from "@/components/app/page-header"
 import { SettingsForm } from "@/components/app/settings-form"
-import { demoBusinessSettings, demoTemplates } from "@/lib/demo-data"
+import { getSettingsPageData } from "@/lib/data"
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const { settings, templates } = await getSettingsPageData()
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -10,8 +12,8 @@ export default function SettingsPage() {
         description="사업자 정보, 결제 조건, 기본 템플릿을 관리합니다."
       />
       <SettingsForm
-        initialSettings={demoBusinessSettings}
-        templates={demoTemplates}
+        initialSettings={settings}
+        templates={templates}
       />
     </div>
   )

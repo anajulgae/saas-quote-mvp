@@ -1,7 +1,9 @@
 import { CheckCircle2, CircleDot, FileText, Wallet } from "lucide-react"
 
 import { LoginForm } from "@/components/app/login-form"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getDemoCredentials, isSupabaseConfigured } from "@/lib/auth"
+import { isDemoLoginEnabled } from "@/lib/demo-flags"
 
 const highlights = [
   "문의 등록 후 바로 고객 타임라인으로 연결",
@@ -11,7 +13,10 @@ const highlights = [
 
 export default function LoginPage() {
   const demoCredentials = getDemoCredentials()
-  const isDemoMode = !isSupabaseConfigured()
+  const supabaseConfigured = isSupabaseConfigured()
+  const demoAllowed = isDemoLoginEnabled()
+  const isDemoMode = !supabaseConfigured && demoAllowed
+  const deploymentBlocked = !supabaseConfigured && !demoAllowed
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#ffffff,#f4f4f5_55%,#eef2ff)]">
@@ -62,12 +67,40 @@ export default function LoginPage() {
             ))}
           </div>
         </section>
-        <section className="mx-auto w-full max-w-md">
-          <LoginForm
-            defaultEmail={demoCredentials.email}
-            defaultPassword={demoCredentials.password}
-            isDemoMode={isDemoMode}
-          />
+        <section className="mx-auto w-full max-w-md space-y-4">
+          {deploymentBlocked ? (
+            <Card className="border-destructive/30 bg-destructive/5">
+              <CardHeader>
+                <CardTitle className="text-lg">배포 설정 필요</CardTitle>
+                <CardDescription>
+                  Supabase URL/키가 없고, 프로덕션에서는 데모 로그인이 기본 비활성화되어 있습니다.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm text-muted-foreground">
+                <p>
+                  Vercel 등에{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                    NEXT_PUBLIC_SUPABASE_URL
+                  </code>{" "}
+                  와{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                    NEXT_PUBLIC_SUPABASE_ANON_KEY
+                  </code>{" "}
+                  를 설정하거나, 스테이징에서만{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                    ENABLE_DEMO_LOGIN=true
+                  </code>{" "}
+                  로 데모를 켜 주세요.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <LoginForm
+              defaultEmail={demoCredentials.email}
+              defaultPassword={demoCredentials.password}
+              isDemoMode={isDemoMode}
+            />
+          )}
         </section>
       </div>
     </div>
