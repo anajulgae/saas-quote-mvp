@@ -22,7 +22,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -61,6 +60,12 @@ type QuoteFormState = {
   items: QuoteItemForm[]
 }
 
+function defaultValidUntilDate(): string {
+  const d = new Date()
+  d.setDate(d.getDate() + 14)
+  return d.toISOString().slice(0, 10)
+}
+
 function createEmptyItem(): QuoteItemForm {
   return {
     name: "",
@@ -70,6 +75,43 @@ function createEmptyItem(): QuoteItemForm {
   }
 }
 
+function formatCustomerSelectLabel(customer: Customer): string {
+  const primary = customer.companyName?.trim() || customer.name
+  const secondary = [
+    customer.companyName ? customer.name : null,
+    customer.email || null,
+    customer.phone || null,
+  ]
+    .filter(Boolean)
+    .join(" · ")
+  return secondary ? `${primary} — ${secondary}` : primary
+}
+
+function buildQuoteTitleFromInquiry(
+  inv: InquiryWithCustomer,
+  customers: Customer[]
+): string {
+  const base = inv.title.trim()
+  if (base) {
+    return `${base} — 견적`
+  }
+  const c = customers.find((x) => x.id === inv.customerId)
+  const label = c?.companyName?.trim() || c?.name || "견적"
+  return `${label} 견적`
+}
+
+function buildQuoteSummaryFromInquiry(
+  inv: InquiryWithCustomer,
+  defaultSummary: string
+): string {
+  const parts = [
+    inv.details?.trim(),
+    inv.serviceCategory?.trim() ? `서비스: ${inv.serviceCategory}` : "",
+    defaultSummary?.trim(),
+  ].filter(Boolean) as string[]
+  return parts.join("\n\n")
+}
+
 function createEmptyForm(customers: Customer[], defaultSummary = ""): QuoteFormState {
   return {
     customerId: customers[0]?.id ?? "",
@@ -77,7 +119,7 @@ function createEmptyForm(customers: Customer[], defaultSummary = ""): QuoteFormS
     title: "",
     summary: defaultSummary,
     status: "draft",
-    validUntil: "",
+    validUntil: defaultValidUntilDate(),
     sentAt: "",
     items: [createEmptyItem()],
   }
@@ -194,14 +236,37 @@ function QuotesBoardPanel({
     createOpenSourceRef.current = null
   }, [isCreateOpen, customers, defaultQuoteSummary, createOpenSourceRef])
 
-  const availableInquiries = useMemo(
-    () =>
-      inquiries.filter(
-        (inquiry) =>
-          !form.customerId || inquiry.customerId === form.customerId
-      ),
-    [form.customerId, inquiries]
-  )
+  const availableInquiries = useMemo(() => {
+    if (!form.customerId) {
+      return []
+    }
+    return inquiries.filter((inquiry) => inquiry.customerId === form.customerId)
+  }, [form.customerId, inquiries])
+
+  const formValidation = useMemo(() => {
+    const issues: string[] = []
+    if (!form.customerId) {
+      issues.push("고객을 선택해 주세요.")
+    }
+    if (!form.title.trim()) {
+      issues.push("견적 제목을 입력해 주세요.")
+    }
+    form.items.forEach((item, index) => {
+      const row = index + 1
+      if (!item.name.trim()) {
+        issues.push(`${row}번째 줄: 항목명을 입력해 주세요.`)
+      }
+      const q = Number(item.quantity)
+      const p = Number(item.unitPrice)
+      if (!Number.isFinite(q) || q <= 0) {
+        issues.push(`${row}번째 줄: 수량을 확인해 주세요.`)
+      }
+      if (!Number.isFinite(p) || p < 0) {
+        issues.push(`${row}번째 줄: 단가를 확인해 주세요.`)
+      }
+    })
+    return { ok: issues.length === 0, issues }
+  }, [form])
 
   const filteredQuotes = useMemo(() => {
     if (statusFilter === "all") {
@@ -256,6 +321,9 @@ function QuotesBoardPanel({
       ...createEmptyForm(customers, defaultQuoteSummary),
       customerId: inv.customerId,
       inquiryId: inv.id,
+      title: buildQuoteTitleFromInquiry(inv, customers),
+      summary: buildQuoteSummaryFromInquiry(inv, defaultQuoteSummary),
+      validUntil: defaultValidUntilDate(),
     })
     onOpenChange(true)
   }
@@ -335,112 +403,174 @@ function QuotesBoardPanel({
     })
   }
 
-  const formFields = (
-    <div className="grid gap-4">
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">고객</label>
-          <Select
-            value={form.customerId}
-            onValueChange={(value) =>
-              setForm((current) => ({
-                ...current,
-                customerId: value ?? current.customerId,
-                inquiryId: "",
-              }))
-            }
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="고객 선택" />
-            </SelectTrigger>
-            <SelectContent>
-              {customers.map((customer) => (
-                <SelectItem key={customer.id} value={customer.id}>
-                  {customer.companyName ?? customer.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">연결 문의</label>
-          <Select
-            value={form.inquiryId || undefined}
-            onValueChange={(value) =>
-              setForm((current) => ({ ...current, inquiryId: value ?? "" }))
-            }
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="문의 선택 안 함" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableInquiries.map((inquiry) => (
-                <SelectItem key={inquiry.id} value={inquiry.id}>
-                  {inquiry.title} ·{" "}
-                  {
-                    inquiryStageOptions.find((option) => option.value === inquiry.stage)
-                      ?.label
-                  }
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+  const quoteFormDialogClass = cn(
+    "!flex !h-auto !max-h-[100dvh] !w-full !max-w-full !translate-x-0 !translate-y-0 !flex-col !gap-0 !overflow-hidden !rounded-none !p-0 sm:!left-1/2 sm:!top-1/2 sm:!h-auto sm:!max-h-[min(92vh,900px)] sm:!w-full sm:!max-w-[min(72rem,calc(100vw-1.5rem))] sm:!-translate-x-1/2 sm:!-translate-y-1/2 sm:!rounded-xl",
+    "max-sm:!inset-x-2 max-sm:!top-3 max-sm:!bottom-auto max-sm:!max-h-[calc(100dvh-1.5rem)]"
+  )
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">견적 제목</label>
-          <Input
-            value={form.title}
+  const formFields = (
+    <div className="grid gap-5">
+      <section className="rounded-lg border border-border/60 bg-muted/10 px-3 py-3 sm:px-4">
+        <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          1) 고객 · 문의
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">고객</label>
+            <p className="text-[11px] text-muted-foreground">견적서에 표시되는 거래처입니다.</p>
+            <Select
+              value={form.customerId}
+              onValueChange={(value) =>
+                setForm((current) => ({
+                  ...current,
+                  customerId: value ?? current.customerId,
+                  inquiryId: "",
+                }))
+              }
+            >
+              <SelectTrigger className="h-9 w-full text-left [&>span]:line-clamp-2">
+                <SelectValue placeholder="고객을 선택하세요" />
+              </SelectTrigger>
+              <SelectContent className="max-w-[min(100vw-2rem,36rem)]">
+                {customers.map((customer) => (
+                  <SelectItem key={customer.id} value={customer.id} className="py-2">
+                    <span className="block max-w-[32rem] whitespace-normal leading-snug">
+                      {formatCustomerSelectLabel(customer)}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">연결 문의</label>
+            <p className="text-[11px] text-muted-foreground">
+              {form.customerId
+                ? "선택 시 제목·요약이 자동으로 채워집니다. 필요하면 수정하세요."
+                : "먼저 고객을 선택하면 해당 고객의 문의만 표시됩니다."}
+            </p>
+            <Select
+              value={form.inquiryId ? form.inquiryId : "__none__"}
+              disabled={!form.customerId}
+              onValueChange={(value) => {
+                if (!value || value === "__none__") {
+                  setForm((current) => ({ ...current, inquiryId: "" }))
+                  return
+                }
+                const inv = inquiries.find((i) => i.id === value)
+                if (!inv) {
+                  setForm((current) => ({ ...current, inquiryId: value }))
+                  return
+                }
+                setForm((current) => ({
+                  ...current,
+                  customerId: inv.customerId,
+                  inquiryId: value,
+                  title: buildQuoteTitleFromInquiry(inv, customers),
+                  summary: buildQuoteSummaryFromInquiry(inv, defaultQuoteSummary),
+                }))
+              }}
+            >
+              <SelectTrigger className="h-9 w-full text-left [&>span]:line-clamp-2">
+                <SelectValue placeholder={form.customerId ? "문의 선택 (선택 사항)" : "고객을 먼저 선택"} />
+              </SelectTrigger>
+              <SelectContent className="max-w-[min(100vw-2rem,36rem)]">
+                <SelectItem value="__none__" className="text-muted-foreground">
+                  연결 안 함
+                </SelectItem>
+                {availableInquiries.map((inquiry) => {
+                  const det = inquiry.details?.trim() ?? ""
+                  return (
+                    <SelectItem key={inquiry.id} value={inquiry.id} className="py-2">
+                      <span className="block max-w-[32rem] whitespace-normal leading-snug">
+                        <span className="font-medium">{inquiry.title}</span>
+                        <span className="text-muted-foreground">
+                          {" · "}
+                          {inquiryStageOptions.find((o) => o.value === inquiry.stage)?.label}
+                          {det
+                            ? ` — ${det.slice(0, 80)}${det.length > 80 ? "…" : ""}`
+                            : ""}
+                        </span>
+                      </span>
+                    </SelectItem>
+                  )
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          2) 제목 · 요약
+        </p>
+        <div className="grid gap-3 md:grid-cols-[1fr_minmax(9rem,11rem)] md:items-end">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">견적 제목</label>
+            <Input
+              className="h-9"
+              value={form.title}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, title: event.target.value }))
+              }
+              placeholder="예: ○○ 프로젝트 — 견적"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">상태</label>
+            <Select
+              value={form.status}
+              onValueChange={(value) =>
+                setForm((current) => ({
+                  ...current,
+                  status: (value as QuoteStatus | null) ?? current.status,
+                }))
+              }
+            >
+              <SelectTrigger className="h-9 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {quoteStatusOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium">견적 요약</label>
+          <p className="text-[11px] text-muted-foreground">
+            문의·설정 템플릿이 기본으로 들어옵니다. 견적 초안 상단 설명으로 쓰입니다.
+          </p>
+          <Textarea
+            value={form.summary}
             onChange={(event) =>
-              setForm((current) => ({ ...current, title: event.target.value }))
+              setForm((current) => ({ ...current, summary: event.target.value }))
             }
+            className="min-h-[5.5rem] text-sm"
           />
         </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">상태</label>
-          <Select
-            value={form.status}
-            onValueChange={(value) =>
-              setForm((current) => ({
-                ...current,
-                status: (value as QuoteStatus | null) ?? current.status,
-              }))
-            }
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {quoteStatusOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      </section>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">견적 요약</label>
-        <Textarea
-          value={form.summary}
-          onChange={(event) =>
-            setForm((current) => ({ ...current, summary: event.target.value }))
-          }
-          className="min-h-24"
-        />
-      </div>
-
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <label className="text-sm font-medium">견적 항목</label>
+      <section className="space-y-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              3) 견적 항목
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              항목별 공급가 합계에 부가세 10%를 더해 총액을 맞춥니다.
+            </p>
+          </div>
           <Button
             type="button"
-            variant="outline"
+            variant="default"
             size="sm"
+            className="h-9 w-full shrink-0 gap-1.5 sm:w-auto"
             onClick={() =>
               setForm((current) => ({
                 ...current,
@@ -449,82 +579,239 @@ function QuotesBoardPanel({
             }
           >
             <Plus className="size-4" />
-            항목 추가
+            항목 줄 추가
           </Button>
         </div>
-        <div className="space-y-3">
-          {form.items.map((item, index) => (
-            <div
-              key={`${index}-${item.name}`}
-              className="rounded-2xl border border-border/70 p-4"
-            >
-              <div className="grid gap-3 md:grid-cols-[1fr_1fr_120px_140px_auto]">
-                <Input
-                  value={item.name}
-                  onChange={(event) => updateItem(index, { name: event.target.value })}
-                  placeholder="항목명"
-                />
-                <Input
-                  value={item.description}
-                  onChange={(event) =>
-                    updateItem(index, { description: event.target.value })
-                  }
-                  placeholder="설명"
-                />
-                <Input
-                  value={item.quantity}
-                  onChange={(event) =>
-                    updateItem(index, { quantity: event.target.value })
-                  }
-                  inputMode="decimal"
-                  placeholder="수량"
-                />
-                <Input
-                  value={item.unitPrice}
-                  onChange={(event) =>
-                    updateItem(index, { unitPrice: event.target.value })
-                  }
-                  inputMode="numeric"
-                  placeholder="단가"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => removeItem(index)}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
+
+        <div className="hidden overflow-x-auto rounded-lg border border-border/70 md:block">
+          <table className="w-full min-w-[640px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-border/60 bg-muted/40 text-left text-[11px] font-medium text-muted-foreground">
+                <th className="px-2 py-2 pl-3">항목명</th>
+                <th className="w-24 px-2 py-2 text-right">수량</th>
+                <th className="w-32 px-2 py-2 text-right">단가</th>
+                <th className="w-32 px-2 py-2 text-right">금액</th>
+                <th className="w-11 p-2" aria-label="삭제" />
+              </tr>
+            </thead>
+            <tbody>
+              {form.items.map((item, index) => {
+                const q = Number(item.quantity) || 0
+                const p = Number(item.unitPrice) || 0
+                const line = q * p
+                return (
+                  <tr key={`row-${index}`} className="border-b border-border/50 last:border-0">
+                    <td className="px-2 py-2 pl-3 align-top">
+                      <Input
+                        className="h-8"
+                        value={item.name}
+                        onChange={(event) => updateItem(index, { name: event.target.value })}
+                        placeholder="항목명"
+                      />
+                      <Input
+                        className="mt-1 h-7 text-xs text-muted-foreground"
+                        value={item.description}
+                        onChange={(event) =>
+                          updateItem(index, { description: event.target.value })
+                        }
+                        placeholder="설명·비고 (선택)"
+                      />
+                    </td>
+                    <td className="px-2 py-2 align-top">
+                      <Input
+                        className="h-8 text-right tabular-nums"
+                        value={item.quantity}
+                        onChange={(event) =>
+                          updateItem(index, { quantity: event.target.value })
+                        }
+                        inputMode="decimal"
+                      />
+                    </td>
+                    <td className="px-2 py-2 align-top">
+                      <Input
+                        className="h-8 text-right tabular-nums"
+                        value={item.unitPrice}
+                        onChange={(event) =>
+                          updateItem(index, { unitPrice: event.target.value })
+                        }
+                        inputMode="numeric"
+                      />
+                    </td>
+                    <td className="px-2 py-2 align-top">
+                      <div className="flex h-8 items-center justify-end pr-1 text-right text-sm font-medium tabular-nums">
+                        {formatCurrency(line)}
+                      </div>
+                    </td>
+                    <td className="p-2 align-top">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-8"
+                        onClick={() => removeItem(index)}
+                        aria-label={`${index + 1}번째 항목 삭제`}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="space-y-3 md:hidden">
+          {form.items.map((item, index) => {
+            const q = Number(item.quantity) || 0
+            const p = Number(item.unitPrice) || 0
+            const line = q * p
+            return (
+              <div
+                key={`m-${index}`}
+                className="space-y-2 rounded-lg border border-border/70 bg-muted/10 p-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    항목 {index + 1}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => removeItem(index)}
+                    aria-label="삭제"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] text-muted-foreground">항목명</label>
+                  <Input
+                    className="h-9"
+                    value={item.name}
+                    onChange={(event) => updateItem(index, { name: event.target.value })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] text-muted-foreground">설명 (선택)</label>
+                  <Input
+                    className="h-8 text-sm"
+                    value={item.description}
+                    onChange={(event) =>
+                      updateItem(index, { description: event.target.value })
+                    }
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-[11px] text-muted-foreground">수량</label>
+                    <Input
+                      className="h-9 text-right tabular-nums"
+                      value={item.quantity}
+                      onChange={(event) =>
+                        updateItem(index, { quantity: event.target.value })
+                      }
+                      inputMode="decimal"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] text-muted-foreground">단가</label>
+                    <Input
+                      className="h-9 text-right tabular-nums"
+                      value={item.unitPrice}
+                      onChange={(event) =>
+                        updateItem(index, { unitPrice: event.target.value })
+                      }
+                      inputMode="numeric"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] text-muted-foreground">금액</label>
+                    <div className="flex h-9 items-center justify-end text-sm font-semibold tabular-nums">
+                      {formatCurrency(line)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </section>
+
+      <section className="grid gap-3 lg:grid-cols-[1fr_320px] lg:items-stretch">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">유효기한</label>
+            <p className="text-[11px] text-muted-foreground">견적 제안 만료일입니다.</p>
+            <Input
+              type="date"
+              className="h-9"
+              value={form.validUntil}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, validUntil: event.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">발송일 (선택)</label>
+            <Input
+              type="date"
+              className="h-9"
+              value={form.sentAt ? form.sentAt.slice(0, 10) : ""}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  sentAt: event.target.value
+                    ? new Date(`${event.target.value}T12:00:00`).toISOString()
+                    : "",
+                }))
+              }
+            />
+          </div>
+        </div>
+        <div className="flex flex-col justify-center rounded-xl border-2 border-primary/25 bg-primary/[0.04] px-4 py-3 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">
+            합계 (실시간)
+          </p>
+          <div className="mt-2 space-y-1.5 text-sm">
+            <div className="flex justify-between gap-4 tabular-nums">
+              <span className="text-muted-foreground">공급가 합계</span>
+              <span className="font-medium">{formatCurrency(previewTotal.subtotal)}</span>
+            </div>
+            <div className="flex justify-between gap-4 tabular-nums">
+              <span className="text-muted-foreground">부가세 (10%)</span>
+              <span className="font-medium">{formatCurrency(previewTotal.tax)}</span>
+            </div>
+            <div className="border-t border-primary/15 pt-2">
+              <div className="flex justify-between gap-4 tabular-nums">
+                <span className="text-base font-semibold">총액</span>
+                <span className="text-lg font-bold tracking-tight">
+                  {formatCurrency(previewTotal.total)}
+                </span>
               </div>
             </div>
-          ))}
+          </div>
+          <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
+            세금 정책 변경 시 서버 계산 로직을 확장할 수 있도록 합계는 항목 합산 기준입니다.
+          </p>
         </div>
-      </div>
+      </section>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">유효기한</label>
-          <Input
-            type="date"
-            value={form.validUntil}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, validUntil: event.target.value }))
-            }
-          />
+      {!formValidation.ok ? (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/[0.06] px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
+          <p className="font-medium">저장 전 확인</p>
+          <ul className="mt-1 list-inside list-disc space-y-0.5">
+            {formValidation.issues.map((msg) => (
+              <li key={msg}>{msg}</li>
+            ))}
+          </ul>
         </div>
-        <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
-          <p className="text-xs text-muted-foreground">예상 합계</p>
-          <p className="mt-2 font-medium">
-            공급가 {formatCurrency(previewTotal.subtotal)} / 부가세{" "}
-            {formatCurrency(previewTotal.tax)}
-          </p>
-          <p className="mt-1 text-xl font-semibold">
-            총액 {formatCurrency(previewTotal.total)}
-          </p>
-        </div>
-      </div>
+      ) : null}
       {errorMessage ? (
-        <p className="text-sm text-destructive">{errorMessage}</p>
+        <p className="rounded-lg border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {errorMessage}
+        </p>
       ) : null}
     </div>
   )
@@ -542,25 +829,34 @@ function QuotesBoardPanel({
           }
         }}
       >
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>견적 생성</DialogTitle>
-            <DialogDescription>
-              고객과 항목을 입력하면 공급가/세액/총액이 자동 계산됩니다.
-            </DialogDescription>
-          </DialogHeader>
-          {formFields}
-          <DialogFooter>
+        <DialogContent className={quoteFormDialogClass}>
+          <div className="shrink-0 border-b border-border/60 px-4 pb-3 pt-4 pr-12 sm:px-6 sm:pr-14">
+            <DialogHeader className="gap-1">
+              <DialogTitle className="text-lg">견적 생성</DialogTitle>
+              <DialogDescription className="text-xs leading-relaxed">
+                고객 → 문의 → 항목 순으로 입력하면 합계가 바로 반영됩니다.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+            {formFields}
+          </div>
+          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-border/60 bg-muted/30 px-4 py-3 sm:flex-row sm:justify-end sm:px-6">
             <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
               취소
             </Button>
-            <Button type="button" onClick={saveCreate} disabled={isPending} className="gap-2">
+            <Button
+              type="button"
+              onClick={saveCreate}
+              disabled={isPending || !formValidation.ok}
+              className="gap-2"
+            >
               {isPending ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden />
               ) : null}
               저장
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -829,25 +1125,34 @@ function QuotesBoardPanel({
           }
         }}
       >
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>견적 수정</DialogTitle>
-            <DialogDescription>
-              현재 견적 카드 구조는 유지하고 데이터만 실제로 수정합니다.
-            </DialogDescription>
-          </DialogHeader>
-          {formFields}
-          <DialogFooter>
+        <DialogContent className={quoteFormDialogClass}>
+          <div className="shrink-0 border-b border-border/60 px-4 pb-3 pt-4 pr-12 sm:px-6 sm:pr-14">
+            <DialogHeader className="gap-1">
+              <DialogTitle className="text-lg">견적 수정</DialogTitle>
+              <DialogDescription className="text-xs leading-relaxed">
+                동일한 흐름으로 수정합니다. 저장 시 DB에 반영됩니다.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+            {formFields}
+          </div>
+          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-border/60 bg-muted/30 px-4 py-3 sm:flex-row sm:justify-end sm:px-6">
             <Button variant="outline" type="button" onClick={resetForm}>
               닫기
             </Button>
-            <Button type="button" onClick={saveEdit} disabled={isPending} className="gap-2">
+            <Button
+              type="button"
+              onClick={saveEdit}
+              disabled={isPending || !formValidation.ok}
+              className="gap-2"
+            >
               {isPending ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden />
               ) : null}
               저장
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
