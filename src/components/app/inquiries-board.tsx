@@ -1,15 +1,35 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react"
+import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ListOrdered, Pencil, Plus, Search, Sparkles, UserPlus } from "lucide-react"
+import {
+  ArrowRight,
+  ChevronDown,
+  ChevronRight,
+  ListOrdered,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Sparkles,
+  UserPlus,
+} from "lucide-react"
 import { toast } from "sonner"
 
 import { createInquiryAction, updateInquiryAction } from "@/app/actions"
 import { EmptyState } from "@/components/app/empty-state"
 import { PageHeader } from "@/components/app/page-header"
 import { InquiryStageBadge } from "@/components/app/status-badge"
+import { OpsSearchField } from "@/components/operations/ops-search-field"
+import { OpsTableShell } from "@/components/operations/ops-table-shell"
+import {
+  opsTableCellClass,
+  opsTableClass,
+  opsTableHeadCellClass,
+  opsTableHeadRowClass,
+  opsTableRowClass,
+} from "@/components/operations/ops-table-styles"
+import { OpsToolbar } from "@/components/operations/ops-toolbar"
 import { Button } from "@/components/ui/button"
 import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent } from "@/components/ui/card"
@@ -30,8 +50,15 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { inquiryStageOptions } from "@/lib/constants"
-import { formatCurrency, formatDateTime } from "@/lib/format"
+import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import type { Customer, InquiryWithCustomer, InquiryStage } from "@/types/domain"
 
@@ -42,6 +69,23 @@ function toLocalDateTimeValue(value?: string) {
 
   return value.slice(0, 16)
 }
+
+function inquiryToFormFields(inquiry: InquiryWithCustomer) {
+  return {
+    title: inquiry.title,
+    customerId: inquiry.customerId,
+    serviceCategory: inquiry.serviceCategory,
+    channel: inquiry.channel,
+    details: inquiry.details,
+    budgetMin: inquiry.budgetMin ? String(inquiry.budgetMin) : "",
+    budgetMax: inquiry.budgetMax ? String(inquiry.budgetMax) : "",
+    stage: inquiry.stage,
+    followUpAt: toLocalDateTimeValue(inquiry.followUpAt),
+  }
+}
+
+type FollowupFilter = "all" | "overdue" | "week"
+type InquirySort = "created_desc" | "followup_asc" | "followup_desc"
 
 const flowSteps = [
   { step: 1, title: "고객 등록", hint: "거래처를 먼저 등록합니다" },
@@ -70,6 +114,10 @@ export function InquiriesBoard({
   const [isPending, startTransition] = useTransition()
   const [errorMessage, setErrorMessage] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [stageFilter, setStageFilter] = useState<InquiryStage | "all">("all")
+  const [followupFilter, setFollowupFilter] = useState<FollowupFilter>("all")
+  const [sortKey, setSortKey] = useState<InquirySort>("created_desc")
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const deepLinkAppliedRef = useRef(false)
 
   const [form, setForm] = useState({
@@ -119,26 +167,59 @@ export function InquiriesBoard({
   }, [initialCreateOpen, initialCustomerId, customers])
 
   const filteredInquiries = useMemo(() => {
+    let list = [...inquiries]
     const q = searchQuery.trim().toLowerCase()
-    if (!q) {
-      return inquiries
+    if (q) {
+      list = list.filter((inquiry) => {
+        const customer = inquiry.customer
+        const haystack = [
+          inquiry.title,
+          inquiry.details,
+          inquiry.serviceCategory,
+          inquiry.channel,
+          customer?.name,
+          customer?.companyName,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+        return haystack.includes(q)
+      })
     }
-    return inquiries.filter((inquiry) => {
-      const customer = inquiry.customer
-      const haystack = [
-        inquiry.title,
-        inquiry.details,
-        inquiry.serviceCategory,
-        inquiry.channel,
-        customer?.name,
-        customer?.companyName,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-      return haystack.includes(q)
+    if (stageFilter !== "all") {
+      list = list.filter((i) => i.stage === stageFilter)
+    }
+    const now = Date.now()
+    const weekEnd = now + 7 * 86400000
+    if (followupFilter === "overdue") {
+      list = list.filter((i) => {
+        if (!i.followUpAt) {
+          return false
+        }
+        return new Date(i.followUpAt).getTime() < now
+      })
+    } else if (followupFilter === "week") {
+      list = list.filter((i) => {
+        if (!i.followUpAt) {
+          return false
+        }
+        const t = new Date(i.followUpAt).getTime()
+        return t >= now && t <= weekEnd
+      })
+    }
+    list.sort((a, b) => {
+      if (sortKey === "created_desc") {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      }
+      const af = a.followUpAt ? new Date(a.followUpAt).getTime() : Number.POSITIVE_INFINITY
+      const bf = b.followUpAt ? new Date(b.followUpAt).getTime() : Number.POSITIVE_INFINITY
+      if (sortKey === "followup_asc") {
+        return af - bf
+      }
+      return bf - af
     })
-  }, [inquiries, searchQuery])
+    return list
+  }, [inquiries, searchQuery, stageFilter, followupFilter, sortKey])
 
   const resetForm = () => {
     setForm({
@@ -201,16 +282,19 @@ export function InquiriesBoard({
     setIsCreateOpen(false)
     setEditingId(inquiry.id)
     setErrorMessage("")
-    setForm({
-      title: inquiry.title,
-      customerId: inquiry.customerId,
-      serviceCategory: inquiry.serviceCategory,
-      channel: inquiry.channel,
-      details: inquiry.details,
-      budgetMin: inquiry.budgetMin ? String(inquiry.budgetMin) : "",
-      budgetMax: inquiry.budgetMax ? String(inquiry.budgetMax) : "",
-      stage: inquiry.stage,
-      followUpAt: toLocalDateTimeValue(inquiry.followUpAt),
+    setForm(inquiryToFormFields(inquiry))
+  }
+
+  const quickUpdateStage = (inquiry: InquiryWithCustomer, stage: InquiryStage) => {
+    const payload = { ...inquiryToFormFields(inquiry), stage }
+    startTransition(async () => {
+      const result = await updateInquiryAction(inquiry.id, payload)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      toast.success("문의 단계가 변경되었습니다.")
+      router.refresh()
     })
   }
 
@@ -356,11 +440,6 @@ export function InquiriesBoard({
         description="문의에 채널·일정·예상 금액을 남기고, 후속조치와 견적까지 한 흐름으로 관리합니다."
         action={
           <div className="flex w-full flex-col gap-1.5 sm:w-auto sm:items-end">
-            {hasInquiries ? (
-              <p className="text-right text-[11px] leading-tight text-muted-foreground">
-                CSV 일괄 가져오기 · 준비 중
-              </p>
-            ) : null}
             {hasCustomers ? (
               <Button type="button" className="h-9 w-full gap-2 sm:w-auto" onClick={openCreateDialog}>
                 <Plus className="size-4" />
@@ -572,159 +651,264 @@ export function InquiriesBoard({
         </Card>
       ) : null}
 
-      <section
-        className={cn(
-          "grid gap-2 md:grid-cols-3",
-          isEmptyInquiries && "opacity-[0.88]"
-        )}
-      >
-        <Card
-          className={cn(
-            "border-border/60",
-            isEmptyInquiries && "border-dashed border-primary/18 bg-primary/[0.04]"
-          )}
-        >
-          <CardContent className="px-2.5 py-2 sm:px-3 sm:py-2.5">
-            <p className="text-[10px] font-medium text-muted-foreground">신규 문의</p>
-            <p
-              className={cn(
-                "mt-0.5 tabular-nums tracking-tight",
-                isEmptyInquiries
-                  ? "text-sm font-medium text-muted-foreground"
-                  : "text-2xl font-semibold"
-              )}
-            >
-              {stageSummary.new}건
-            </p>
-          </CardContent>
-        </Card>
-        <Card
-          className={cn(
-            "border-border/60",
-            isEmptyInquiries && "border-dashed border-primary/18 bg-primary/[0.04]"
-          )}
-        >
-          <CardContent className="px-2.5 py-2 sm:px-3 sm:py-2.5">
-            <p className="text-[10px] font-medium text-muted-foreground">검토 중</p>
-            <p
-              className={cn(
-                "mt-0.5 tabular-nums tracking-tight",
-                isEmptyInquiries
-                  ? "text-sm font-medium text-muted-foreground"
-                  : "text-2xl font-semibold"
-              )}
-            >
-              {stageSummary.qualified}건
-            </p>
-          </CardContent>
-        </Card>
-        <Card
-          className={cn(
-            "border-border/60",
-            isEmptyInquiries && "border-dashed border-primary/18 bg-primary/[0.04]"
-          )}
-        >
-          <CardContent className="px-2.5 py-2 sm:px-3 sm:py-2.5">
-            <p className="text-[10px] font-medium text-muted-foreground">견적 발송 단계</p>
-            <p
-              className={cn(
-                "mt-0.5 tabular-nums tracking-tight",
-                isEmptyInquiries
-                  ? "text-sm font-medium text-muted-foreground"
-                  : "text-2xl font-semibold"
-              )}
-            >
-              {stageSummary.quoted}건
-            </p>
-          </CardContent>
-        </Card>
-      </section>
-
       {!isEmptyInquiries ? (
-        <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-muted/25 p-4 shadow-sm ring-1 ring-primary/[0.04] md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm font-medium">운영 팁</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              문의를 등록한 뒤 팔로업 시간을 지정하고, 견적 단계로 넘기면 견적·청구와 연결됩니다.
-            </p>
-          </div>
-          <Button type="button" className="shrink-0" onClick={openCreateDialog}>
-            <Plus className="size-4" />
-            문의 등록
-          </Button>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border/50 bg-muted/15 px-3 py-2 text-[11px] text-muted-foreground">
+          <span>
+            신규{" "}
+            <strong className="font-semibold tabular-nums text-foreground">{stageSummary.new}</strong>
+          </span>
+          <span className="hidden sm:inline">·</span>
+          <span>
+            검토 중{" "}
+            <strong className="font-semibold tabular-nums text-foreground">
+              {stageSummary.qualified}
+            </strong>
+          </span>
+          <span className="hidden sm:inline">·</span>
+          <span>
+            견적 단계{" "}
+            <strong className="font-semibold tabular-nums text-foreground">{stageSummary.quoted}</strong>
+          </span>
         </div>
       ) : null}
 
       {hasInquiries ? (
-        <div className="relative">
-          <Search
-            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden
-          />
-          <Input
+        <OpsToolbar>
+          <OpsSearchField
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="제목, 내용, 고객명, 회사명으로 검색…"
-            className="pl-10"
-            aria-label="문의 검색"
+            onChange={setSearchQuery}
+            placeholder="제목, 내용, 고객명, 채널…"
           />
-        </div>
+          <Select
+            value={stageFilter}
+            onValueChange={(v) => setStageFilter((v as InquiryStage | "all") ?? "all")}
+          >
+            <SelectTrigger className="h-9 w-full sm:w-[150px]">
+              <SelectValue placeholder="단계" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체 단계</SelectItem>
+              {inquiryStageOptions.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={followupFilter}
+            onValueChange={(v) => setFollowupFilter((v as FollowupFilter) ?? "all")}
+          >
+            <SelectTrigger className="h-9 w-full sm:w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">팔로업 전체</SelectItem>
+              <SelectItem value="overdue">일정 지남</SelectItem>
+              <SelectItem value="week">7일 이내</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sortKey} onValueChange={(v) => setSortKey((v as InquirySort) ?? "created_desc")}>
+            <SelectTrigger className="h-9 w-full sm:w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="created_desc">최신 등록순</SelectItem>
+              <SelectItem value="followup_asc">팔로업 임박순</SelectItem>
+              <SelectItem value="followup_desc">팔로업 늦은순</SelectItem>
+            </SelectContent>
+          </Select>
+        </OpsToolbar>
       ) : null}
 
       {hasInquiries && !filteredInquiries.length ? (
         <EmptyState
-          title="검색 결과가 없습니다"
-          description="다른 검색어로 다시 시도해 보세요."
+          title="조건에 맞는 문의가 없습니다"
+          description="검색·필터를 조정하거나 새 문의를 등록해 보세요."
         />
       ) : null}
 
-      <div className="grid gap-4">
-        {filteredInquiries.map((inquiry) => {
-          const customer = inquiry.customer
+      {hasInquiries && filteredInquiries.length > 0 ? (
+        <OpsTableShell className="hidden md:block">
+          <table className={cn(opsTableClass, "min-w-[900px]")}>
+            <thead>
+              <tr className={opsTableHeadRowClass}>
+                <th className={cn(opsTableHeadCellClass, "w-10")} aria-label="펼침" />
+                <th className={opsTableHeadCellClass}>제목</th>
+                <th className={opsTableHeadCellClass}>고객</th>
+                <th className={opsTableHeadCellClass}>채널</th>
+                <th className={opsTableHeadCellClass}>단계</th>
+                <th className={cn(opsTableHeadCellClass, "text-right")}>예산</th>
+                <th className={opsTableHeadCellClass}>팔로업</th>
+                <th className={opsTableHeadCellClass}>등록일</th>
+                <th className={cn(opsTableHeadCellClass, "w-12 text-right")} aria-label="작업" />
+              </tr>
+            </thead>
+            <tbody>
+              {filteredInquiries.map((inquiry) => {
+                const customer = inquiry.customer
+                const open = expandedId === inquiry.id
+                const overdue =
+                  inquiry.followUpAt && new Date(inquiry.followUpAt).getTime() < Date.now()
+                return (
+                  <Fragment key={inquiry.id}>
+                    <tr
+                      className={cn(opsTableRowClass, "cursor-pointer")}
+                      data-state={open ? "open" : undefined}
+                      onClick={() => setExpandedId((id) => (id === inquiry.id ? null : inquiry.id))}
+                    >
+                      <td className={cn(opsTableCellClass, "text-muted-foreground")}>
+                        {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+                      </td>
+                      <td className={cn(opsTableCellClass, "max-w-[220px] font-medium")}>
+                        <span className="line-clamp-2">{inquiry.title}</span>
+                        <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground line-clamp-1">
+                          {inquiry.serviceCategory}
+                        </span>
+                      </td>
+                      <td className={cn(opsTableCellClass, "max-w-[140px] truncate text-sm")}>
+                        {customer?.companyName ?? customer?.name ?? "—"}
+                      </td>
+                      <td className={cn(opsTableCellClass, "text-xs text-muted-foreground")}>
+                        {inquiry.channel}
+                      </td>
+                      <td className={opsTableCellClass} onClick={(e) => e.stopPropagation()}>
+                        <InquiryStageBadge stage={inquiry.stage} />
+                      </td>
+                      <td
+                        className={cn(
+                          opsTableCellClass,
+                          "text-right text-xs tabular-nums text-muted-foreground"
+                        )}
+                      >
+                        {formatCurrency(inquiry.budgetMin ?? 0)}–{formatCurrency(inquiry.budgetMax ?? 0)}
+                      </td>
+                      <td
+                        className={cn(
+                          opsTableCellClass,
+                          "whitespace-nowrap text-xs",
+                          overdue ? "font-medium text-destructive" : "text-muted-foreground"
+                        )}
+                      >
+                        {inquiry.followUpAt ? formatDateTime(inquiry.followUpAt) : "—"}
+                      </td>
+                      <td className={cn(opsTableCellClass, "whitespace-nowrap text-xs text-muted-foreground")}>
+                        {formatDate(inquiry.createdAt)}
+                      </td>
+                      <td className={cn(opsTableCellClass, "text-right")} onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-8")}
+                          >
+                            <MoreHorizontal className="size-4" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem className="gap-2" onClick={() => openEdit(inquiry)}>
+                              <Pencil className="size-4" />
+                              수정
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="gap-2"
+                              onClick={() =>
+                                router.push(`/quotes?customer=${inquiry.customerId}&new=1`)
+                              }
+                            >
+                              <ArrowRight className="size-4" />
+                              견적 작성
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            {inquiryStageOptions.map((o) => (
+                              <DropdownMenuItem
+                                key={o.value}
+                                disabled={o.value === inquiry.stage || isPending}
+                                onClick={() => quickUpdateStage(inquiry, o.value)}
+                              >
+                                단계 → {o.label}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                    {open ? (
+                      <tr className="bg-muted/15">
+                        <td colSpan={9} className="border-b border-border/50 px-4 py-4">
+                          <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
+                            <div>
+                              <p className="text-xs font-semibold text-muted-foreground">문의 내용</p>
+                              <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">
+                                {inquiry.details?.trim() || "내용 없음"}
+                              </p>
+                              <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                                <span>고객과 연결된 문의입니다.</span>
+                                {inquiry.stage === "quoted" ? (
+                                  <span className="rounded border border-primary/30 bg-primary/10 px-1.5 py-px text-primary">
+                                    견적 단계 진행 중
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
+                              <Button size="sm" variant="outline" onClick={() => openEdit(inquiry)}>
+                                수정
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() =>
+                                  router.push(`/quotes?customer=${inquiry.customerId}&new=1`)
+                                }
+                              >
+                                견적 작성
+                              </Button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                )
+              })}
+            </tbody>
+          </table>
+        </OpsTableShell>
+      ) : null}
 
-          return (
-            <div
-              key={inquiry.id}
-              className="grid gap-4 rounded-2xl border border-border/70 bg-background p-4 lg:grid-cols-[1.4fr_0.6fr_0.8fr_auto]"
-            >
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <InquiryStageBadge stage={inquiry.stage} />
-                  <span className="text-xs text-muted-foreground">{inquiry.channel}</span>
+      {hasInquiries && filteredInquiries.length > 0 ? (
+        <div className="space-y-2 md:hidden">
+          {filteredInquiries.map((inquiry) => {
+            const customer = inquiry.customer
+            return (
+              <div
+                key={inquiry.id}
+                className="rounded-xl border border-border/60 bg-card p-3 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <InquiryStageBadge stage={inquiry.stage} />
+                    <p className="mt-1 font-medium leading-snug">{inquiry.title}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {customer?.companyName ?? customer?.name} · {inquiry.channel}
+                    </p>
+                  </div>
+                  <Button size="sm" variant="outline" className="shrink-0" onClick={() => openEdit(inquiry)}>
+                    수정
+                  </Button>
                 </div>
-                <div>
-                  <p className="font-medium">{inquiry.title}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {customer?.companyName ?? customer?.name} · {inquiry.serviceCategory}
-                  </p>
+                <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">{inquiry.details}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    className="h-8"
+                    onClick={() => router.push(`/quotes?customer=${inquiry.customerId}&new=1`)}
+                  >
+                    견적
+                  </Button>
                 </div>
-                <p className="text-sm leading-6 text-muted-foreground">{inquiry.details}</p>
               </div>
-              <div className="space-y-2">
-                <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                  예상 예산
-                </p>
-                <p className="font-medium">
-                  {formatCurrency(inquiry.budgetMin ?? 0)} -{" "}
-                  {formatCurrency(inquiry.budgetMax ?? 0)}
-                </p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                  팔로업
-                </p>
-                <p className="font-medium">{formatDateTime(inquiry.followUpAt)}</p>
-              </div>
-              <div className="flex items-start justify-end">
-                <Button variant="outline" size="sm" type="button" onClick={() => openEdit(inquiry)}>
-                  <Pencil className="size-4" />
-                  수정
-                </Button>
-              </div>
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
+      ) : null}
     </div>
   )
 }

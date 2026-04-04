@@ -9,7 +9,16 @@ import {
   useTransition,
   type MutableRefObject,
 } from "react"
-import { ArrowRight, BellRing, ListOrdered, Loader2, Pencil, Plus, Receipt } from "lucide-react"
+import {
+  ArrowRight,
+  BellRing,
+  ListOrdered,
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Receipt,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
@@ -22,9 +31,21 @@ import {
 import { EmptyState } from "@/components/app/empty-state"
 import { PageHeader } from "@/components/app/page-header"
 import { PaymentStatusBadge } from "@/components/app/status-badge"
+import { OpsDetailSheet } from "@/components/operations/ops-detail-sheet"
+import { OpsSearchField } from "@/components/operations/ops-search-field"
+import { OpsTableShell } from "@/components/operations/ops-table-shell"
+import { OpsToolbar } from "@/components/operations/ops-toolbar"
+import {
+  opsTableCellClass,
+  opsTableClass,
+  opsTableHeadCellClass,
+  opsTableHeadRowClass,
+  opsTableRowClass,
+} from "@/components/operations/ops-table-styles"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { buttonVariants } from "@/components/ui/button-variants"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -34,6 +55,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Select,
   SelectContent,
@@ -53,6 +80,7 @@ import { cn } from "@/lib/utils"
 import type {
   Customer,
   InvoiceFormInput,
+  InvoiceType,
   InvoiceWithReminders,
   PaymentStatus,
   Quote,
@@ -60,6 +88,70 @@ import type {
 } from "@/types/domain"
 
 type PaymentQuickFilter = "all" | "unpaid" | "overdue" | "paid"
+
+type InvoiceListSort = "requested_desc" | "due_asc" | "amount_desc" | "customer"
+
+function invoiceListSearchHaystack(inv: InvoiceWithReminders): string {
+  const c = inv.customer
+  return [
+    inv.invoiceNumber,
+    c?.name,
+    c?.companyName,
+    c?.email,
+    c?.phone,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+}
+
+function invoiceTypeTableLabel(type: InvoiceType): string {
+  if (type === "deposit") {
+    return "선금"
+  }
+  if (type === "balance") {
+    return "잔금"
+  }
+  return "최종"
+}
+
+/** 입금 완료 전·기한 기준 행 강조(연체·임박) */
+function invoiceRowReceivableHint(inv: InvoiceWithReminders): "overdue" | "due_soon" | null {
+  if (inv.paymentStatus === "paid") {
+    return null
+  }
+  if (inv.paymentStatus === "overdue") {
+    return "overdue"
+  }
+  if (!inv.dueDate) {
+    return null
+  }
+  const due = new Date(inv.dueDate)
+  const today = new Date()
+  due.setHours(0, 0, 0, 0)
+  today.setHours(0, 0, 0, 0)
+  if (due < today) {
+    return "overdue"
+  }
+  const diffDays = (due.getTime() - today.getTime()) / 86400000
+  if (diffDays <= 3) {
+    return "due_soon"
+  }
+  return null
+}
+
+function linkedQuoteSummary(inv: InvoiceWithReminders, quoteList: Quote[]): string {
+  if (!inv.quoteId) {
+    return "—"
+  }
+  const q = quoteList.find((x) => x.id === inv.quoteId)
+  if (!q) {
+    return "견적 연결"
+  }
+  const title = q.title.trim() || q.quoteNumber
+  const short = title.length > 28 ? `${title.slice(0, 28)}…` : title
+  return `${q.quoteNumber} · ${short}`
+}
 
 type InvoiceFormState = {
   customerId: string
@@ -204,6 +296,10 @@ function InvoicesBoardPanel({
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<
     PaymentStatus | "all"
   >("all")
+  const [invoiceListSearch, setInvoiceListSearch] = useState("")
+  const [invoiceTypeFilter, setInvoiceTypeFilter] = useState<InvoiceType | "all">("all")
+  const [invoiceSort, setInvoiceSort] = useState<InvoiceListSort>("requested_desc")
+  const [drawerInvoiceId, setDrawerInvoiceId] = useState<string | null>(null)
   const [quickQuoteId, setQuickQuoteId] = useState(quotes[0]?.id ?? "")
   const [form, setForm] = useState<InvoiceFormState>(() => createEmptyInvoiceForm(customers))
   /** true면 견적·청구 타입 변경 시 금액 제안을 자동 반영, false면 사용자가 금액을 직접 조정한 상태 */
@@ -315,7 +411,14 @@ function InvoicesBoardPanel({
     paymentStatusOptions.find((o) => o.value === form.paymentStatus)?.label ?? form.paymentStatus
 
   const filteredInvoices = useMemo(() => {
+    const q = invoiceListSearch.trim().toLowerCase()
     return invoices.filter((inv) => {
+      if (invoiceTypeFilter !== "all" && inv.invoiceType !== invoiceTypeFilter) {
+        return false
+      }
+      if (q && !invoiceListSearchHaystack(inv).includes(q)) {
+        return false
+      }
       if (paymentQuickFilter === "unpaid" && inv.paymentStatus === "paid") {
         return false
       }
@@ -330,7 +433,52 @@ function InvoicesBoardPanel({
       }
       return true
     })
-  }, [invoices, paymentQuickFilter, paymentStatusFilter])
+  }, [
+    invoices,
+    invoiceListSearch,
+    invoiceTypeFilter,
+    paymentQuickFilter,
+    paymentStatusFilter,
+  ])
+
+  const displayInvoices = useMemo(() => {
+    const arr = [...filteredInvoices]
+    const dueTs = (inv: InvoiceWithReminders) => {
+      if (!inv.dueDate) {
+        return Number.POSITIVE_INFINITY
+      }
+      return new Date(inv.dueDate).getTime()
+    }
+    const requestedTs = (inv: InvoiceWithReminders) => {
+      if (!inv.requestedAt) {
+        return 0
+      }
+      return new Date(inv.requestedAt).getTime()
+    }
+    const customerLabel = (inv: InvoiceWithReminders) => {
+      const c = inv.customer
+      return (c?.companyName?.trim() || c?.name || "").toLowerCase()
+    }
+    arr.sort((a, b) => {
+      switch (invoiceSort) {
+        case "due_asc":
+          return dueTs(a) - dueTs(b)
+        case "amount_desc":
+          return b.amount - a.amount
+        case "customer":
+          return customerLabel(a).localeCompare(customerLabel(b), "ko")
+        case "requested_desc":
+        default:
+          return requestedTs(b) - requestedTs(a)
+      }
+    })
+    return arr
+  }, [filteredInvoices, invoiceSort])
+
+  const drawerInvoice = useMemo(
+    () => invoices.find((i) => i.id === drawerInvoiceId) ?? null,
+    [drawerInvoiceId, invoices]
+  )
 
   const resetInvoiceForm = () => {
     setAmountFollowsSuggestion(true)
@@ -340,10 +488,20 @@ function InvoicesBoardPanel({
   }
 
   const openEdit = (invoice: InvoiceWithReminders) => {
+    setDrawerInvoiceId(null)
     setAmountFollowsSuggestion(false)
     setEditingInvoiceId(invoice.id)
     setErrorMessage("")
     setForm(toInvoiceForm(invoice))
+  }
+
+  const openReminderFor = (invoice: InvoiceWithReminders) => {
+    setDrawerInvoiceId(null)
+    setReminderInvoiceId(invoice.id)
+    setReminderForm({
+      channel: "kakao",
+      message: defaultReminderMessage,
+    })
   }
 
   const openCreateFresh = () => {
@@ -1035,34 +1193,80 @@ function InvoicesBoardPanel({
       ) : null}
 
       {hasInvoices ? (
-        <div className="space-y-2 rounded-lg border border-border/60 bg-muted/10 p-3">
-          <p className="text-xs font-medium text-muted-foreground">빠른 필터</p>
-          <div className="flex flex-wrap gap-1.5">
-            {(
-              [
-                { key: "all" as const, label: "전체" },
-                { key: "unpaid" as const, label: "미수금" },
-                { key: "overdue" as const, label: "연체" },
-                { key: "paid" as const, label: "입금완료" },
-              ] as const
-            ).map(({ key, label }) => (
-              <Button
-                key={key}
-                type="button"
-                size="sm"
-                className="h-8"
-                variant={paymentQuickFilter === key ? "default" : "outline"}
-                onClick={() => {
-                  setPaymentQuickFilter(key)
-                  setPaymentStatusFilter("all")
-                }}
-              >
-                {label}
-              </Button>
-            ))}
+        <OpsToolbar>
+          <OpsSearchField
+            value={invoiceListSearch}
+            onChange={setInvoiceListSearch}
+            placeholder="청구 번호·고객명·회사명 검색"
+            aria-label="청구 목록 검색"
+            className="min-w-[min(100%,14rem)] sm:max-w-xs"
+          />
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <span className="text-xs font-medium text-muted-foreground">청구 유형</span>
+            <Select
+              value={invoiceTypeFilter}
+              onValueChange={(value) =>
+                setInvoiceTypeFilter((value as InvoiceType | "all" | null) ?? "all")
+              }
+            >
+              <SelectTrigger className="h-9 w-full min-w-[7rem] sm:w-[130px]">
+                <SelectValue placeholder="전체" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체</SelectItem>
+                {invoiceTypeOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
-            <label className="text-xs font-medium text-muted-foreground">상세 상태</label>
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <span className="text-xs font-medium text-muted-foreground">정렬</span>
+            <Select
+              value={invoiceSort}
+              onValueChange={(value) =>
+                setInvoiceSort((value as InvoiceListSort | null) ?? "requested_desc")
+              }
+            >
+              <SelectTrigger className="h-9 w-full min-w-[9rem] sm:w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="requested_desc">최신 청구순</SelectItem>
+                <SelectItem value="due_asc">입금 기한 임박순</SelectItem>
+                <SelectItem value="amount_desc">금액 높은순</SelectItem>
+                <SelectItem value="customer">고객명순</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex w-full flex-col gap-2 border-t border-border/40 pt-2 sm:flex-row sm:flex-wrap sm:items-center sm:border-t-0 sm:pt-0">
+            <span className="text-xs font-medium text-muted-foreground">수금</span>
+            <div className="flex flex-wrap gap-1.5">
+              {(
+                [
+                  { key: "all" as const, label: "전체" },
+                  { key: "unpaid" as const, label: "미수금" },
+                  { key: "overdue" as const, label: "연체" },
+                  { key: "paid" as const, label: "입금완료" },
+                ] as const
+              ).map(({ key, label }) => (
+                <Button
+                  key={key}
+                  type="button"
+                  size="sm"
+                  className="h-8"
+                  variant={paymentQuickFilter === key ? "default" : "outline"}
+                  onClick={() => {
+                    setPaymentQuickFilter(key)
+                    setPaymentStatusFilter("all")
+                  }}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
             <Select
               value={paymentStatusFilter}
               onValueChange={(value) => {
@@ -1071,10 +1275,10 @@ function InvoicesBoardPanel({
               }}
             >
               <SelectTrigger className="h-8 w-full sm:w-[200px]">
-                <SelectValue placeholder="전체" />
+                <SelectValue placeholder="상세 상태" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">전체 (상세)</SelectItem>
+                <SelectItem value="all">상세 상태 · 전체</SelectItem>
                 {paymentStatusOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -1083,7 +1287,7 @@ function InvoicesBoardPanel({
               </SelectContent>
             </Select>
           </div>
-        </div>
+        </OpsToolbar>
       ) : null}
 
       {!invoices.length ? (
@@ -1258,39 +1462,237 @@ function InvoicesBoardPanel({
         />
       ) : null}
 
-      {filteredInvoices.map((invoice) => {
-        const customer = invoice.customer
-        const reminders = invoice.reminders
+      {displayInvoices.length > 0 ? (
+        <>
+          <OpsTableShell className="hidden md:block">
+            <table className={cn(opsTableClass, "min-w-[1100px]")}>
+              <thead>
+                <tr className={opsTableHeadRowClass}>
+                  <th className={opsTableHeadCellClass}>청구 번호</th>
+                  <th className={opsTableHeadCellClass}>고객</th>
+                  <th className={cn(opsTableHeadCellClass, "max-w-[200px]")}>연결 견적</th>
+                  <th className={opsTableHeadCellClass}>유형</th>
+                  <th className={opsTableHeadCellClass}>결제 상태</th>
+                  <th className={cn(opsTableHeadCellClass, "text-right")}>금액</th>
+                  <th className={opsTableHeadCellClass}>청구일</th>
+                  <th className={opsTableHeadCellClass}>입금 기한</th>
+                  <th className={opsTableHeadCellClass}>입금일</th>
+                  <th className={cn(opsTableHeadCellClass, "w-12 text-right")} aria-label="작업" />
+                </tr>
+              </thead>
+              <tbody>
+                {displayInvoices.map((invoice) => {
+                  const customer = invoice.customer
+                  const recvHint = invoiceRowReceivableHint(invoice)
+                  return (
+                    <tr
+                      key={invoice.id}
+                      className={cn(
+                        opsTableRowClass,
+                        "cursor-pointer",
+                        recvHint === "overdue" && "bg-destructive/[0.05]",
+                        recvHint === "due_soon" && "bg-amber-500/[0.06]"
+                      )}
+                      onClick={() => setDrawerInvoiceId(invoice.id)}
+                    >
+                      <td className={cn(opsTableCellClass, "font-mono text-xs tabular-nums text-muted-foreground")}>
+                        <span className="flex flex-col gap-0.5">
+                          {invoice.invoiceNumber}
+                          {recvHint === "overdue" ? (
+                            <Badge variant="destructive" className="w-fit px-1 py-0 text-[9px]">
+                              연체·기한초과
+                            </Badge>
+                          ) : null}
+                          {recvHint === "due_soon" ? (
+                            <Badge className="w-fit border-amber-500/40 bg-amber-500/12 px-1 py-0 text-[9px] text-amber-950 dark:text-amber-50">
+                              기한 임박
+                            </Badge>
+                          ) : null}
+                        </span>
+                      </td>
+                      <td className={cn(opsTableCellClass, "max-w-[160px]")}>
+                        <span className="line-clamp-2 text-sm font-medium">
+                          {customer?.companyName?.trim() || customer?.name || "—"}
+                        </span>
+                      </td>
+                      <td className={cn(opsTableCellClass, "max-w-[200px] truncate text-xs text-muted-foreground")}>
+                        {linkedQuoteSummary(invoice, quotes)}
+                      </td>
+                      <td className={cn(opsTableCellClass, "text-xs")}>
+                        {invoiceTypeTableLabel(invoice.invoiceType)}
+                      </td>
+                      <td className={opsTableCellClass} onClick={(e) => e.stopPropagation()}>
+                        <div className="flex flex-col gap-1">
+                          <PaymentStatusBadge status={invoice.paymentStatus} />
+                          <Select
+                            value={invoice.paymentStatus}
+                            onValueChange={(value) =>
+                              updatePaymentStatus(
+                                invoice.id,
+                                (value as PaymentStatus | null) ?? invoice.paymentStatus,
+                                invoice.customerId
+                              )
+                            }
+                          >
+                            <SelectTrigger className="h-8 w-[128px] text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {paymentStatusOptions.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </td>
+                      <td className={cn(opsTableCellClass, "text-right text-sm font-semibold tabular-nums")}>
+                        {formatCurrency(invoice.amount)}
+                      </td>
+                      <td className={cn(opsTableCellClass, "whitespace-nowrap text-xs text-muted-foreground")}>
+                        {formatDate(invoice.requestedAt)}
+                      </td>
+                      <td className={cn(opsTableCellClass, "whitespace-nowrap text-xs text-muted-foreground")}>
+                        {formatDate(invoice.dueDate)}
+                      </td>
+                      <td className={cn(opsTableCellClass, "whitespace-nowrap text-xs text-muted-foreground")}>
+                        {formatDate(invoice.paidAt)}
+                      </td>
+                      <td className={cn(opsTableCellClass, "text-right")} onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-8")}
+                          >
+                            <MoreHorizontal className="size-4" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem className="gap-2" onClick={() => openEdit(invoice)}>
+                              <Pencil className="size-4" />
+                              수정
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="gap-2" onClick={() => openReminderFor(invoice)}>
+                              <BellRing className="size-4" />
+                              리마인드
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </OpsTableShell>
 
-        return (
-          <Card key={invoice.id} className="border-border/70">
-            <CardHeader>
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <CardTitle>
-                    {invoice.invoiceNumber} · {customer?.companyName ?? customer?.name}
-                  </CardTitle>
-                  <CardDescription className="mt-1">
-                    {invoice.invoiceType === "deposit"
-                      ? "선금 청구"
-                      : invoice.invoiceType === "balance"
-                        ? "잔금 청구"
-                        : "최종 청구"}
-                  </CardDescription>
+          <div className="space-y-2 md:hidden">
+            {displayInvoices.map((invoice) => {
+              const customer = invoice.customer
+              const recvHint = invoiceRowReceivableHint(invoice)
+              return (
+                <button
+                  key={invoice.id}
+                  type="button"
+                  className={cn(
+                    "flex w-full flex-col gap-2 rounded-xl border border-border/60 bg-card p-3 text-left shadow-sm",
+                    recvHint === "overdue" && "border-destructive/35",
+                    recvHint === "due_soon" && "border-amber-500/35"
+                  )}
+                  onClick={() => setDrawerInvoiceId(invoice.id)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-mono text-[11px] text-muted-foreground">{invoice.invoiceNumber}</p>
+                      <p className="mt-0.5 font-medium leading-snug">
+                        {customer?.companyName?.trim() || customer?.name || "—"}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {invoiceTypeTableLabel(invoice.invoiceType)} · {formatCurrency(invoice.amount)}
+                      </p>
+                    </div>
+                    <PaymentStatusBadge status={invoice.paymentStatus} />
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          <OpsDetailSheet
+            open={drawerInvoice !== null}
+            onOpenChange={(o) => !o && setDrawerInvoiceId(null)}
+            title={
+              drawerInvoice ? (
+                <span className="flex flex-col gap-1">
+                  <span className="font-mono text-xs text-muted-foreground">{drawerInvoice.invoiceNumber}</span>
+                  <span>
+                    {drawerInvoice.customer?.companyName?.trim() ||
+                      drawerInvoice.customer?.name ||
+                      "고객"}
+                  </span>
+                </span>
+              ) : (
+                ""
+              )
+            }
+            description={
+              drawerInvoice ? (
+                <span>
+                  {invoiceTypeTableLabel(drawerInvoice.invoiceType)} 청구 ·{" "}
+                  {formatCurrency(drawerInvoice.amount)}
+                </span>
+              ) : null
+            }
+            footer={
+              drawerInvoice ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={() => openEdit(drawerInvoice)}>
+                    수정
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => openReminderFor(drawerInvoice)}>
+                    리마인드
+                  </Button>
+                  {drawerInvoice.quoteId ? (
+                    <Link
+                      href={`/quotes/${drawerInvoice.quoteId}/print`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={cn(buttonVariants({ size: "sm", variant: "outline" }), "inline-flex")}
+                    >
+                      연결 견적서
+                    </Link>
+                  ) : null}
                 </div>
+              ) : null
+            }
+          >
+            {drawerInvoice ? (
+              <div className="space-y-4 text-sm">
                 <div className="flex flex-wrap items-center gap-2">
-                  <PaymentStatusBadge status={invoice.paymentStatus} />
+                  <PaymentStatusBadge status={drawerInvoice.paymentStatus} />
+                  {invoiceRowReceivableHint(drawerInvoice) === "overdue" ? (
+                    <Badge variant="destructive" className="text-[10px]">
+                      연체 또는 기한 경과
+                    </Badge>
+                  ) : null}
+                  {invoiceRowReceivableHint(drawerInvoice) === "due_soon" ? (
+                    <Badge className="border-amber-500/50 bg-amber-500/15 text-[10px] text-amber-950 dark:text-amber-50">
+                      입금 기한 임박
+                    </Badge>
+                  ) : null}
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-muted-foreground">결제 상태 변경</p>
                   <Select
-                    value={invoice.paymentStatus}
+                    value={drawerInvoice.paymentStatus}
                     onValueChange={(value) =>
                       updatePaymentStatus(
-                        invoice.id,
-                        (value as PaymentStatus | null) ?? invoice.paymentStatus,
-                        invoice.customerId
+                        drawerInvoice.id,
+                        (value as PaymentStatus | null) ?? drawerInvoice.paymentStatus,
+                        drawerInvoice.customerId
                       )
                     }
                   >
-                    <SelectTrigger className="w-[140px]">
+                    <SelectTrigger className="h-9 w-full max-w-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1301,90 +1703,70 @@ function InvoicesBoardPanel({
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button variant="outline" size="sm" type="button" onClick={() => openEdit(invoice)}>
-                    <Pencil className="size-4" />
-                    수정
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    type="button"
-                    onClick={() => {
-                      setReminderInvoiceId(invoice.id)
-                      setReminderForm({
-                        channel: "kakao",
-                        message: defaultReminderMessage,
-                      })
-                    }}
-                  >
-                    <BellRing className="size-4" />
-                    리마인드
-                  </Button>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-3 md:grid-cols-4">
-                <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
-                  <p className="text-xs text-muted-foreground">청구 금액</p>
-                  <p className="mt-2 text-lg font-semibold">
-                    {formatCurrency(invoice.amount)}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
-                  <p className="text-xs text-muted-foreground">요청일</p>
-                  <p className="mt-2 text-lg font-semibold">
-                    {formatDate(invoice.requestedAt)}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
-                  <p className="text-xs text-muted-foreground">기한</p>
-                  <p className="mt-2 text-lg font-semibold">{formatDate(invoice.dueDate)}</p>
-                </div>
-                <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
-                  <p className="text-xs text-muted-foreground">입금일</p>
-                  <p className="mt-2 text-lg font-semibold">{formatDate(invoice.paidAt)}</p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-medium">메모</p>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  {invoice.notes || "메모가 없습니다."}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-medium">리마인드 이력</p>
-                {reminders.length ? (
-                  <div className="space-y-2">
-                    {reminders.map((reminder) => (
-                      <div
-                        key={reminder.id}
-                        className="rounded-xl border border-border/70 px-3 py-3"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                            {reminder.channel}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDateTime(reminder.sentAt)}
-                          </p>
-                        </div>
-                        <p className="mt-2 text-sm leading-6">{reminder.message}</p>
-                      </div>
-                    ))}
+                {drawerInvoice.quoteId ? (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground">연결 견적</p>
+                    <p className="mt-1 text-sm">{linkedQuoteSummary(drawerInvoice, quotes)}</p>
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    아직 발송된 리마인드가 없습니다.
+                ) : null}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-lg border border-border/50 p-2">
+                    <p className="text-muted-foreground">청구 금액</p>
+                    <p className="mt-0.5 font-semibold tabular-nums">{formatCurrency(drawerInvoice.amount)}</p>
+                  </div>
+                  <div className="rounded-lg border border-border/50 p-2">
+                    <p className="text-muted-foreground">청구일</p>
+                    <p className="mt-0.5 tabular-nums">{formatDate(drawerInvoice.requestedAt)}</p>
+                  </div>
+                  <div className="rounded-lg border border-border/50 p-2">
+                    <p className="text-muted-foreground">입금 기한</p>
+                    <p className="mt-0.5 tabular-nums">{formatDate(drawerInvoice.dueDate)}</p>
+                  </div>
+                  <div className="rounded-lg border border-border/50 p-2">
+                    <p className="text-muted-foreground">입금일</p>
+                    <p className="mt-0.5 tabular-nums">{formatDate(drawerInvoice.paidAt)}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">메모</p>
+                  <p className="mt-1 leading-relaxed text-muted-foreground">
+                    {drawerInvoice.notes?.trim() || "메모가 없습니다."}
                   </p>
-                )}
+                </div>
+                <div>
+                  <p className="mb-2 text-xs font-semibold text-muted-foreground">리마인드 기록</p>
+                  {drawerInvoice.reminders.length ? (
+                    <ul className="max-h-52 space-y-2 overflow-y-auto">
+                      {drawerInvoice.reminders.map((reminder) => {
+                        const ch =
+                          reminderChannelOptions.find((o) => o.value === reminder.channel)?.label ??
+                          reminder.channel
+                        return (
+                          <li
+                            key={reminder.id}
+                            className="rounded-lg border border-border/50 px-3 py-2 text-xs"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-medium text-foreground">{ch}</span>
+                              <span className="shrink-0 text-muted-foreground tabular-nums">
+                                {formatDateTime(reminder.sentAt)}
+                              </span>
+                            </div>
+                            <p className="mt-1 leading-snug">{reminder.message}</p>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">기록된 리마인드가 없습니다.</p>
+                  )}
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        )
-      })}
+            ) : null}
+          </OpsDetailSheet>
+        </>
+      ) : null}
 
       <Dialog
         open={editingInvoiceId !== null}

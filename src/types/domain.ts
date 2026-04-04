@@ -166,6 +166,8 @@ export interface CustomerSummary extends Customer {
   inquiryCount: number
   quoteCount: number
   invoiceCount: number
+  /** 문의·견적·청구·고객 수정 중 가장 최근 시각(정렬·표시용) */
+  lastActivityAt: string
   /** 최근 14일 이내 문의 존재 */
   hasRecentInquiry: boolean
   /** 초안·발송 등 진행 중 견적 */

@@ -30,11 +30,20 @@ import {
 import { EmptyState } from "@/components/app/empty-state"
 import { PageHeader } from "@/components/app/page-header"
 import { QuoteDraftAssistant } from "@/components/app/quote-draft-assistant"
+import { OpsDetailSheet } from "@/components/operations/ops-detail-sheet"
+import { OpsTableShell } from "@/components/operations/ops-table-shell"
+import {
+  opsTableCellClass,
+  opsTableClass,
+  opsTableHeadCellClass,
+  opsTableHeadRowClass,
+  opsTableRowClass,
+} from "@/components/operations/ops-table-styles"
 import { Badge } from "@/components/ui/badge"
 import { QuoteStatusBadge } from "@/components/app/status-badge"
 import { Button } from "@/components/ui/button"
 import { buttonVariants } from "@/components/ui/button-variants"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -236,6 +245,7 @@ function QuotesBoardPanel({
     next: QuoteStatus
   } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<QuoteWithItems | null>(null)
+  const [drawerQuoteId, setDrawerQuoteId] = useState<string | null>(null)
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false)
   const [quickInquiryId, setQuickInquiryId] = useState(inquiries[0]?.id ?? "")
   const [form, setForm] = useState<QuoteFormState>(() =>
@@ -462,7 +472,15 @@ function QuotesBoardPanel({
     setErrorMessage("")
   }
 
+  const drawerQuote = useMemo(() => {
+    if (!drawerQuoteId) {
+      return null
+    }
+    return quotes.find((q) => q.id === drawerQuoteId) ?? null
+  }, [drawerQuoteId, quotes])
+
   const openEdit = (quote: QuoteWithItems) => {
+    setDrawerQuoteId(null)
     setEditingQuoteId(quote.id)
     setErrorMessage("")
     setForm(toFormState(quote))
@@ -1568,174 +1586,285 @@ function QuotesBoardPanel({
         />
       ) : null}
 
-      {processedQuotes.map((quote) => {
-        const customer = quote.customer
-        const validityHint = getQuoteValidityHint(quote.validUntil, quote.status)
-
-        return (
-          <Card
-            key={quote.id}
-            className={cn(
-              "overflow-hidden border-border/70 transition-shadow hover:shadow-md",
-              validityHint === "past_due" && "border-destructive/40 bg-destructive/[0.03]",
-              validityHint === "due_soon" && "border-amber-500/35 bg-amber-500/[0.04]"
-            )}
-          >
-            <CardHeader className="space-y-3 pb-3">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                <div className="min-w-0 space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-xs font-semibold text-muted-foreground tabular-nums">
-                      {quote.quoteNumber}
-                    </span>
-                    <QuoteStatusBadge status={quote.status} />
-                    {validityHint === "past_due" ? (
-                      <Badge variant="destructive" className="text-[10px]">
-                        유효기한 경과
-                      </Badge>
-                    ) : null}
-                    {validityHint === "due_soon" ? (
-                      <Badge className="border-amber-500/50 bg-amber-500/15 text-[10px] text-amber-950 dark:text-amber-50">
-                        유효기한 임박
-                      </Badge>
-                    ) : null}
-                  </div>
-                  <CardTitle className="text-lg leading-snug">{quote.title}</CardTitle>
-                  <CardDescription className="text-sm font-medium text-foreground/80">
-                    {customerPrimaryLabel(customer)}
-                    {customer?.email ? (
-                      <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-                        {customer.email}
-                      </span>
-                    ) : null}
-                  </CardDescription>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                  <Select
-                    value={quote.status}
-                    onValueChange={(value) => {
-                      const next = (value as QuoteStatus | null) ?? quote.status
-                      if (next === quote.status) {
-                        return
-                      }
-                      setStatusConfirm({ quote, next })
-                    }}
-                  >
-                    <SelectTrigger className="h-9 w-[min(100%,140px)]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {quoteStatusOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button variant="outline" size="sm" className="h-9 gap-1" type="button" onClick={() => openEdit(quote)}>
-                    <Pencil className="size-4" />
-                    수정
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
+      {processedQuotes.length > 0 ? (
+        <>
+          <OpsTableShell className="hidden md:block">
+            <table className={cn(opsTableClass, "min-w-[1000px]")}>
+              <thead>
+                <tr className={opsTableHeadRowClass}>
+                  <th className={opsTableHeadCellClass}>번호</th>
+                  <th className={opsTableHeadCellClass}>제목</th>
+                  <th className={opsTableHeadCellClass}>고객</th>
+                  <th className={opsTableHeadCellClass}>상태</th>
+                  <th className={cn(opsTableHeadCellClass, "text-right")}>총액</th>
+                  <th className={opsTableHeadCellClass}>작성일</th>
+                  <th className={opsTableHeadCellClass}>유효기한</th>
+                  <th className={opsTableHeadCellClass}>발송일</th>
+                  <th className={cn(opsTableHeadCellClass, "w-12 text-right")} aria-label="작업" />
+                </tr>
+              </thead>
+              <tbody>
+                {processedQuotes.map((quote) => {
+                  const customer = quote.customer
+                  const validityHint = getQuoteValidityHint(quote.validUntil, quote.status)
+                  return (
+                    <tr
+                      key={quote.id}
                       className={cn(
-                        buttonVariants({ variant: "outline", size: "sm" }),
-                        "inline-flex h-9 gap-1 px-2"
+                        opsTableRowClass,
+                        "cursor-pointer",
+                        validityHint === "past_due" && "bg-destructive/[0.04]",
+                        validityHint === "due_soon" && "bg-amber-500/[0.06]"
                       )}
+                      onClick={() => setDrawerQuoteId(quote.id)}
                     >
-                      <MoreHorizontal className="size-4" />
-                      <span className="sr-only">추가 작업</span>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-52">
-                      <DropdownMenuItem
-                        className="gap-2"
-                        onClick={() => runDuplicateQuote(quote)}
-                      >
-                        <Copy className="size-4" />
-                        복제
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="gap-2"
-                        onClick={() =>
-                          window.open(`/quotes/${quote.id}/print`, "_blank", "noopener,noreferrer")
-                        }
-                      >
-                        <Download className="size-4" />
-                        견적서 보기·PDF
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="gap-2" onClick={() => copyQuotePrintLink(quote.id)}>
-                        <Link2 className="size-4" />
-                        견적서 링크 복사
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="gap-2" onClick={() => openSendPrep(quote.id)}>
-                        <Send className="size-4" />
-                        발송 준비
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="gap-2 text-destructive focus:text-destructive"
-                        onClick={() => setDeleteTarget(quote)}
-                      >
-                        <Trash2 className="size-4" />
-                        삭제
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                      <td className={cn(opsTableCellClass, "font-mono text-xs tabular-nums text-muted-foreground")}>
+                        {quote.quoteNumber}
+                      </td>
+                      <td className={cn(opsTableCellClass, "max-w-[240px]")}>
+                        <span className="line-clamp-2 font-medium">{quote.title}</span>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {validityHint === "past_due" ? (
+                            <Badge variant="destructive" className="text-[9px] px-1 py-0">
+                              기한경과
+                            </Badge>
+                          ) : null}
+                          {validityHint === "due_soon" ? (
+                            <Badge className="border-amber-500/40 bg-amber-500/12 text-[9px] px-1 py-0 text-amber-950 dark:text-amber-50">
+                              임박
+                            </Badge>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td className={cn(opsTableCellClass, "max-w-[140px] truncate text-sm")}>
+                        {customerPrimaryLabel(customer)}
+                      </td>
+                      <td className={opsTableCellClass} onClick={(e) => e.stopPropagation()}>
+                        <Select
+                          value={quote.status}
+                          onValueChange={(value) => {
+                            const next = (value as QuoteStatus | null) ?? quote.status
+                            if (next === quote.status) {
+                              return
+                            }
+                            setStatusConfirm({ quote, next })
+                          }}
+                        >
+                          <SelectTrigger className="h-8 w-[120px] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {quoteStatusOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className={cn(opsTableCellClass, "text-right text-sm font-semibold tabular-nums")}>
+                        {formatCurrency(quote.total)}
+                      </td>
+                      <td className={cn(opsTableCellClass, "whitespace-nowrap text-xs text-muted-foreground")}>
+                        {formatDate(quote.createdAt)}
+                      </td>
+                      <td className={cn(opsTableCellClass, "whitespace-nowrap text-xs text-muted-foreground")}>
+                        {formatDate(quote.validUntil)}
+                      </td>
+                      <td className={cn(opsTableCellClass, "whitespace-nowrap text-xs text-muted-foreground")}>
+                        {formatDate(quote.sentAt)}
+                      </td>
+                      <td className={cn(opsTableCellClass, "text-right")} onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-8")}
+                          >
+                            <MoreHorizontal className="size-4" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-52">
+                            <DropdownMenuItem className="gap-2" onClick={() => openEdit(quote)}>
+                              <Pencil className="size-4" />
+                              수정
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="gap-2" onClick={() => runDuplicateQuote(quote)}>
+                              <Copy className="size-4" />
+                              복제
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="gap-2"
+                              onClick={() =>
+                                window.open(`/quotes/${quote.id}/print`, "_blank", "noopener,noreferrer")
+                              }
+                            >
+                              <Download className="size-4" />
+                              견적서·PDF
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="gap-2" onClick={() => copyQuotePrintLink(quote.id)}>
+                              <Link2 className="size-4" />
+                              링크 복사
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="gap-2" onClick={() => openSendPrep(quote.id)}>
+                              <Send className="size-4" />
+                              발송 준비
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="gap-2 text-destructive focus:text-destructive"
+                              onClick={() => setDeleteTarget(quote)}
+                            >
+                              <Trash2 className="size-4" />
+                              삭제
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </OpsTableShell>
+
+          <div className="space-y-2 md:hidden">
+            {processedQuotes.map((quote) => {
+              const customer = quote.customer
+              const validityHint = getQuoteValidityHint(quote.validUntil, quote.status)
+              return (
+                <button
+                  key={quote.id}
+                  type="button"
+                  className={cn(
+                    "flex w-full flex-col gap-2 rounded-xl border border-border/60 bg-card p-3 text-left shadow-sm",
+                    validityHint === "past_due" && "border-destructive/35",
+                    validityHint === "due_soon" && "border-amber-500/35"
+                  )}
+                  onClick={() => setDrawerQuoteId(quote.id)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-mono text-[11px] text-muted-foreground">{quote.quoteNumber}</p>
+                      <p className="mt-0.5 font-medium leading-snug">{quote.title}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{customerPrimaryLabel(customer)}</p>
+                    </div>
+                    <QuoteStatusBadge status={quote.status} />
+                  </div>
+                  <p className="text-sm font-semibold tabular-nums text-primary">{formatCurrency(quote.total)}</p>
+                </button>
+              )
+            })}
+          </div>
+        </>
+      ) : null}
+
+      <OpsDetailSheet
+        open={drawerQuote !== null}
+        onOpenChange={(o) => !o && setDrawerQuoteId(null)}
+        title={
+          drawerQuote ? (
+            <span className="flex flex-col gap-1">
+              <span className="font-mono text-xs text-muted-foreground">{drawerQuote.quoteNumber}</span>
+              <span>{drawerQuote.title}</span>
+            </span>
+          ) : (
+            ""
+          )
+        }
+        description={
+          drawerQuote ? (
+            <span>
+              {customerPrimaryLabel(drawerQuote.customer)}
+              {drawerQuote.customer?.email ? ` · ${drawerQuote.customer.email}` : ""}
+            </span>
+          ) : null
+        }
+        footer={
+          drawerQuote ? (
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => openEdit(drawerQuote)}>
+                수정
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => runDuplicateQuote(drawerQuote)}>
+                복제
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  window.open(`/quotes/${drawerQuote.id}/print`, "_blank", "noopener,noreferrer")
+                }
+              >
+                견적서
+              </Button>
+              <Button size="sm" onClick={() => openSendPrep(drawerQuote.id)}>
+                발송 준비
+              </Button>
+            </div>
+          ) : null
+        }
+      >
+        {drawerQuote ? (
+          <div className="space-y-4 text-sm">
+            <div className="flex flex-wrap gap-2">
+              <QuoteStatusBadge status={drawerQuote.status} />
+              {getQuoteValidityHint(drawerQuote.validUntil, drawerQuote.status) === "past_due" ? (
+                <Badge variant="destructive" className="text-[10px]">
+                  유효기한 경과
+                </Badge>
+              ) : null}
+              {getQuoteValidityHint(drawerQuote.validUntil, drawerQuote.status) === "due_soon" ? (
+                <Badge className="border-amber-500/50 bg-amber-500/15 text-[10px] text-amber-950 dark:text-amber-50">
+                  유효기한 임박
+                </Badge>
+              ) : null}
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground">요약</p>
+              <p className="mt-1 leading-relaxed text-muted-foreground">
+                {drawerQuote.summary?.trim() || "요약 없음"}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-lg border border-border/50 p-2">
+                <p className="text-muted-foreground">총액</p>
+                <p className="mt-0.5 font-semibold tabular-nums">{formatCurrency(drawerQuote.total)}</p>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4 border-t border-border/40 bg-muted/5 pt-4">
-              {quote.summary?.trim() ? (
-                <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">{quote.summary}</p>
-              ) : (
-                <p className="text-sm text-muted-foreground">요약 없음</p>
-              )}
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-xl border border-border/60 bg-background/80 p-3">
-                  <p className="text-[11px] font-medium text-muted-foreground">총액</p>
-                  <p className="mt-1 text-lg font-bold tabular-nums text-primary">{formatCurrency(quote.total)}</p>
-                </div>
-                <div className="rounded-xl border border-border/60 bg-background/80 p-3">
-                  <p className="text-[11px] font-medium text-muted-foreground">공급가 / 부가세</p>
-                  <p className="mt-1 text-sm font-semibold tabular-nums">
-                    {formatCurrency(quote.subtotal)} · {formatCurrency(quote.tax)}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-border/60 bg-background/80 p-3">
-                  <p className="text-[11px] font-medium text-muted-foreground">작성일</p>
-                  <p className="mt-1 text-sm font-semibold tabular-nums">{formatDate(quote.createdAt)}</p>
-                </div>
-                <div className="rounded-xl border border-border/60 bg-background/80 p-3">
-                  <p className="text-[11px] font-medium text-muted-foreground">유효기한</p>
-                  <p className="mt-1 text-sm font-semibold tabular-nums">{formatDate(quote.validUntil)}</p>
-                </div>
+              <div className="rounded-lg border border-border/50 p-2">
+                <p className="text-muted-foreground">공급가·세액</p>
+                <p className="mt-0.5 font-semibold tabular-nums">
+                  {formatCurrency(drawerQuote.subtotal)} / {formatCurrency(drawerQuote.tax)}
+                </p>
               </div>
-              <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-                <p className="mb-2 text-xs font-semibold text-muted-foreground">항목</p>
-                <ul className="space-y-2">
-                  {quote.items.slice(0, 4).map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border/30 pb-2 text-sm last:border-0 last:pb-0"
-                    >
-                      <span className="min-w-0 font-medium">
-                        {item.name}
-                        <span className="mt-0.5 block text-xs font-normal text-muted-foreground tabular-nums">
-                          {item.quantity} × {formatCurrency(item.unitPrice)}
-                        </span>
+              <div className="rounded-lg border border-border/50 p-2">
+                <p className="text-muted-foreground">작성일</p>
+                <p className="mt-0.5 tabular-nums">{formatDate(drawerQuote.createdAt)}</p>
+              </div>
+              <div className="rounded-lg border border-border/50 p-2">
+                <p className="text-muted-foreground">유효기한</p>
+                <p className="mt-0.5 tabular-nums">{formatDate(drawerQuote.validUntil)}</p>
+              </div>
+            </div>
+            <div>
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">항목</p>
+              <ul className="max-h-60 space-y-2 overflow-y-auto">
+                {drawerQuote.items.map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex justify-between gap-2 border-b border-border/40 pb-2 text-sm last:border-0"
+                  >
+                    <span className="min-w-0">
+                      <span className="font-medium">{item.name}</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground tabular-nums">
+                        {item.quantity} × {formatCurrency(item.unitPrice)}
                       </span>
-                      <span className="shrink-0 font-semibold tabular-nums">{formatCurrency(item.lineTotal)}</span>
-                    </li>
-                  ))}
-                </ul>
-                {quote.items.length > 4 ? (
-                  <p className="mt-2 text-xs text-muted-foreground">외 {quote.items.length - 4}개 항목</p>
-                ) : null}
-              </div>
-            </CardContent>
-          </Card>
-        )
-      })}
+                    </span>
+                    <span className="shrink-0 font-medium tabular-nums">{formatCurrency(item.lineTotal)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ) : null}
+      </OpsDetailSheet>
 
         </div>
 

@@ -1395,8 +1395,8 @@ export async function getCustomersPageData(): Promise<{
       .select("*")
       .order("created_at", { ascending: false }),
     context.supabase.from("inquiries").select("id, customer_id, created_at"),
-    context.supabase.from("quotes").select("id, customer_id, status"),
-    context.supabase.from("invoices").select("id, customer_id, payment_status"),
+    context.supabase.from("quotes").select("id, customer_id, status, updated_at"),
+    context.supabase.from("invoices").select("id, customer_id, payment_status, updated_at"),
   ])
 
   if (customerError) {
@@ -1425,11 +1425,13 @@ export async function getCustomersPageData(): Promise<{
     id: string
     customer_id: string
     status: string
+    updated_at: string
   }>
   const invoiceRowsSafe = (invoiceRows ?? []) as Array<{
     id: string
     customer_id: string
     payment_status: string
+    updated_at: string
   }>
 
   const recentCutoff = Date.now() - CUSTOMER_INQUIRY_RECENT_DAYS * 24 * 60 * 60 * 1000
@@ -1451,11 +1453,38 @@ export async function getCustomersPageData(): Promise<{
       const hasOverdueInvoice = custInvoices.some((item) => item.payment_status === "overdue")
       const hasOpenReceivable = custInvoices.some((item) => item.payment_status !== "paid")
 
+      const activityTimes: number[] = []
+      const pushTime = (iso?: string | null) => {
+        if (!iso) {
+          return
+        }
+        const t = new Date(iso).getTime()
+        if (Number.isFinite(t)) {
+          activityTimes.push(t)
+        }
+      }
+      pushTime(customer.createdAt)
+      pushTime(customer.updatedAt)
+      for (const inv of custInquiries) {
+        pushTime(inv.created_at)
+      }
+      for (const q of custQuotes) {
+        pushTime(q.updated_at)
+      }
+      for (const inv of custInvoices) {
+        pushTime(inv.updated_at)
+      }
+      const lastActivityAt =
+        activityTimes.length > 0
+          ? new Date(Math.max(...activityTimes)).toISOString()
+          : customer.updatedAt ?? customer.createdAt
+
       return {
         ...customer,
         inquiryCount: custInquiries.length,
         quoteCount: custQuotes.length,
         invoiceCount: custInvoices.length,
+        lastActivityAt,
         hasRecentInquiry,
         hasActiveQuote,
         hasOpenReceivable,
