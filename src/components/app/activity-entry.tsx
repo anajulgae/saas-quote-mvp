@@ -23,7 +23,7 @@ const kindIcon: Record<ActivityKind, LucideIcon> = {
 const kindAccent: Record<ActivityKind, string> = {
   inquiry: "bg-sky-500/10 text-sky-700 dark:text-sky-400",
   quote: "bg-violet-500/10 text-violet-700 dark:text-violet-400",
-  invoice: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  invoice: "bg-primary/10 text-primary dark:text-primary",
   reminder: "bg-amber-500/10 text-amber-800 dark:text-amber-300",
   other: "bg-muted text-muted-foreground",
 }

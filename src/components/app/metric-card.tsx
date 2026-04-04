@@ -10,13 +10,15 @@ export function MetricCard({
   hint: string
 }) {
   return (
-    <Card className="border-border/70">
+    <Card className="border-border/55 transition-shadow duration-200 hover:shadow-md">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm text-muted-foreground">{label}</CardTitle>
+        <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {label}
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-1">
-        <div className="text-2xl font-semibold tracking-tight tabular-nums">{value}</div>
-        <p className="text-xs text-muted-foreground">{hint}</p>
+      <CardContent className="space-y-1.5">
+        <div className="text-2xl font-semibold tracking-tight tabular-nums text-foreground">{value}</div>
+        <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>
       </CardContent>
     </Card>
   )

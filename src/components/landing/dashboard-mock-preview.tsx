@@ -5,7 +5,7 @@ export function DashboardMockPreview({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border border-border/80 bg-card shadow-[0_24px_48px_-12px_rgba(15,23,42,0.12)] ring-1 ring-black/5",
+        "shadow-elevated relative overflow-hidden rounded-2xl border border-border/65 bg-card ring-1 ring-primary/[0.06]",
         className
       )}
       aria-hidden
@@ -41,7 +41,7 @@ export function DashboardMockPreview({ className }: { className?: string }) {
                 <span className="text-[10px] font-semibold text-muted-foreground sm:text-xs">
                   이번 달 청구
                 </span>
-                <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
+                <span className="rounded-md bg-primary/12 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
                   +12%
                 </span>
               </div>
@@ -52,7 +52,7 @@ export function DashboardMockPreview({ className }: { className?: string }) {
                 {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
                   <div
                     key={i}
-                    className="flex-1 rounded-t-sm bg-emerald-500/80"
+                    className="flex-1 rounded-t-sm bg-primary/85"
                     style={{ height: `${h}%` }}
                   />
                 ))}

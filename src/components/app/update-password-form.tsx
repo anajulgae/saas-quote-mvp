@@ -22,7 +22,7 @@ export function UpdatePasswordForm() {
     return (
       <Card className={authCardClass}>
         <CardHeader className="space-y-3 pb-2">
-          <div className={cn(authIconBoxClass, "bg-emerald-600 text-white")}>
+          <div className={authIconBoxClass}>
             <CheckCircle2 className="size-5" aria-hidden />
           </div>
           <CardTitle className="text-xl font-semibold tracking-tight">비밀번호가 변경되었습니다</CardTitle>

@@ -575,13 +575,13 @@ export function InquiriesBoard({
       <section
         className={cn(
           "grid gap-2 md:grid-cols-3",
-          isEmptyInquiries && "opacity-45"
+          isEmptyInquiries && "opacity-[0.88]"
         )}
       >
         <Card
           className={cn(
             "border-border/60",
-            isEmptyInquiries && "border-dashed border-border/50 bg-muted/10"
+            isEmptyInquiries && "border-dashed border-primary/18 bg-primary/[0.04]"
           )}
         >
           <CardContent className="px-2.5 py-2 sm:px-3 sm:py-2.5">
@@ -601,7 +601,7 @@ export function InquiriesBoard({
         <Card
           className={cn(
             "border-border/60",
-            isEmptyInquiries && "border-dashed border-border/50 bg-muted/10"
+            isEmptyInquiries && "border-dashed border-primary/18 bg-primary/[0.04]"
           )}
         >
           <CardContent className="px-2.5 py-2 sm:px-3 sm:py-2.5">
@@ -621,7 +621,7 @@ export function InquiriesBoard({
         <Card
           className={cn(
             "border-border/60",
-            isEmptyInquiries && "border-dashed border-border/50 bg-muted/10"
+            isEmptyInquiries && "border-dashed border-primary/18 bg-primary/[0.04]"
           )}
         >
           <CardContent className="px-2.5 py-2 sm:px-3 sm:py-2.5">
@@ -641,7 +641,7 @@ export function InquiriesBoard({
       </section>
 
       {!isEmptyInquiries ? (
-        <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-muted/30 p-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-muted/25 p-4 shadow-sm ring-1 ring-primary/[0.04] md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-sm font-medium">운영 팁</p>
             <p className="mt-1 text-sm text-muted-foreground">

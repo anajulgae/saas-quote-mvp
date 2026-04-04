@@ -18,11 +18,11 @@ export function PageHeader({
         className
       )}
     >
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+      <div className="space-y-1.5">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-[1.65rem] md:leading-snug">
           {title}
         </h1>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p>
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>

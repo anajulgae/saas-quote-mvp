@@ -42,7 +42,7 @@ function ForgotPasswordFormInner({ onTryAnother }: { onTryAnother: () => void })
     return (
       <Card className={authCardClass}>
         <CardHeader className="space-y-3 pb-2">
-          <div className={cn(authIconBoxClass, "bg-emerald-600 text-white")}>
+          <div className={authIconBoxClass}>
             <CheckCircle2 className="size-5" aria-hidden />
           </div>
           <CardTitle className="text-xl font-semibold tracking-tight">재설정 메일을 보냈습니다</CardTitle>

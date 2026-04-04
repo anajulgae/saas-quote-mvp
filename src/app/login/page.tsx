@@ -59,7 +59,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           className="order-2 space-y-6 pb-6 lg:order-1 lg:pb-0 lg:pr-4"
         >
           <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-border/70 bg-background/90 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm">
-            <CircleDot className="size-3 shrink-0 fill-emerald-500 text-emerald-500" aria-hidden />
+            <CircleDot className="size-3 shrink-0 fill-primary text-primary" aria-hidden />
             견적·청구·수금을 한 화면에서
           </div>
           <div className="space-y-3">
@@ -75,7 +75,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <ul className="max-w-md space-y-2.5 rounded-2xl border border-border/70 bg-background/85 p-4 shadow-sm">
             {valueBullets.map((item) => (
               <li key={item} className="flex gap-2.5 text-sm leading-snug text-foreground">
-                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden />
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
                 <span>{item}</span>
               </li>
             ))}

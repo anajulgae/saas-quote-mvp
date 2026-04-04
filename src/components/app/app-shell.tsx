@@ -30,7 +30,7 @@ const HEADER_CONTEXT: { match: string; title: string; description: string }[] = 
 function headerForPath(pathname: string | null) {
   const path = pathname ?? "/dashboard"
   const row = HEADER_CONTEXT.find((h) => path === h.match || path.startsWith(`${h.match}/`))
-  return row ?? { title: "FlowBill AI", description: "견적 · 청구 · 수금 연결 관리" }
+  return row ?? { title: "Bill-IO", description: "견적 · 청구 · 수금 연결 관리" }
 }
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
@@ -50,8 +50,8 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             className={cn(
               "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
               isActive
-                ? "bg-foreground text-background"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "bg-primary/12 text-primary ring-1 ring-primary/15 shadow-none"
+                : "text-muted-foreground hover:bg-muted/90 hover:text-foreground"
             )}
           >
             <Icon className="size-4" />
@@ -73,8 +73,8 @@ function SidebarContent({
   return (
     <div className="flex h-full flex-col">
       <div className="space-y-1.5 border-b border-border/70 px-4 py-4">
-        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-          FlowBill AI
+        <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+          Bill-IO
         </p>
         <h2 className="text-base font-semibold leading-snug tracking-tight text-foreground">
           {businessName}
@@ -110,7 +110,7 @@ function AppHeader({
   const { title, description } = headerForPath(pathname)
 
   return (
-    <header className="sticky top-0 z-20 border-b border-border/70 bg-background/90 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-border/60 bg-background/85 backdrop-blur-md">
       <div className="flex items-center justify-between gap-3 px-4 py-2.5 md:px-6">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Sheet>
@@ -148,9 +148,9 @@ export function AppShell({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#fafafa,#f4f4f5_45%,#f8fafc)]">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_100%_70%_at_50%_-15%,oklch(0.94_0.03_175_/_0.22),transparent_55%),linear-gradient(180deg,oklch(0.997_0.004_260),oklch(0.975_0.008_260))]">
       <div className="mx-auto flex min-h-screen max-w-[1600px]">
-        <aside className="hidden w-72 border-r border-border/70 bg-background/90 backdrop-blur xl:block">
+        <aside className="hidden w-72 border-r border-border/60 bg-card/85 backdrop-blur-md xl:block">
           <SidebarContent businessName={businessName} sidebarSecondary={sidebarSecondary} />
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">

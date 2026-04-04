@@ -50,11 +50,14 @@ function resolveDashboardMainAction(counts: {
 
 function emptyBadgeClass(tone: "positive" | "neutral" | "muted") {
   const map = {
-    positive: "border-emerald-500/25 bg-emerald-500/[0.06] text-emerald-800 dark:text-emerald-200",
-    neutral: "border-border/60 bg-muted/40 text-muted-foreground",
-    muted: "border-border/60 bg-muted/30 text-muted-foreground",
+    positive: "border-primary/25 bg-primary/[0.08] text-primary dark:bg-primary/18",
+    neutral: "border-border/55 bg-muted/50 text-muted-foreground",
+    muted: "border-border/50 bg-muted/35 text-muted-foreground",
   } as const
-  return cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium", map[tone])
+  return cn(
+    "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-wide",
+    map[tone]
+  )
 }
 
 export default async function DashboardPage() {
@@ -79,7 +82,7 @@ export default async function DashboardPage() {
       {showBetaOnboarding ? <BetaOnboardingBanner /> : null}
 
       {showQuickStartStrip ? (
-        <Card className="border-border/70 bg-muted/20 shadow-none">
+        <Card className="border-primary/15 bg-primary/[0.04] shadow-none ring-1 ring-primary/10">
           <CardContent className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div className="flex min-w-0 gap-2.5">
               <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -199,7 +202,7 @@ export default async function DashboardPage() {
           <CardContent className="space-y-2">
             {!overdueInvoices.length ? (
               <div className="flex gap-3 rounded-xl border border-dashed border-border/60 bg-muted/15 px-3 py-3 sm:items-start">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary">
                   <CheckCircle2 className="size-4" aria-hidden />
                 </div>
                 <div className="min-w-0 flex-1 space-y-2">
@@ -324,7 +327,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-2">
             {!recentActivities.length ? (
-              <div className="rounded-xl border border-dashed border-border/70 bg-muted/15 px-3 py-4 sm:px-4">
+              <div className="rounded-xl border border-dashed border-primary/15 bg-primary/[0.03] px-3 py-4 sm:px-4">
                 <div className="flex gap-3 sm:items-start">
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <Activity className="size-4" aria-hidden />

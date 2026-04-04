@@ -467,7 +467,7 @@ export default async function CustomerDetailPage({
                 </div>
               ))
             ) : (
-              <div className="rounded-lg border border-dashed border-emerald-500/35 bg-emerald-500/[0.06] p-3">
+              <div className="rounded-lg border border-dashed border-primary/25 bg-primary/[0.06] p-3">
                 <p className="text-sm font-semibold text-foreground">청구 없음</p>
                 <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
                   견적 확정 후 선금·잔금 청구를 만듭니다.

@@ -27,8 +27,8 @@ export function SignupCheckEmailPanel({
         <div className={authIconBoxClass}>
           <Mail className="size-5" aria-hidden />
         </div>
-        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.07] px-3 py-2.5 text-sm leading-snug text-foreground">
-          <p className="font-semibold text-emerald-900 dark:text-emerald-100">가입이 거의 완료되었습니다</p>
+        <div className="rounded-lg border border-primary/18 bg-primary/[0.07] px-3 py-2.5 text-sm leading-snug text-foreground">
+          <p className="font-semibold text-primary">가입이 거의 완료되었습니다</p>
           <p className="mt-1 text-xs text-muted-foreground">
             마지막 단계로 이메일 인증만 진행해 주세요. 인증 후 로그인하면 바로 서비스를 이용할 수
             있습니다.
@@ -106,7 +106,7 @@ export function SignupCheckEmailPanel({
               </p>
             ) : null}
             {state?.ok ? (
-              <p className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-200">
+              <p className="rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
                 인증 메일을 다시 보냈습니다. 잠시 후 메일함을 확인해 주세요.
               </p>
             ) : null}

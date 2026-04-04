@@ -25,12 +25,12 @@ export function LandingHero() {
 
   return (
     <section
-      className="border-b border-border/50 bg-gradient-to-b from-muted/30 to-background px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24"
+      className="border-b border-border/50 bg-gradient-to-b from-primary/[0.06] via-background to-background px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24"
       aria-labelledby="hero-heading"
     >
       <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1fr_min(100%,440px)] lg:items-center lg:gap-14">
         <div className="space-y-8">
-          <p className="inline-flex max-w-full items-center gap-2 rounded-full border border-emerald-600/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-900">
+          <p className="inline-flex max-w-full items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
             소규모 사업자를 위한 견적·청구·수금 관리
           </p>
           <div className="space-y-4">
@@ -51,7 +51,7 @@ export function LandingHero() {
               href="/signup"
               className={cn(
                 buttonVariants({ size: "lg" }),
-                "h-12 min-h-12 w-full justify-center bg-emerald-600 px-6 text-base font-semibold text-white shadow-sm hover:bg-emerald-700 sm:w-auto"
+                "h-12 min-h-12 w-full justify-center bg-primary px-6 text-base font-semibold text-primary-foreground shadow-md hover:bg-primary/90 sm:w-auto"
               )}
             >
               무료로 시작하기
@@ -60,7 +60,7 @@ export function LandingHero() {
               href="/login"
               className={cn(
                 buttonVariants({ variant: "outline", size: "lg" }),
-                "h-12 min-h-12 w-full justify-center border-border/80 bg-background px-6 text-base font-medium sm:w-auto"
+                "h-12 min-h-12 w-full justify-center border-2 border-border bg-background px-6 text-base font-semibold text-foreground shadow-sm hover:bg-muted/40 sm:w-auto"
               )}
             >
               로그인
@@ -77,7 +77,7 @@ export function LandingHero() {
             {trust.map((line) => (
               <li key={line} className="flex gap-2.5 text-sm leading-snug text-foreground">
                 <CheckCircle2
-                  className="mt-0.5 size-4 shrink-0 text-emerald-600"
+                  className="mt-0.5 size-4 shrink-0 text-primary"
                   aria-hidden
                 />
                 <span>{line}</span>
@@ -129,12 +129,12 @@ export function LandingProblemSolution() {
           {rows.map((row) => (
             <article
               key={row.problem}
-              className="flex flex-col rounded-2xl border border-border/70 bg-card p-6 shadow-sm ring-1 ring-black/[0.03]"
+              className="flex flex-col rounded-2xl border border-border/60 bg-card p-6 shadow-sm ring-1 ring-primary/[0.04] transition-shadow duration-200 hover:shadow-md"
             >
               <p className="text-xs font-semibold tracking-wide text-muted-foreground">문제</p>
               <p className="mt-2 text-sm font-medium leading-snug text-foreground">{row.problem}</p>
               <div className="my-4 h-px bg-border/80" />
-              <p className="text-xs font-semibold tracking-wide text-emerald-800">Bill-IO</p>
+              <p className="text-xs font-semibold tracking-wide text-primary">Bill-IO</p>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{row.solve}</p>
             </article>
           ))}
@@ -181,7 +181,7 @@ export function LandingFeatures() {
   return (
     <section
       id="features"
-      className="border-y border-border/50 bg-muted/25 px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
+      className="border-y border-border/50 bg-muted/30 px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
       aria-labelledby="features-heading"
     >
       <div className="mx-auto max-w-6xl">
@@ -200,9 +200,9 @@ export function LandingFeatures() {
           {items.map(({ icon: Icon, title, desc }) => (
             <article
               key={title}
-              className="group rounded-2xl border border-border/70 bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
+              className="group rounded-2xl border border-border/60 bg-card p-6 shadow-sm ring-1 ring-black/[0.02] transition-shadow duration-200 hover:shadow-md"
             >
-              <div className="mb-4 flex size-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-600/15">
+              <div className="mb-4 flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
                 <Icon className="size-5" strokeWidth={1.75} aria-hidden />
               </div>
               <h3 className="text-base font-semibold text-foreground">{title}</h3>
@@ -245,10 +245,10 @@ export function LandingHowItWorks() {
           {steps.map((s) => (
             <li
               key={s.step}
-              className="relative flex gap-4 rounded-2xl border border-border/70 bg-card p-5 shadow-sm"
+              className="relative flex gap-4 rounded-2xl border border-border/60 bg-card p-5 shadow-sm ring-1 ring-black/[0.02]"
             >
               <span
-                className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-sm font-bold text-white"
+                className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground shadow-sm"
                 aria-hidden
               >
                 {s.step}
@@ -329,12 +329,12 @@ export function LandingPricing() {
               className={cn(
                 "flex flex-col rounded-2xl border bg-card p-6 shadow-sm",
                 plan.highlight
-                  ? "border-emerald-600 ring-2 ring-emerald-600/25 lg:scale-[1.02]"
-                  : "border-border/70"
+                  ? "border-primary shadow-elevated-sm ring-2 ring-primary/20 lg:scale-[1.02]"
+                  : "border-border/60"
               )}
             >
               {plan.highlight ? (
-                <p className="mb-3 inline-flex w-fit rounded-full bg-emerald-600 px-2.5 py-0.5 text-xs font-semibold text-white">
+                <p className="mb-3 inline-flex w-fit rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground shadow-sm">
                   추천
                 </p>
               ) : (
@@ -351,7 +351,7 @@ export function LandingPricing() {
               <ul className="mt-6 flex flex-1 flex-col gap-2.5 text-sm text-muted-foreground">
                 {plan.features.map((f) => (
                   <li key={f} className="flex gap-2">
-                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden />
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
                     <span>{f}</span>
                   </li>
                 ))}
@@ -362,8 +362,8 @@ export function LandingPricing() {
                   buttonVariants({ size: "lg" }),
                   "mt-8 h-11 w-full justify-center font-semibold",
                   plan.highlight
-                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                    : "border border-border/80 bg-background hover:bg-muted"
+                    ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+                    : "border-2 border-border/70 bg-background font-semibold hover:bg-muted/60"
                 )}
               >
                 {plan.cta}
@@ -424,7 +424,7 @@ export function LandingFaq() {
               key={item.q}
               className="group rounded-xl border border-border/70 bg-card px-4 py-1 shadow-sm open:pb-3 open:shadow-md"
             >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 text-left text-sm font-semibold text-foreground outline-none marker:content-none focus-visible:ring-2 focus-visible:ring-emerald-600/30 focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 text-left text-sm font-semibold text-foreground outline-none marker:content-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
                 {item.q}
                 <span className="text-muted-foreground transition group-open:rotate-180">▼</span>
               </summary>
@@ -442,43 +442,49 @@ export function LandingFaq() {
 export function LandingFinalCta() {
   return (
     <section
-      className="mx-4 mb-16 overflow-hidden rounded-3xl border border-emerald-600/20 bg-gradient-to-br from-emerald-600 to-emerald-800 px-6 py-14 text-center shadow-lg sm:mx-6 sm:py-16 lg:mx-auto lg:max-w-6xl lg:px-8"
+      className="shadow-elevated relative mx-4 mb-16 overflow-hidden rounded-3xl border border-primary/20 bg-primary px-6 py-14 text-center sm:mx-6 sm:py-16 lg:mx-auto lg:max-w-6xl lg:px-8"
       aria-labelledby="final-cta-heading"
     >
-      <LayoutDashboard className="mx-auto mb-4 size-10 text-white/90" aria-hidden />
-      <h2
-        id="final-cta-heading"
-        className="text-balance text-2xl font-semibold tracking-tight text-white sm:text-3xl"
-      >
-        지금 바로 운영 흐름을 정리해 보세요
-      </h2>
-      <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-emerald-50 sm:text-base">
-        가입 후 고객과 견적·청구를 한곳에서 이어 관리할 수 있습니다. 별도 설치 없이 웹에서
-        시작합니다.
-      </p>
-      <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:justify-center">
-        <Link
-          href="/signup"
-          className={cn(
-            buttonVariants({ size: "lg" }),
-            "h-12 min-h-12 border-0 bg-white px-8 text-base font-semibold text-emerald-800 shadow-md hover:bg-emerald-50"
-          )}
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,oklch(1_0_0_/_0.12),transparent_65%)]"
+        aria-hidden
+      />
+      <div className="relative">
+        <LayoutDashboard className="mx-auto mb-4 size-10 text-primary-foreground/90" aria-hidden />
+        <h2
+          id="final-cta-heading"
+          className="text-balance text-2xl font-semibold tracking-tight text-primary-foreground sm:text-3xl"
         >
-          무료로 시작하기
-        </Link>
-        <Link
-          href="/login"
-          className={cn(
-            buttonVariants({ variant: "outline", size: "lg" }),
-            "h-12 min-h-12 border-white/40 bg-transparent px-8 text-base font-semibold text-white hover:bg-white/10"
-          )}
-        >
-          로그인
-        </Link>
+          지금 바로 운영 흐름을 정리해 보세요
+        </h2>
+        <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-primary-foreground/85 sm:text-base">
+          가입 후 고객과 견적·청구를 한곳에서 이어 관리할 수 있습니다. 별도 설치 없이 웹에서
+          시작합니다.
+        </p>
+        <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:justify-center">
+          <Link
+            href="/signup"
+            className={cn(
+              buttonVariants({ size: "lg" }),
+              "h-12 min-h-12 border-0 bg-primary-foreground px-8 text-base font-semibold text-primary shadow-md hover:bg-primary-foreground/92"
+            )}
+          >
+            무료로 시작하기
+          </Link>
+          <Link
+            href="/login"
+            className={cn(
+              buttonVariants({ variant: "outline", size: "lg" }),
+              "h-12 min-h-12 border-2 border-primary-foreground/35 bg-transparent px-8 text-base font-semibold text-primary-foreground hover:bg-primary-foreground/10"
+            )}
+          >
+            로그인
+          </Link>
+        </div>
+        <p className="mt-6 text-xs text-primary-foreground/75">
+          계정별 데이터 분리 · SSL 접속 · 상용 서비스 기준으로 운영됩니다
+        </p>
       </div>
-      <p className="mt-6 text-xs text-emerald-100/90">
-        계정별 데이터 분리 · SSL 접속 · 상용 서비스 기준으로 운영됩니다
-      </p>
     </section>
   )
 }
@@ -500,7 +506,7 @@ export function LandingFooter() {
       <div className="mx-auto flex max-w-6xl flex-col gap-8 md:flex-row md:items-start md:justify-between">
         <div className="max-w-sm">
           <div className="flex items-center gap-2 font-semibold text-foreground">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-emerald-600 text-sm font-bold text-white">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground shadow-sm">
               B
             </span>
             Bill-IO

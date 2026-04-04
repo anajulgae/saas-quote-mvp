@@ -51,7 +51,7 @@ export function LoginForm({
           </p>
         ) : null}
         {passwordResetNotice ? (
-          <p className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-900 dark:text-emerald-100">
+          <p className="rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
             비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요.
           </p>
         ) : null}

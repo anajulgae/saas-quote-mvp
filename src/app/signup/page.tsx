@@ -23,7 +23,7 @@ export default function SignupPage() {
       <div className="mx-auto grid min-h-screen max-w-6xl items-start gap-8 lg:grid-cols-[1fr_min(100%,420px)] lg:items-center lg:gap-12">
         <section className="order-2 space-y-5 pb-6 lg:order-1 lg:pb-0 lg:pr-4">
           <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-border/70 bg-background/90 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm">
-            <CircleDot className="size-3 shrink-0 fill-emerald-500 text-emerald-500" aria-hidden />
+            <CircleDot className="size-3 shrink-0 fill-primary text-primary" aria-hidden />
             무료로 시작하기
           </div>
           <div className="space-y-2">
@@ -47,7 +47,7 @@ export default function SignupPage() {
           <ul className="max-w-md space-y-2 rounded-2xl border border-border/70 bg-background/85 p-4 shadow-sm">
             {bullets.map((item) => (
               <li key={item} className="flex gap-2.5 text-sm leading-snug text-foreground">
-                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden />
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
                 <span>{item}</span>
               </li>
             ))}

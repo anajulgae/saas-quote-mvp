@@ -26,10 +26,10 @@ export function LandingHeader() {
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:h-16 sm:px-6 lg:px-8">
         <Link
           href="/"
-          className="flex items-center gap-2 font-semibold tracking-tight text-foreground outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/40 focus-visible:ring-offset-2"
+          className="flex items-center gap-2 font-semibold tracking-tight text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
         >
           <span
-            className="flex size-8 items-center justify-center rounded-lg bg-emerald-600 text-sm font-bold text-white shadow-sm"
+            className="flex size-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground shadow-sm"
             aria-hidden
           >
             B
@@ -66,7 +66,7 @@ export function LandingHeader() {
             href="/signup"
             className={cn(
               buttonVariants({ variant: "default", size: "default" }),
-              "hidden h-9 bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700 sm:inline-flex"
+              "hidden h-9 bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 sm:inline-flex"
             )}
           >
             무료로 시작하기
@@ -110,7 +110,7 @@ export function LandingHeader() {
                 </Link>
                 <Link
                   href="/signup"
-                  className="mx-3 mt-1 flex h-10 items-center justify-center rounded-lg bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700"
+                  className="mx-3 mt-1 flex h-10 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
                   onClick={() => setOpen(false)}
                 >
                   무료로 시작하기
