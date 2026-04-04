@@ -1534,6 +1534,13 @@ export async function getDashboardPageData(): Promise<{
   pipelineSummary: Record<"new" | "qualified" | "quoted" | "won", number>
   /** 고객·문의·견적이 모두 없을 때 베타 온보딩 배너 표시 */
   showBetaOnboarding: boolean
+  /** 대시보드 조건부 CTA·빠른 시작용 건수 */
+  counts: {
+    customers: number
+    inquiries: number
+    quotes: number
+    invoices: number
+  }
 }> {
   const context = await getDataContext()
 
@@ -1562,6 +1569,12 @@ export async function getDashboardPageData(): Promise<{
         won: demoInquiries.filter((item) => item.stage === "won").length,
       },
       showBetaOnboarding: false,
+      counts: {
+        customers: demoCustomers.length,
+        inquiries: demoInquiries.length,
+        quotes: demoQuotes.length,
+        invoices: demoInvoices.length,
+      },
     }
   }
 
@@ -1662,5 +1675,11 @@ export async function getDashboardPageData(): Promise<{
     },
     showBetaOnboarding:
       customers.length === 0 && inquiries.length === 0 && quotes.length === 0,
+    counts: {
+      customers: customers.length,
+      inquiries: inquiries.length,
+      quotes: quotes.length,
+      invoices: invoices.length,
+    },
   }
 }

@@ -15,7 +15,7 @@ export function MetricCard({
         <CardTitle className="text-sm text-muted-foreground">{label}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-1">
-        <div className="text-2xl font-semibold tracking-tight">{value}</div>
+        <div className="text-2xl font-semibold tracking-tight tabular-nums">{value}</div>
         <p className="text-xs text-muted-foreground">{hint}</p>
       </CardContent>
     </Card>

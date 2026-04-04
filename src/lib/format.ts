@@ -9,7 +9,14 @@ const compactNumberFormatter = new Intl.NumberFormat("ko-KR", {
   maximumFractionDigits: 1,
 })
 
+/** 한국 원화. 0은 기호만 붙은 ₩0 대신 읽기 쉬운 "0원"으로 통일 */
 export function formatCurrency(value: number) {
+  if (!Number.isFinite(value)) {
+    return "—"
+  }
+  if (value === 0) {
+    return "0원"
+  }
   return currencyFormatter.format(value)
 }
 

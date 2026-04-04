@@ -57,12 +57,20 @@ function SidebarContent({
 }) {
   return (
     <div className="flex h-full flex-col">
-      <div className="space-y-1 border-b border-border/70 px-4 py-5">
+      <div className="space-y-2 border-b border-border/70 px-4 py-5">
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
           FlowBill AI
         </p>
-        <h2 className="text-lg font-semibold">{businessName}</h2>
-        <p className="text-sm text-muted-foreground">{ownerName}</p>
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">사업장</p>
+          <h2 className="mt-0.5 text-lg font-semibold leading-snug tracking-tight">{businessName}</h2>
+        </div>
+        {ownerName ? (
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">담당</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">{ownerName}</p>
+          </div>
+        ) : null}
       </div>
       <div className="flex-1 px-3 py-4">
         <NavLinks />
@@ -81,11 +89,14 @@ function SidebarContent({
 export function AppShell({
   businessName,
   ownerName,
+  accountLine,
   isDemoSession,
   children,
 }: {
   businessName: string
   ownerName: string
+  /** 헤더에만 표시 (이메일 등). 사이드바와 중복되지 않게 분리 */
+  accountLine: string
   /** 외부 점검용 데모 쿠키 세션 (Supabase·운영 DB 미사용) */
   isDemoSession?: boolean
   children: React.ReactNode
@@ -116,10 +127,12 @@ export function AppShell({
                     <SidebarContent businessName={businessName} ownerName={ownerName} />
                   </SheetContent>
                 </Sheet>
-                <div>
-                  <p className="text-sm font-medium">{businessName}</p>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground" title={accountLine}>
+                    {accountLine}
+                  </p>
                   <p className="text-xs text-muted-foreground">
-                    견적, 청구, 수금 흐름을 한 화면에서 관리
+                    견적 · 청구 · 수금 연결 관리
                   </p>
                 </div>
               </div>
