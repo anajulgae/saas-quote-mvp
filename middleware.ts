@@ -17,6 +17,17 @@ function hasSessionCookie(request: NextRequest) {
   return demoCookieActive || supabaseCookie
 }
 
+/** 데모 비활성화 뒤에 남은 데모 쿠키는 미들웨어에서만 삭제 (RSC에서 delete 시 500 가능) */
+function stripStaleDemoCookie(request: NextRequest, response: NextResponse) {
+  if (
+    request.cookies.get(FLOWBILL_DEMO_SESSION_COOKIE)?.value === "1" &&
+    !isDemoLoginEnabled()
+  ) {
+    response.cookies.delete(FLOWBILL_DEMO_SESSION_COOKIE)
+  }
+  return response
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -25,7 +36,7 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/favicon") ||
     pathname.includes(".")
   ) {
-    return NextResponse.next()
+    return stripStaleDemoCookie(request, NextResponse.next())
   }
 
   const isPublic = PUBLIC_PATHS.some((path) => pathname.startsWith(path))
@@ -34,19 +45,19 @@ export function middleware(request: NextRequest) {
   if (pathname === "/") {
     const nextUrl = request.nextUrl.clone()
     nextUrl.pathname = isAuthenticated ? "/dashboard" : "/login"
-    return NextResponse.redirect(nextUrl)
+    return stripStaleDemoCookie(request, NextResponse.redirect(nextUrl))
   }
 
   if (!isPublic && !isAuthenticated) {
     const nextUrl = request.nextUrl.clone()
     nextUrl.pathname = "/login"
-    return NextResponse.redirect(nextUrl)
+    return stripStaleDemoCookie(request, NextResponse.redirect(nextUrl))
   }
 
   // /login: 만료된 sb-* 쿠키가 남아 있어도 여기서 대시보드로 보내지 않음(세션 없을 때 /login 루프 방지).
   // 로그인 성공 후 이동은 loginAction의 redirect("/dashboard")가 처리합니다.
 
-  return NextResponse.next()
+  return stripStaleDemoCookie(request, NextResponse.next())
 }
 
 export const config = {

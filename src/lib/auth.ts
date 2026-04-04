@@ -105,16 +105,14 @@ export async function getAppSession() {
   const cookieStore = await cookies()
   const demoSession = cookieStore.get(FLOWBILL_DEMO_SESSION_COOKIE)?.value
 
-  if (demoSession === "1") {
-    if (!isDemoLoginEnabled()) {
-      cookieStore.delete(FLOWBILL_DEMO_SESSION_COOKIE)
-    } else {
-      return {
-        mode: "demo" as const,
-        user: demoUser,
-      }
+  if (demoSession === "1" && isDemoLoginEnabled()) {
+    return {
+      mode: "demo" as const,
+      user: demoUser,
     }
   }
+  // 데모가 꺼졌는데 데모 쿠키만 남은 경우: Server Component에서는 쿠키 삭제 불가(런타임 오류) → 무시하고 아래로 진행.
+  // 무효 쿠키 제거는 middleware.ts 에서 처리합니다.
 
   const supabase = await createSupabaseServerClient()
 
