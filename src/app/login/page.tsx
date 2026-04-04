@@ -1,116 +1,187 @@
-import { CheckCircle2, CircleDot, FileText, Wallet } from "lucide-react"
+import Link from "next/link"
+import { CheckCircle2, CircleDot } from "lucide-react"
 
 import { LoginForm } from "@/components/app/login-form"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { buttonVariants } from "@/components/ui/button-variants"
 import { getDemoCredentials, isSupabaseConfigured } from "@/lib/auth"
-import { isDemoLoginEnabled } from "@/lib/demo-flags"
+import { isDemoLoginEnabled, showLoginReviewHints } from "@/lib/demo-flags"
+import { cn } from "@/lib/utils"
 
-const highlights = [
-  "문의 등록 후 바로 고객 타임라인으로 연결",
-  "AI 보조 초안으로 견적 작성 속도 단축",
-  "선금/잔금 청구와 미수 리마인드 추적",
+const valueBullets = [
+  "고객 문의부터 견적·청구·수금까지 한 흐름으로 관리합니다.",
+  "선금·잔금·미수 상태를 한눈에 추적합니다.",
+  "오늘 처리할 후속 조치를 정리해 놓치지 않게 합니다.",
 ]
 
-export default function LoginPage() {
+type LoginPageProps = {
+  searchParams?: Promise<{ error?: string }>
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const sp = (await searchParams) ?? {}
   const demoCredentials = getDemoCredentials()
   const supabaseConfigured = isSupabaseConfigured()
   const demoAllowed = isDemoLoginEnabled()
   const deploymentBlocked = !supabaseConfigured && !demoAllowed
   const publicDemoOffered = demoAllowed && supabaseConfigured
   const localDemoSandbox = demoAllowed && !supabaseConfigured
+  const reviewHints = showLoginReviewHints()
 
-  const demoUiVariant = deploymentBlocked
-    ? "none"
-    : publicDemoOffered
-      ? "public-review"
+  const reviewHintsMode = deploymentBlocked
+    ? ("off" as const)
+    : !reviewHints
+      ? ("off" as const)
       : localDemoSandbox
-        ? "local-sandbox"
-        : "none"
+        ? ("local-sandbox" as const)
+        : publicDemoOffered
+          ? ("public-review" as const)
+          : ("off" as const)
+
+  const defaultEmail =
+    reviewHints && (localDemoSandbox || publicDemoOffered) ? demoCredentials.email : ""
+  const defaultPassword = reviewHints && localDemoSandbox ? demoCredentials.password : ""
+
+  const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim()
+  const authCallbackError =
+    sp.error === "auth"
+      ? "인증 링크 처리에 실패했습니다. 메일의 링크를 다시 열거나 로그인을 시도해 주세요."
+      : undefined
+  const showAccountLinks = supabaseConfigured && !deploymentBlocked
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#ffffff,#f4f4f5_55%,#eef2ff)]">
-      <div className="mx-auto grid min-h-screen max-w-7xl items-center gap-10 px-4 py-10 lg:grid-cols-[1.1fr_0.9fr] lg:px-8">
-        <section className="space-y-8">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/80 px-3 py-1 text-sm text-muted-foreground">
-            <CircleDot className="size-3.5 fill-emerald-500 text-emerald-500" />
-            국내 1인 사업자를 위한 실전형 견적-청구 SaaS
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#ffffff,#f4f4f5_50%,#eef2ff)]">
+      <div className="mx-auto grid min-h-screen max-w-6xl items-start gap-8 px-4 py-8 sm:py-10 lg:grid-cols-[1fr_min(100%,420px)] lg:items-center lg:gap-12 lg:px-8">
+        <section
+          id="value-prop"
+          className="order-2 space-y-6 pb-6 lg:order-1 lg:pb-0 lg:pr-4"
+        >
+          <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-border/70 bg-background/90 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm">
+            <CircleDot className="size-3 shrink-0 fill-emerald-500 text-emerald-500" aria-hidden />
+            견적·청구·수금을 한 화면에서
           </div>
-          <div className="space-y-4">
-            <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-balance md:text-5xl">
-              고객 문의부터 미수금 리마인드까지 끊기지 않는 업무 흐름
+          <div className="space-y-3">
+            <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+              프리랜서와 소규모 서비스업을 위한 운영 툴
             </h1>
-            <p className="max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
-              영상 제작자, 디자이너, 청소/설치/수리 소상공인을 위한 한국형
-              견적-청구-수금 관리 앱입니다.
+            <p className="max-w-md text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
+              문의부터 견적 발송, 청구와 입금 상태까지 끊기지 않게 이어 관리하세요.
             </p>
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-border/70 bg-background/90 p-5">
-              <FileText className="size-5 text-foreground" />
-              <p className="mt-4 text-sm font-medium">견적 발송 흐름</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                문의에서 견적까지 한 화면에서 연결
-              </p>
-            </div>
-            <div className="rounded-2xl border border-border/70 bg-background/90 p-5">
-              <Wallet className="size-5 text-foreground" />
-              <p className="mt-4 text-sm font-medium">입금 추적</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                선금, 잔금, 미수 상태를 직관적으로 확인
-              </p>
-            </div>
-            <div className="rounded-2xl border border-border/70 bg-background/90 p-5">
-              <CheckCircle2 className="size-5 text-foreground" />
-              <p className="mt-4 text-sm font-medium">후속조치 관리</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                오늘 해야 할 연락과 리마인드를 놓치지 않음
-              </p>
-            </div>
-          </div>
-          <div className="space-y-3 rounded-3xl border border-border/70 bg-background/80 p-6">
-            {highlights.map((item) => (
-              <div key={item} className="flex items-center gap-3 text-sm">
-                <CheckCircle2 className="size-4 text-emerald-600" />
+          <ul className="max-w-md space-y-2.5 rounded-2xl border border-border/70 bg-background/85 p-4 shadow-sm">
+            {valueBullets.map((item) => (
+              <li key={item} className="flex gap-2.5 text-sm leading-snug text-foreground">
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden />
                 <span>{item}</span>
-              </div>
+              </li>
             ))}
+          </ul>
+          <p className="max-w-md border-t border-border/60 pt-4 text-xs leading-relaxed text-muted-foreground">
+            국내 1인 사업자·소규모 서비스업을 염두에 둔 견적·청구 관리입니다. 데이터는 본인 계정
+            기준으로 안전하게 분리됩니다.
+          </p>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <a
+              href="#login-form"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "h-9 border-border/80 bg-background/80"
+              )}
+            >
+              로그인
+            </a>
+            {supabaseConfigured && !deploymentBlocked ? (
+              <Link
+                href="/signup"
+                className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
+              >
+                무료로 시작하기
+              </Link>
+            ) : null}
+            {contactEmail ? (
+              <a
+                href={`mailto:${contactEmail}?subject=${encodeURIComponent("문의하기")}`}
+                className={cn(
+                  buttonVariants({ variant: "ghost", size: "sm" }),
+                  "h-9 text-muted-foreground"
+                )}
+              >
+                문의하기
+              </a>
+            ) : null}
           </div>
         </section>
-        <section className="mx-auto w-full max-w-md space-y-4">
+
+        <section className="order-1 w-full max-w-md justify-self-center lg:order-2 lg:justify-self-end">
           {deploymentBlocked ? (
-            <Card className="border-destructive/30 bg-destructive/5">
+            <Card className="border-destructive/25 bg-destructive/5 shadow-md">
               <CardHeader>
-                <CardTitle className="text-lg">배포 설정 필요</CardTitle>
+                <CardTitle className="text-lg">로그인을 사용할 수 없습니다</CardTitle>
                 <CardDescription>
-                  Supabase URL/키가 없고, 프로덕션에서는 데모 로그인이 기본 비활성화되어 있습니다.
+                  인증 환경이 구성되지 않았습니다. 관리자에게 환경 설정을 요청하세요.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <CardContent className="space-y-2 text-xs leading-relaxed text-muted-foreground">
                 <p>
-                  Vercel 등에{" "}
-                  <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                  Supabase 연결(
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono">
                     NEXT_PUBLIC_SUPABASE_URL
-                  </code>{" "}
-                  와{" "}
-                  <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                  </code>
+                  ,{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono">
                     NEXT_PUBLIC_SUPABASE_ANON_KEY
-                  </code>{" "}
-                  를 설정하거나, 스테이징에서만{" "}
-                  <code className="rounded bg-muted px-1 py-0.5 text-xs">
-                    ENABLE_DEMO_LOGIN=true
-                  </code>{" "}
-                  로 데모를 켜 주세요.
+                  </code>
+                  )을 설정하거나, 내부 스테이징에서 허용된 방식으로 로그인을 활성화해야 합니다.
+                </p>
+                <p className="text-[11px]">
+                  로컬 개발 전용 안내가 필요하면 환경 변수{" "}
+                  <code className="rounded bg-muted px-1 font-mono">LOGIN_REVIEW_HINTS=true</code> 로 리뷰
+                  모드를 켤 수 있습니다.
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <LoginForm
-              defaultEmail={
-                localDemoSandbox || publicDemoOffered ? demoCredentials.email : ""
-              }
-              defaultPassword={localDemoSandbox ? demoCredentials.password : ""}
-              demoUiVariant={demoUiVariant}
-            />
+            <div className="space-y-4">
+              <LoginForm
+                defaultEmail={defaultEmail}
+                defaultPassword={defaultPassword}
+                reviewHintsMode={reviewHintsMode}
+                authCallbackError={authCallbackError}
+                showAccountLinks={showAccountLinks}
+              />
+              {showAccountLinks ? (
+                <p className="text-center text-xs text-muted-foreground">
+                  아직 계정이 없으신가요?{" "}
+                  <Link
+                    href="/signup"
+                    className="font-medium text-foreground underline-offset-4 hover:underline"
+                  >
+                    회원가입
+                  </Link>
+                  {contactEmail ? (
+                    <>
+                      {" · "}
+                      <a
+                        href={`mailto:${contactEmail}?subject=${encodeURIComponent("도입 문의")}`}
+                        className="font-medium text-foreground underline-offset-4 hover:underline"
+                      >
+                        도입 문의
+                      </a>
+                    </>
+                  ) : null}
+                </p>
+              ) : contactEmail ? (
+                <p className="text-center text-xs text-muted-foreground">
+                  도입 문의:{" "}
+                  <a
+                    href={`mailto:${contactEmail}?subject=${encodeURIComponent("도입 문의")}`}
+                    className="font-medium text-foreground underline-offset-4 hover:underline"
+                  >
+                    메일 보내기
+                  </a>
+                </p>
+              ) : null}
+            </div>
           )}
         </section>
       </div>

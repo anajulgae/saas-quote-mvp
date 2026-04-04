@@ -12,6 +12,7 @@ import {
   getDemoSessionCookieName,
   isSupabaseConfigured,
 } from "@/lib/auth"
+import { getSiteOrigin } from "@/lib/site-url"
 import { toUserFacingActionError } from "@/lib/action-errors"
 import { isDemoLoginEnabled, isDemoPasswordStrongEnoughForProduction } from "@/lib/demo-flags"
 import {
@@ -316,6 +317,219 @@ export async function logoutAction() {
   }
 
   redirect("/login")
+}
+
+const signupFormSchema = z
+  .object({
+    email: z.string().trim().email("올바른 이메일을 입력해 주세요."),
+    password: z.string().min(8, "비밀번호는 8자 이상이어야 합니다."),
+    confirmPassword: z.string(),
+    fullName: z.string().trim().min(1, "이름을 입력해 주세요."),
+    businessName: z.string().trim().optional(),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: "비밀번호가 일치하지 않습니다.",
+    path: ["confirmPassword"],
+  })
+
+const updatePasswordFormSchema = z
+  .object({
+    password: z.string().min(8, "비밀번호는 8자 이상이어야 합니다."),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: "비밀번호가 일치하지 않습니다.",
+    path: ["confirmPassword"],
+  })
+
+export async function signupAction(_: { error?: string } | undefined, formData: FormData) {
+  if (!isSupabaseConfigured()) {
+    return {
+      error: "현재 환경에서는 온라인 회원가입을 사용할 수 없습니다. 관리자에게 문의해 주세요.",
+    }
+  }
+
+  const parsed = signupFormSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
+    fullName: formData.get("fullName"),
+    businessName: formData.get("businessName") ?? "",
+  })
+
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요.",
+    }
+  }
+
+  const { email, password, fullName, businessName } = parsed.data
+  const resolvedBusiness = (businessName ?? "").trim() || fullName
+
+  const supabase = await createSupabaseServerClient()
+  if (!supabase) {
+    return { error: "인증 설정을 확인해 주세요." }
+  }
+
+  const origin = getSiteOrigin()
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/dashboard")}`,
+      data: {
+        full_name: fullName,
+        business_name: resolvedBusiness,
+      },
+    },
+  })
+
+  if (error) {
+    const msg = error.message.toLowerCase()
+    if (msg.includes("already registered") || msg.includes("user already")) {
+      return { error: "이미 가입된 이메일입니다. 로그인을 이용해 주세요." }
+    }
+    return {
+      error: toUserFacingActionError(error, "회원가입에 실패했습니다. 잠시 후 다시 시도해 주세요."),
+    }
+  }
+
+  if (data.session && data.user) {
+    await ensureUserProfile(supabase, data.user)
+    await createActivityLog({
+      action: "auth.signup_complete",
+      description: "회원가입이 완료되었습니다.",
+      metadata: { source: "password" },
+    })
+    redirect("/dashboard")
+  }
+
+  redirect("/signup/check-email")
+}
+
+export async function resendSignupConfirmationAction(
+  _: { error?: string; ok?: boolean } | undefined,
+  formData: FormData
+) {
+  const email = String(formData.get("email") ?? "").trim()
+  if (!email) {
+    return { error: "이메일을 입력해 주세요." }
+  }
+  if (!z.string().email().safeParse(email).success) {
+    return { error: "올바른 이메일을 입력해 주세요." }
+  }
+
+  if (!isSupabaseConfigured()) {
+    return { error: "현재 환경에서는 이용할 수 없습니다." }
+  }
+
+  const supabase = await createSupabaseServerClient()
+  if (!supabase) {
+    return { error: "인증 설정을 확인해 주세요." }
+  }
+
+  const origin = getSiteOrigin()
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: {
+      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/dashboard")}`,
+    },
+  })
+
+  if (error) {
+    return {
+      error: toUserFacingActionError(error, "인증 메일 재발송에 실패했습니다. 잠시 후 다시 시도해 주세요."),
+    }
+  }
+
+  return { ok: true as const }
+}
+
+export async function requestPasswordResetAction(
+  _: { error?: string } | undefined,
+  formData: FormData
+) {
+  const email = String(formData.get("email") ?? "").trim()
+  if (!email) {
+    return { error: "이메일을 입력해 주세요." }
+  }
+  if (!z.string().email().safeParse(email).success) {
+    return { error: "올바른 이메일을 입력해 주세요." }
+  }
+
+  if (!isSupabaseConfigured()) {
+    return {
+      error: "현재 환경에서는 비밀번호 재설정을 사용할 수 없습니다. 관리자에게 문의해 주세요.",
+    }
+  }
+
+  const supabase = await createSupabaseServerClient()
+  if (!supabase) {
+    return { error: "인증 설정을 확인해 주세요." }
+  }
+
+  const origin = getSiteOrigin()
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/auth/update-password")}`,
+  })
+
+  if (error) {
+    return {
+      error: toUserFacingActionError(
+        error,
+        "재설정 메일 발송에 실패했습니다. 잠시 후 다시 시도해 주세요."
+      ),
+    }
+  }
+
+  redirect("/forgot-password/sent")
+}
+
+export async function updatePasswordAction(_: { error?: string } | undefined, formData: FormData) {
+  if (!isSupabaseConfigured()) {
+    return { error: "인증 설정을 확인해 주세요." }
+  }
+
+  const supabase = await createSupabaseServerClient()
+  if (!supabase) {
+    return { error: "인증 설정을 확인해 주세요." }
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return {
+      error:
+        "세션이 없거나 링크가 만료되었습니다. 비밀번호 찾기를 다시 진행하거나 로그인해 주세요.",
+    }
+  }
+
+  const parsed = updatePasswordFormSchema.safeParse({
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
+  })
+
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요.",
+    }
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+  })
+
+  if (error) {
+    return {
+      error: toUserFacingActionError(error, "비밀번호를 변경하지 못했습니다. 잠시 후 다시 시도해 주세요."),
+    }
+  }
+
+  await ensureUserProfile(supabase, user)
+  redirect("/dashboard")
 }
 
 export async function createCustomerAction(input: {

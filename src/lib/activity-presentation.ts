@@ -2,6 +2,7 @@ import type { ActivityKind } from "@/types/domain"
 
 const headlineByAction: Record<string, string> = {
   "auth.login_success": "로그인",
+  "auth.signup_complete": "회원가입",
   "customer.created": "고객 등록",
   "inquiry.created": "문의 등록",
   "inquiry.updated": "문의 수정",

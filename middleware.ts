@@ -4,7 +4,13 @@ import { NextResponse } from "next/server"
 import { isDemoLoginEnabled } from "@/lib/demo-flags"
 import { FLOWBILL_DEMO_SESSION_COOKIE } from "@/lib/demo-session"
 
-const PUBLIC_PATHS = ["/login"]
+const PUBLIC_PATHS = [
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/auth/callback",
+  "/signup/check-email",
+]
 
 function hasSessionCookie(request: NextRequest) {
   const demoCookieActive =
@@ -53,9 +59,6 @@ export function middleware(request: NextRequest) {
     nextUrl.pathname = "/login"
     return stripStaleDemoCookie(request, NextResponse.redirect(nextUrl))
   }
-
-  // /login: 만료된 sb-* 쿠키가 남아 있어도 여기서 대시보드로 보내지 않음(세션 없을 때 /login 루프 방지).
-  // 로그인 성공 후 이동은 loginAction의 redirect("/dashboard")가 처리합니다.
 
   return stripStaleDemoCookie(request, NextResponse.next())
 }
