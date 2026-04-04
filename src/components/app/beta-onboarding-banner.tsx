@@ -12,22 +12,10 @@ import { cn } from "@/lib/utils"
 const STORAGE_KEY = "flowbill-beta-onboarding-dismissed"
 
 const steps = [
-  {
-    title: "고객 등록",
-    body: "거래처 정보를 먼저 남겨 두면 문의·견적에 바로 연결할 수 있어요.",
-  },
-  {
-    title: "문의 등록",
-    body: "채널과 일정을 기록해 놓치지 않게 관리해요.",
-  },
-  {
-    title: "견적 발송",
-    body: "항목·금액을 묶어 보내고 상태를 추적해요.",
-  },
-  {
-    title: "청구 및 수금",
-    body: "선금·잔금과 입금 상태를 한곳에서 확인해요.",
-  },
+  { title: "고객 등록", body: "거래처를 등록해 문의·견적에 연결" },
+  { title: "문의 등록", body: "채널·일정을 기록해 팔로업 관리" },
+  { title: "견적 발송", body: "항목·금액 묶어 발송·상태 추적" },
+  { title: "청구·수금", body: "선금·잔금·입금 상태 확인" },
 ] as const
 
 export function BetaOnboardingBanner() {
@@ -46,13 +34,13 @@ export function BetaOnboardingBanner() {
   }
 
   return (
-    <Card className="border-primary/25 bg-primary/[0.04]">
-      <CardContent className="relative p-4 pt-5 sm:p-5 sm:pt-6">
+    <Card className="border-primary/20 bg-primary/[0.035] shadow-none">
+      <CardContent className="relative p-3 pt-3.5 sm:p-4 sm:pt-4">
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="absolute top-3 right-3 size-8 shrink-0"
+          className="absolute top-2 right-2 size-7 shrink-0"
           aria-label="안내 닫기"
           onClick={() => {
             try {
@@ -63,53 +51,53 @@ export function BetaOnboardingBanner() {
             setHidden(true)
           }}
         >
-          <X className="size-4" />
+          <X className="size-3.5" />
         </Button>
 
-        <div className="pr-10">
-          <div className="flex flex-wrap items-start gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <ListChecks className="size-4" aria-hidden />
+        <div className="pr-9">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <ListChecks className="size-3.5" aria-hidden />
             </div>
-            <div className="min-w-0 flex-1 space-y-1">
-              <p className="font-semibold text-foreground">처음 오셨나요? 이렇게 진행해 보세요</p>
-              <p className="text-sm text-muted-foreground">
-                고객 → 문의 → 견적 → 청구 순으로 쌓이면 대시보드가 살아납니다.
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground">처음이신가요? 순서만 기억하세요</p>
+              <p className="text-xs text-muted-foreground sm:text-[13px]">
+                고객 → 문의 → 견적 → 청구 순으로 쌓이면 대시보드가 채워집니다.
               </p>
             </div>
           </div>
 
-          <ol className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <ol className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
             {steps.map((step, index) => (
               <li
                 key={step.title}
-                className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm"
+                className="rounded-lg border border-border/50 bg-background/70 px-2.5 py-2 text-[13px] leading-snug"
               >
                 <p className="font-medium text-foreground">
                   <span className="text-muted-foreground">{index + 1}. </span>
                   {step.title}
                 </p>
-                <p className="mt-1.5 leading-snug text-muted-foreground">{step.body}</p>
+                <p className="mt-1 text-xs leading-snug text-muted-foreground">{step.body}</p>
               </li>
             ))}
           </ol>
 
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <div className="mt-3 flex flex-col gap-1.5 sm:flex-row sm:flex-wrap">
             <Link
               href="/customers"
               className={cn(
-                buttonVariants(),
-                "inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+                buttonVariants({ size: "sm" }),
+                "inline-flex h-9 w-full items-center justify-center gap-1.5 sm:w-auto"
               )}
             >
-              <UserPlus className="size-4" />
+              <UserPlus className="size-3.5" />
               첫 고객 등록
             </Link>
             <Link
               href="/inquiries"
               className={cn(
-                buttonVariants({ variant: "outline" }),
-                "inline-flex w-full items-center justify-center sm:w-auto"
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "inline-flex h-9 w-full items-center justify-center sm:w-auto"
               )}
             >
               첫 문의 만들기
