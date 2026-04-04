@@ -53,6 +53,9 @@ Vercel 프로젝트 **Settings → Environment Variables**에서 설정합니다
 
 ## 3. Supabase Auth — Site URL / Redirect URL
 
+**인증 메일 한글·발신 주소(`admin@bill-io.com` 등)** 는 대시보드 **Email Templates** + **Custom SMTP** 로 설정합니다.  
+→ 상세: **[supabase-auth-email-ko-smtp.md](./supabase-auth-email-ko-smtp.md)**
+
 **설정 위치 (Supabase 대시보드)**  
 **Authentication** → **URL Configuration** (구 UI에서는 *Authentication → Settings* 일 수 있음)
 
