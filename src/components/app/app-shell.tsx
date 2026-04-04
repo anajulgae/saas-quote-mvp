@@ -81,10 +81,13 @@ function SidebarContent({
 export function AppShell({
   businessName,
   ownerName,
+  isDemoSession,
   children,
 }: {
   businessName: string
   ownerName: string
+  /** 외부 점검용 데모 쿠키 세션 (Supabase·운영 DB 미사용) */
+  isDemoSession?: boolean
   children: React.ReactNode
 }) {
   return (
@@ -94,6 +97,14 @@ export function AppShell({
           <SidebarContent businessName={businessName} ownerName={ownerName} />
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
+          {isDemoSession ? (
+            <div
+              role="status"
+              className="border-b border-amber-500/40 bg-amber-500/15 px-4 py-2 text-center text-sm font-medium text-amber-950 dark:text-amber-100"
+            >
+              테스트용 데모 환경 · 샘플 데이터만 표시됩니다 (운영 DB·실사용자 데이터와 분리)
+            </div>
+          ) : null}
           <header className="sticky top-0 z-20 border-b border-border/70 bg-background/90 backdrop-blur">
             <div className="flex items-center justify-between gap-3 px-4 py-3 md:px-6">
               <div className="flex items-center gap-3">

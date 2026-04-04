@@ -10,7 +10,7 @@ export { isSupabaseConfigured } from "@/lib/supabase/server"
 
 export function getDemoCredentials() {
   return {
-    email: process.env.DEMO_LOGIN_EMAIL ?? "demo@flowbill.kr",
+    email: process.env.DEMO_LOGIN_EMAIL ?? "demo-review@flowbill.kr",
     password: process.env.DEMO_LOGIN_PASSWORD ?? "demo1234!",
   }
 }

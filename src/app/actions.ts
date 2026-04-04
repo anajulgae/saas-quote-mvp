@@ -13,7 +13,7 @@ import {
   isSupabaseConfigured,
 } from "@/lib/auth"
 import { toUserFacingActionError } from "@/lib/action-errors"
-import { isDemoLoginEnabled } from "@/lib/demo-flags"
+import { isDemoLoginEnabled, isDemoPasswordStrongEnoughForProduction } from "@/lib/demo-flags"
 import {
   createActivityLog,
   createInquiryRecord,
@@ -204,6 +204,30 @@ export async function loginAction(_: { error?: string } | undefined, formData: F
     }
   }
 
+  const demoCredentials = getDemoCredentials()
+
+  if (isDemoLoginEnabled()) {
+    if (email === demoCredentials.email && password === demoCredentials.password) {
+      if (!isDemoPasswordStrongEnoughForProduction()) {
+        return {
+          error:
+            "공개 데모가 프로덕션에서 비활성화되었습니다. DEMO_LOGIN_PASSWORD(16자 이상)를 환경 변수에 설정한 뒤 다시 시도하세요.",
+        }
+      }
+
+      const cookieStore = await cookies()
+      cookieStore.set(getDemoSessionCookieName(), "1", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 14,
+      })
+
+      redirect("/dashboard")
+    }
+  }
+
   if (!isSupabaseConfigured()) {
     if (!isDemoLoginEnabled()) {
       return {
@@ -212,27 +236,9 @@ export async function loginAction(_: { error?: string } | undefined, formData: F
       }
     }
 
-    const demoCredentials = getDemoCredentials()
-
-    if (
-      email !== demoCredentials.email ||
-      password !== demoCredentials.password
-    ) {
-      return {
-        error: `데모 로그인은 ${demoCredentials.email} / 설정된 데모 비밀번호를 사용해 주세요.`,
-      }
+    return {
+      error: `데모 로그인은 ${demoCredentials.email} 및 설정된 데모 비밀번호를 사용해 주세요.`,
     }
-
-    const cookieStore = await cookies()
-    cookieStore.set(getDemoSessionCookieName(), "1", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 14,
-    })
-
-    redirect("/dashboard")
   }
 
   const supabase = await createSupabaseServerClient()

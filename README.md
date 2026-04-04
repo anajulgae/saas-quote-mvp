@@ -4,7 +4,8 @@
 
 **실전 배포 실행 순서(체크리스트)**: **[docs/deploy-runbook.md](./docs/deploy-runbook.md)**  
 **배포 상세 가이드**(환경변수·Auth URL·마이그레이션·데모·RC·흔한 실수): **[docs/deployment.md](./docs/deployment.md)**  
-**비공개 베타 운영**(이벤트 로그 확인·피드백·즉시 대응 신호): **[docs/beta-operations.md](./docs/beta-operations.md)**
+**비공개 베타 운영**(이벤트 로그 확인·피드백·즉시 대응 신호): **[docs/beta-operations.md](./docs/beta-operations.md)**  
+**외부 점검용 공개 데모**(운영 DB와 분리·켜기/끄기): **[docs/public-demo.md](./docs/public-demo.md)**
 
 ---
 
@@ -45,7 +46,7 @@ npm run build
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 필수 권장 | anon public 키 |
 | `ENABLE_DEMO_LOGIN` | 선택 | 데모 로그인·데모 쿠키 허용 여부 (아래 표 참고) |
 | `DEMO_LOGIN_EMAIL` | 선택 | 데모 계정 이메일 |
-| `DEMO_LOGIN_PASSWORD` | 선택 | 데모 비밀번호 (데모를 켠 환경에서는 **강한 값** 권장) |
+| `DEMO_LOGIN_PASSWORD` | 선택 | 데모 비밀번호. **프로덕션에서 데모 허용 시 16자 이상 필수** (`docs/public-demo.md`) |
 | `NEXT_PUBLIC_APP_NAME` | 선택 | 표시용 이름 |
 
 ### `ENABLE_DEMO_LOGIN` 동작 (코드: `src/lib/demo-flags.ts`)
@@ -58,7 +59,8 @@ npm run build
 
 **프로덕션 기본**: 데모는 꺼져 있습니다. 미들웨어(`middleware.ts`)와 `getAppSession()`(`src/lib/auth.ts`)이 동일하게 `isDemoLoginEnabled()`를 사용하므로, **프로덕션에서 데모 쿠키만으로는 인증되지 않습니다.**
 
-**스테이징만 데모**: Vercel **Preview** 환경에만 `ENABLE_DEMO_LOGIN=true` 를 두고, **Production**에는 두지 않습니다.
+**스테이징만 데모**: 보통은 Vercel **Preview**에만 `ENABLE_DEMO_LOGIN=true` 를 둡니다.  
+**제3자 점검**: Production에서 짧게 열어야 하면 `ENABLE_DEMO_LOGIN=true` + 강한 `DEMO_LOGIN_PASSWORD` + 전용 `DEMO_LOGIN_EMAIL` 만 사용하고, 끝나면 끄세요. 상세는 **[docs/public-demo.md](./docs/public-demo.md)**.
 
 ---
 

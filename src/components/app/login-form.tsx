@@ -8,14 +8,16 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 
+type DemoUiVariant = "none" | "local-sandbox" | "public-review"
+
 export function LoginForm({
   defaultEmail,
   defaultPassword,
-  isDemoMode,
+  demoUiVariant,
 }: {
   defaultEmail: string
   defaultPassword: string
-  isDemoMode: boolean
+  demoUiVariant: DemoUiVariant
 }) {
   const [state, formAction, isPending] = useActionState(loginAction, undefined)
 
@@ -28,8 +30,13 @@ export function LoginForm({
         <div className="space-y-1">
           <CardTitle className="text-2xl">로그인</CardTitle>
           <CardDescription>
-            {isDemoMode ? (
+            {demoUiVariant === "local-sandbox" ? (
               <>고객 문의부터 견적, 청구, 수금 리마인드까지 한 번에 관리하세요.</>
+            ) : demoUiVariant === "public-review" ? (
+              <>
+                <strong className="text-foreground">테스트용 데모</strong> 계정으로 로그인하면 실제 DB 없이 샘플 데이터만
+                표시됩니다. 운영 계정·데이터와 분리되어 있습니다.
+              </>
             ) : (
               <>
                 로그인 후 <strong className="text-foreground">대시보드</strong>에서 시작 순서를 확인한 다음,{" "}
@@ -85,12 +92,24 @@ export function LoginForm({
             )}
           </Button>
         </form>
-        {isDemoMode ? (
+        {demoUiVariant === "local-sandbox" ? (
           <div className="rounded-xl border border-border/70 bg-muted/40 p-4 text-sm text-muted-foreground">
-            <p className="font-medium text-foreground">데모 모드</p>
-            <p className="mt-1">Supabase 환경변수가 없으면 데모 세션으로 바로 테스트할 수 있습니다.</p>
+            <p className="font-medium text-foreground">로컬 데모 (Supabase 미설정)</p>
+            <p className="mt-1">아래 값으로 바로 시도할 수 있습니다. 운영 DB와 무관한 샘플 데이터입니다.</p>
             <p className="mt-2 font-mono text-xs text-foreground">
               {defaultEmail} / {defaultPassword}
+            </p>
+          </div>
+        ) : null}
+        {demoUiVariant === "public-review" ? (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
+            <p className="font-medium">외부 점검용 데모</p>
+            <p className="mt-1 opacity-90">
+              이메일: <span className="font-mono text-xs">{defaultEmail}</span>
+            </p>
+            <p className="mt-2 opacity-90">
+              비밀번호는 <strong>운영자가 안전한 채널로만</strong> 전달받은 값을 입력하세요. 페이지에 비밀번호를 적지
+              마세요.
             </p>
           </div>
         ) : null}

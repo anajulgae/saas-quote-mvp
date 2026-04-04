@@ -17,3 +17,14 @@ export function isDemoLoginEnabled(): boolean {
 
   return true
 }
+
+const MIN_DEMO_PASSWORD_LEN = 16
+
+/** 프로덕션에서 공개 데모 비밀번호 최소 요건 충족 여부 (loginAction에서 사용) */
+export function isDemoPasswordStrongEnoughForProduction(): boolean {
+  if (process.env.NODE_ENV !== "production") {
+    return true
+  }
+  const p = process.env.DEMO_LOGIN_PASSWORD ?? ""
+  return p.length >= MIN_DEMO_PASSWORD_LEN
+}

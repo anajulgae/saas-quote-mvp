@@ -13,6 +13,7 @@ export default async function AppLayout({
     <AppShell
       businessName={session.user.businessName || demoBusinessSettings.businessName}
       ownerName={session.user.fullName}
+      isDemoSession={session.mode === "demo"}
     >
       {children}
     </AppShell>

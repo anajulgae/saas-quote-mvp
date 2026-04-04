@@ -15,8 +15,17 @@ export default function LoginPage() {
   const demoCredentials = getDemoCredentials()
   const supabaseConfigured = isSupabaseConfigured()
   const demoAllowed = isDemoLoginEnabled()
-  const isDemoMode = !supabaseConfigured && demoAllowed
   const deploymentBlocked = !supabaseConfigured && !demoAllowed
+  const publicDemoOffered = demoAllowed && supabaseConfigured
+  const localDemoSandbox = demoAllowed && !supabaseConfigured
+
+  const demoUiVariant = deploymentBlocked
+    ? "none"
+    : publicDemoOffered
+      ? "public-review"
+      : localDemoSandbox
+        ? "local-sandbox"
+        : "none"
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#ffffff,#f4f4f5_55%,#eef2ff)]">
@@ -96,9 +105,11 @@ export default function LoginPage() {
             </Card>
           ) : (
             <LoginForm
-              defaultEmail={demoCredentials.email}
-              defaultPassword={demoCredentials.password}
-              isDemoMode={isDemoMode}
+              defaultEmail={
+                localDemoSandbox || publicDemoOffered ? demoCredentials.email : ""
+              }
+              defaultPassword={localDemoSandbox ? demoCredentials.password : ""}
+              demoUiVariant={demoUiVariant}
             />
           )}
         </section>
