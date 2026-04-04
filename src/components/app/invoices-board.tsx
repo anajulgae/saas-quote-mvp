@@ -495,7 +495,7 @@ function InvoicesBoardPanel({
   )
 
   return (
-    <div className="space-y-3 md:space-y-4">
+    <div className="space-y-2.5 md:space-y-3.5">
       <Dialog
         open={isCreateOpen}
         onOpenChange={(open) => {
@@ -584,41 +584,41 @@ function InvoicesBoardPanel({
       {!invoices.length ? (
         <>
           <Card className="border border-primary/30 bg-gradient-to-b from-primary/[0.05] to-background shadow-sm">
-            <CardContent className="space-y-2.5 p-3 sm:p-4">
-              <div className="flex flex-wrap gap-1.5">
-                <span className="rounded-md border border-border/60 bg-muted/30 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+            <CardContent className="space-y-2 p-2.5 sm:space-y-2 sm:p-3">
+              <div className="flex flex-wrap gap-1">
+                <span className="rounded border border-border/60 bg-muted/30 px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">
                   선금·잔금 분리
                 </span>
-                <span className="rounded-md border border-border/60 bg-muted/30 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                <span className="rounded border border-border/60 bg-muted/30 px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">
                   미수·연체 추적
                 </span>
-                <span className="rounded-md border border-border/60 bg-muted/30 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                <span className="rounded border border-border/60 bg-muted/30 px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">
                   리마인드 기록
                 </span>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">시작하기</p>
-                <h2 className="text-base font-bold tracking-tight sm:text-lg">
+                <h2 className="text-sm font-bold tracking-tight sm:text-base">
                   {hasQuotes
                     ? "견적을 확인한 뒤 첫 청구를 만들어보세요"
                     : "견적을 먼저 준비한 뒤 청구를 시작하세요"}
                 </h2>
-                <p className="text-[13px] leading-snug text-muted-foreground">
-                  청구는 견적을 바탕으로 선금·잔금 요청을 만들고, 결제 상태와 리마인드 이력을 관리합니다.
+                <p className="text-xs leading-snug text-muted-foreground">
+                  견적을 바탕으로 선금·잔금을 나누고, 입금 상태와 리마인드 이력을 한곳에서 관리합니다.
                 </p>
               </div>
 
               {hasQuotes ? (
-                <div className="flex flex-col gap-2 rounded-md border border-border/60 bg-background/80 p-2.5 sm:flex-row sm:items-end">
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <label className="text-[11px] font-medium text-muted-foreground">
+                <div className="flex flex-col gap-1.5 rounded-md border border-border/60 bg-background/80 p-2 sm:flex-row sm:items-end">
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <label className="text-[10px] font-medium text-muted-foreground">
                       빠른 시작 · 견적 선택
                     </label>
                     <Select
                       value={quickQuoteId}
                       onValueChange={(value) => setQuickQuoteId(value ?? "")}
                     >
-                      <SelectTrigger className="h-9 w-full">
+                      <SelectTrigger className="h-8 w-full text-sm">
                         <SelectValue placeholder="견적 선택" />
                       </SelectTrigger>
                       <SelectContent>
@@ -633,7 +633,7 @@ function InvoicesBoardPanel({
                   <Button
                     type="button"
                     size="sm"
-                    className="h-9 w-full shrink-0 sm:w-auto"
+                    className="h-8 w-full shrink-0 text-sm sm:w-auto"
                     disabled={!quickQuoteId}
                     onClick={() => openCreateWithQuote(quickQuoteId)}
                   >
@@ -642,55 +642,62 @@ function InvoicesBoardPanel({
                 </div>
               ) : null}
 
-              <div ref={flowRef} className="rounded-md border border-border/60 bg-muted/15 p-2 sm:p-2.5">
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <div ref={flowRef} className="rounded-md border border-border/60 bg-muted/15 p-1.5 sm:p-2">
+                <p className="mb-1 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
                   진행 순서
                 </p>
-                <ol className="grid gap-1.5 sm:grid-cols-3">
+                <ol className="grid gap-1 sm:grid-cols-3">
                   {flowSteps.map((item) => (
                     <li
                       key={item.step}
-                      className="flex gap-1.5 rounded-md border border-border/50 bg-background/70 px-2 py-1.5 text-[12px]"
+                      className="flex gap-1 rounded border border-border/50 bg-background/70 px-1.5 py-1 text-[11px]"
                     >
-                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/12 text-[10px] font-bold text-primary">
+                      <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/12 text-[9px] font-bold text-primary">
                         {item.step}
                       </span>
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-semibold leading-tight">{item.title}</p>
-                        <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
-                          {item.hint}
-                        </p>
+                        <p className="mt-px text-[9px] leading-snug text-muted-foreground">{item.hint}</p>
                       </div>
                     </li>
                   ))}
                 </ol>
               </div>
 
-              <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap">
+              <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center">
                 <Link
                   href="/quotes"
                   className={cn(
                     buttonVariants({ size: "sm", variant: hasQuotes ? "outline" : "default" }),
-                    "inline-flex h-9 items-center justify-center gap-1.5 font-semibold"
+                    "inline-flex h-8 items-center justify-center gap-1.5 text-sm font-semibold"
                   )}
                 >
-                  견적 보기
+                  {hasQuotes ? "견적 보기" : "견적 만들기"}
                   <ArrowRight className="size-3.5" />
                 </Link>
-                <Button type="button" size="sm" variant="outline" className="h-9 gap-1.5" onClick={scrollToFlow}>
+                <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5 text-sm" onClick={scrollToFlow}>
                   <ListOrdered className="size-3.5" />
                   청구 흐름 보기
                 </Button>
                 {hasQuotes ? (
-                  <Button type="button" size="sm" className="h-9 gap-1.5 font-semibold" onClick={openCreateFresh}>
+                  <Button type="button" size="sm" className="h-8 gap-1.5 text-sm font-semibold" onClick={openCreateFresh}>
                     <Plus className="size-3.5" />
-                    첫 청구 만들기
+                    청구 만들기
                   </Button>
                 ) : (
-                  <span title="청구 생성 전에 먼저 견적을 준비해주세요">
-                    <Button type="button" size="sm" className="h-9 gap-1.5" disabled>
+                  <span
+                    className="inline-flex w-full sm:w-auto"
+                    title="청구 생성 전에 먼저 견적을 준비해주세요"
+                  >
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="h-8 w-full cursor-not-allowed gap-1.5 opacity-60 sm:w-auto"
+                      disabled
+                    >
                       <Plus className="size-3.5" />
-                      첫 청구 만들기
+                      청구 만들기
                     </Button>
                   </span>
                 )}
@@ -698,15 +705,38 @@ function InvoicesBoardPanel({
             </CardContent>
           </Card>
 
-          <div className="flex gap-2.5 rounded-lg border border-dashed border-border/60 bg-muted/10 px-3 py-2.5">
-            <Receipt className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-            <div className="min-w-0 space-y-0.5">
-              <p className="text-sm font-medium text-foreground">아직 생성된 청구가 없습니다</p>
-              <p className="text-[11px] leading-snug text-muted-foreground">
-                {hasQuotes
-                  ? "청구를 저장하면 이 영역에 카드가 쌓이고, 입금·리마인드를 한곳에서 관리할 수 있어요."
-                  : "견적이 생기면 위에서 바로 선금·잔금 청구를 만들 수 있어요."}
-              </p>
+          <div className="rounded-lg border border-border/70 bg-muted/25 px-3 py-3 shadow-sm sm:flex sm:items-center sm:gap-3">
+            <div
+              className="mb-2 flex size-9 shrink-0 items-center justify-center rounded-md border border-border/50 bg-background/80 sm:mb-0"
+              aria-hidden
+            >
+              <Receipt className="size-4 text-muted-foreground" />
+            </div>
+            <div className="min-w-0 flex-1 space-y-2 sm:space-y-0">
+              <div>
+                <p className="text-sm font-semibold text-foreground">아직 생성된 청구가 없습니다</p>
+                <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
+                  {hasQuotes
+                    ? "저장한 청구가 여기에 쌓이며, 입금·리마인드를 같은 화면에서 다룹니다."
+                    : "견적을 만든 뒤 위 카드에서 선금·잔금 청구를 바로 시작할 수 있습니다."}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-1.5 sm:mt-2 sm:justify-end">
+                <Link
+                  href="/quotes"
+                  className={cn(
+                    buttonVariants({ variant: "outline", size: "sm" }),
+                    "inline-flex h-8 items-center gap-1.5"
+                  )}
+                >
+                  {hasQuotes ? "견적 보기" : "견적 만들기"}
+                  <ArrowRight className="size-3" />
+                </Link>
+                <Button type="button" variant="ghost" size="sm" className="h-8 gap-1.5 px-2" onClick={scrollToFlow}>
+                  <ListOrdered className="size-3.5" />
+                  청구 흐름 보기
+                </Button>
+              </div>
             </div>
           </div>
         </>
@@ -959,51 +989,74 @@ export function InvoicesWorkspace({
   const hasQuotes = quotes.length > 0
 
   return (
-    <div className="space-y-4 md:space-y-5">
+    <div className="space-y-3 md:space-y-4">
       <PageHeader
         title="청구 및 수금"
         description="선금·잔금 청구, 입금 상태, 미수 리마인드 이력을 한곳에서 다룹니다."
         action={
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+          <div className="w-full sm:w-auto sm:min-w-[18rem]">
             {hasQuotes ? (
-              <Button
-                type="button"
-                className="h-9 w-full gap-2 sm:w-auto"
-                onClick={() => {
-                  createOpenSourceRef.current = "header"
-                  setIsCreateOpen(true)
-                }}
-              >
-                <Plus className="size-4" />
-                새 청구
-              </Button>
+              <div className="rounded-lg border border-border/60 bg-muted/15 p-2 shadow-sm">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:justify-end">
+                  <Link
+                    href="/quotes"
+                    className={cn(
+                      buttonVariants({ variant: "outline", size: "sm" }),
+                      "inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5 font-medium sm:w-auto"
+                    )}
+                  >
+                    견적 보기
+                    <ArrowRight className="size-3.5" />
+                  </Link>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-9 w-full gap-1.5 font-semibold sm:w-auto"
+                    onClick={() => {
+                      createOpenSourceRef.current = "header"
+                      setIsCreateOpen(true)
+                    }}
+                  >
+                    <Plus className="size-4" />
+                    청구 만들기
+                  </Button>
+                </div>
+                <p className="mt-2 border-t border-border/50 pt-2 text-center text-[11px] leading-snug text-muted-foreground sm:text-right">
+                  견적을 확인한 뒤 청구를 저장할 수 있습니다
+                </p>
+              </div>
             ) : (
-              <div className="w-full rounded-lg border border-border/60 bg-muted/20 p-2.5 sm:w-auto sm:min-w-[17rem]">
+              <div className="rounded-lg border border-border/60 bg-muted/15 p-2 shadow-sm">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-2">
                   <Link
                     href="/quotes"
                     className={cn(
                       buttonVariants({ size: "sm" }),
-                      "inline-flex h-9 flex-1 items-center justify-center gap-2 font-medium"
+                      "inline-flex h-9 flex-1 items-center justify-center gap-1.5 font-semibold"
                     )}
                   >
                     견적 만들기
                     <ArrowRight className="size-3.5" />
                   </Link>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled
-                    className="h-9 flex-1 cursor-not-allowed opacity-50 sm:max-w-[8.5rem]"
+                  <span
+                    className="flex flex-1 sm:max-w-[9rem]"
                     title="청구 생성 전에 먼저 견적을 준비해주세요"
                   >
-                    <Plus className="size-3.5" />
-                    새 청구
-                  </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled
+                      className="h-9 w-full cursor-not-allowed gap-1.5 opacity-60"
+                    >
+                      <Plus className="size-3.5" />
+                      청구 만들기
+                    </Button>
+                  </span>
                 </div>
-                <p className="mt-1.5 border-t border-border/40 pt-1.5 text-center text-[11px] leading-snug text-muted-foreground sm:text-left">
-                  청구 생성 전에 먼저 견적을 준비해주세요
+                <p className="mt-2 border-t border-border/50 pt-2 text-[11px] leading-snug text-muted-foreground">
+                  <span className="text-foreground/80">먼저 견적을 준비해 주세요.</span>{" "}
+                  준비되면 청구 만들기가 활성화됩니다.
                 </p>
               </div>
             )}
