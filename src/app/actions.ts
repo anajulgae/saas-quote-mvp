@@ -15,6 +15,7 @@ import {
 import { maskEmailForDisplay } from "@/lib/mask-email"
 import { getSiteOrigin } from "@/lib/site-url"
 import { toPasswordResetEmailError, toUserFacingActionError } from "@/lib/action-errors"
+import { consumePasswordResetRateSlot } from "@/lib/password-reset-rate-limit"
 import { isDemoLoginEnabled, isDemoPasswordStrongEnoughForProduction } from "@/lib/demo-flags"
 import {
   createActivityLog,
@@ -476,6 +477,11 @@ export async function requestPasswordResetAction(
   const supabase = await createSupabaseServerClient()
   if (!supabase) {
     return { error: "인증 설정을 확인해 주세요." }
+  }
+
+  const rate = consumePasswordResetRateSlot(email)
+  if (!rate.ok) {
+    return { error: rate.message, invalidEmail: false }
   }
 
   const origin = getSiteOrigin()

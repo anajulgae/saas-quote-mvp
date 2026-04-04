@@ -1,6 +1,7 @@
 /**
  * 서버 액션에서 DB/네트워크 오류를 사용자용 문구로 정리합니다.
  */
+import { PASSWORD_RESET_RATE_LIMIT_USER_MESSAGE } from "./password-reset-rate-limit"
 export function toUserFacingActionError(error: unknown, fallback: string): string {
   const obj =
     typeof error === "object" && error !== null
@@ -76,7 +77,7 @@ export function toPasswordResetEmailError(error: unknown): string {
     code.includes("over_email") ||
     code === "too_many_requests"
   ) {
-    return "짧은 시간에 메일 요청이 많습니다. 1~2분 후 다시 시도해 주세요."
+    return PASSWORD_RESET_RATE_LIMIT_USER_MESSAGE
   }
 
   if (
