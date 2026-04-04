@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ChevronRight, ListOrdered, Pencil, Plus, Search, Sparkles, UserPlus } from "lucide-react"
+import { ListOrdered, Pencil, Plus, Search, Sparkles, UserPlus } from "lucide-react"
 import { toast } from "sonner"
 
 import { createInquiryAction, updateInquiryAction } from "@/app/actions"
@@ -325,45 +325,48 @@ export function InquiriesBoard({
   )
 
   return (
-    <div className="space-y-5 md:space-y-6">
+    <div className="space-y-4 md:space-y-5">
       <PageHeader
         title="문의 관리"
         description="문의에 채널·일정·예상 금액을 남기고, 후속조치와 견적까지 한 흐름으로 관리합니다."
         action={
-          <div className="flex w-full flex-col gap-2 sm:max-w-[17rem] sm:items-end">
+          <div className="flex w-full flex-col gap-1.5 sm:w-auto sm:items-end">
             {hasInquiries ? (
               <p className="text-right text-[11px] leading-tight text-muted-foreground">
                 CSV 일괄 가져오기 · 준비 중
               </p>
             ) : null}
             {hasCustomers ? (
-              <Button type="button" className="h-10 w-full gap-2 sm:w-auto" onClick={openCreateDialog}>
+              <Button type="button" className="h-9 w-full gap-2 sm:w-auto" onClick={openCreateDialog}>
                 <Plus className="size-4" />
                 문의 등록
               </Button>
             ) : (
-              <div className="flex w-full flex-col gap-2 sm:items-end">
-                <Link
-                  href="/customers"
-                  className={cn(
-                    buttonVariants({ size: "default" }),
-                    "inline-flex h-10 w-full items-center justify-center gap-2 sm:w-auto"
-                  )}
-                >
-                  <UserPlus className="size-4" />
-                  고객 등록하기
-                </Link>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled
-                  className="h-10 w-full cursor-not-allowed opacity-60 sm:w-auto"
-                  title="문의 등록 전에 먼저 고객을 추가해주세요"
-                >
-                  <Plus className="size-4" />
-                  문의 등록
-                </Button>
-                <p className="text-center text-xs leading-snug text-muted-foreground sm:text-right">
+              <div className="w-full rounded-lg border border-border/60 bg-muted/20 p-2.5 sm:w-auto sm:min-w-[min(100%,20rem)]">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-2">
+                  <Link
+                    href="/customers"
+                    className={cn(
+                      buttonVariants({ size: "sm" }),
+                      "inline-flex h-9 flex-1 items-center justify-center gap-2 font-medium"
+                    )}
+                  >
+                    <UserPlus className="size-3.5" />
+                    고객 등록하기
+                  </Link>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled
+                    className="h-9 flex-1 cursor-not-allowed opacity-55 sm:max-w-[9.5rem]"
+                    title="문의 등록 전에 먼저 고객을 추가해주세요"
+                  >
+                    <Plus className="size-3.5" />
+                    문의 등록
+                  </Button>
+                </div>
+                <p className="mt-2 border-t border-border/50 pt-2 text-center text-[11px] leading-snug text-muted-foreground sm:text-left">
                   문의 등록 전에 먼저 고객을 추가해주세요
                 </p>
               </div>
@@ -435,56 +438,56 @@ export function InquiriesBoard({
       </Dialog>
 
       {isEmptyInquiries ? (
-        <Card className="overflow-hidden border-2 border-primary/40 bg-gradient-to-b from-primary/[0.09] via-background to-background shadow-md ring-1 ring-primary/15">
-          <CardContent className="space-y-5 p-5 sm:p-7">
-            <div className="space-y-2">
-              <p className="text-xs font-semibold tracking-wide text-primary uppercase">빠른 시작</p>
-              <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+        <Card className="overflow-hidden border border-primary/35 bg-gradient-to-b from-primary/[0.06] to-background shadow-sm ring-1 ring-primary/10">
+          <CardContent className="space-y-3 p-4 sm:p-5">
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-semibold tracking-wide text-primary uppercase">빠른 시작</p>
+              <h2 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
                 먼저 고객을 등록한 뒤 문의를 추가하세요
               </h2>
-              <p className="text-base leading-relaxed text-muted-foreground">
+              <p className="text-sm leading-snug text-muted-foreground">
                 문의는 고객과 연결되어야 견적과 청구로 자연스럽게 이어집니다.
               </p>
               {!hasCustomers ? (
-                <p className="text-sm font-medium text-amber-900 dark:text-amber-100/90">
-                  지금은 등록된 고객이 없습니다. 아래에서 고객 등록하기를 눌러 시작하세요.
+                <p className="text-xs font-medium text-amber-900 dark:text-amber-100/90">
+                  등록된 고객이 없습니다. 아래 <span className="font-semibold">고객 등록하기</span>로 시작하세요.
                 </p>
               ) : (
-                <p className="text-sm font-medium text-muted-foreground">
-                  고객이 준비되었습니다. 문의 등록으로 첫 건을 남기거나 단계 안내를 확인하세요.
+                <p className="text-xs font-medium text-muted-foreground">
+                  고객이 준비되었습니다. 첫 문의를 남기거나 단계 안내를 확인하세요.
                 </p>
               )}
             </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center">
               <Link
                 href="/customers"
                 className={cn(
-                  buttonVariants({ size: "lg" }),
-                  "inline-flex h-11 w-full items-center justify-center gap-2 font-semibold shadow-sm sm:min-w-[11rem] sm:w-auto"
+                  buttonVariants({ size: "default" }),
+                  "inline-flex h-9 w-full items-center justify-center gap-2 font-semibold shadow-sm sm:min-w-[10.5rem] sm:w-auto"
                 )}
               >
-                <UserPlus className="size-4" />
+                <UserPlus className="size-3.5" />
                 고객 등록하기
               </Link>
               <Button
                 type="button"
                 variant="outline"
-                size="lg"
-                className="h-11 w-full gap-2 border-primary/30 sm:w-auto"
+                size="sm"
+                className="h-9 w-full gap-1.5 border-primary/25 sm:w-auto"
                 onClick={scrollToFlowSteps}
               >
-                <ListOrdered className="size-4" />
+                <ListOrdered className="size-3.5" />
                 문의 흐름 보기
               </Button>
               {hasCustomers ? (
                 <Button
                   type="button"
-                  size="lg"
-                  className="h-11 w-full gap-2 font-semibold sm:w-auto"
+                  size="default"
+                  className="h-9 w-full gap-2 font-semibold sm:w-auto"
                   onClick={openCreateDialog}
                 >
-                  <Plus className="size-4" />
+                  <Plus className="size-3.5" />
                   첫 문의 만들기
                 </Button>
               ) : null}
@@ -493,32 +496,47 @@ export function InquiriesBoard({
             <div
               ref={flowStepsRef}
               id="inquiry-flow-steps"
-              className="rounded-xl border border-border/70 bg-background/90 p-3 sm:p-4"
+              className="rounded-lg border border-border/60 bg-background/80 p-2.5 sm:p-3"
             >
-              <p className="mb-3 flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase">
-                <ListOrdered className="size-3.5" aria-hidden />
+              <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+                <ListOrdered className="size-3" aria-hidden />
                 진행 순서
               </p>
-              <ol className="grid gap-3 sm:grid-cols-3">
+              <ol className="grid gap-2 sm:grid-cols-3">
                 {flowSteps.map((item) => (
                   <li
                     key={item.step}
-                    className="flex gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-3 text-sm"
+                    className={cn(
+                      "flex gap-2 rounded-md border px-2.5 py-2 text-[13px]",
+                      item.step === 3
+                        ? "border-border/50 bg-muted/10"
+                        : "border-border/60 bg-muted/15"
+                    )}
                   >
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary">
+                    <span
+                      className={cn(
+                        "flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold",
+                        item.step === 3
+                          ? "bg-muted text-muted-foreground"
+                          : "bg-primary/12 text-primary"
+                      )}
+                    >
                       {item.step}
                     </span>
                     <div className="min-w-0">
-                      <p className="font-semibold text-foreground">{item.title}</p>
-                      <p className="mt-1 text-xs leading-snug text-muted-foreground">{item.hint}</p>
+                      <p
+                        className={cn(
+                          "font-semibold leading-tight",
+                          item.step === 3 ? "text-muted-foreground" : "text-foreground"
+                        )}
+                      >
+                        {item.title}
+                      </p>
+                      <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{item.hint}</p>
                       {item.step === 3 ? (
-                        <Link
-                          href="/quotes"
-                          className="mt-2 inline-flex items-center gap-0.5 text-xs font-semibold text-primary hover:underline"
-                        >
-                          견적 화면 열기
-                          <ChevronRight className="size-3" />
-                        </Link>
+                        <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground/90">
+                          문의 등록 후 견적 메뉴에서 진행하세요
+                        </p>
                       ) : null}
                     </div>
                   </li>
@@ -531,22 +549,24 @@ export function InquiriesBoard({
 
       <section
         className={cn(
-          "grid gap-3 md:grid-cols-3",
-          isEmptyInquiries && "order-none opacity-60"
+          "grid gap-2 md:grid-cols-3",
+          isEmptyInquiries && "opacity-45"
         )}
       >
         <Card
           className={cn(
-            "border-border/70",
-            isEmptyInquiries && "scale-[0.98] border-dashed bg-muted/15"
+            "border-border/60",
+            isEmptyInquiries && "border-dashed border-border/50 bg-muted/10"
           )}
         >
-          <CardContent className="p-3 sm:p-4">
-            <p className="text-[11px] font-medium text-muted-foreground">신규 문의</p>
+          <CardContent className="px-2.5 py-2 sm:px-3 sm:py-2.5">
+            <p className="text-[10px] font-medium text-muted-foreground">신규 문의</p>
             <p
               className={cn(
-                "mt-0.5 font-semibold tabular-nums tracking-tight",
-                isEmptyInquiries ? "text-lg" : "text-2xl"
+                "mt-0.5 tabular-nums tracking-tight",
+                isEmptyInquiries
+                  ? "text-sm font-medium text-muted-foreground"
+                  : "text-2xl font-semibold"
               )}
             >
               {stageSummary.new}건
@@ -555,16 +575,18 @@ export function InquiriesBoard({
         </Card>
         <Card
           className={cn(
-            "border-border/70",
-            isEmptyInquiries && "scale-[0.98] border-dashed bg-muted/15"
+            "border-border/60",
+            isEmptyInquiries && "border-dashed border-border/50 bg-muted/10"
           )}
         >
-          <CardContent className="p-3 sm:p-4">
-            <p className="text-[11px] font-medium text-muted-foreground">검토 중</p>
+          <CardContent className="px-2.5 py-2 sm:px-3 sm:py-2.5">
+            <p className="text-[10px] font-medium text-muted-foreground">검토 중</p>
             <p
               className={cn(
-                "mt-0.5 font-semibold tabular-nums tracking-tight",
-                isEmptyInquiries ? "text-lg" : "text-2xl"
+                "mt-0.5 tabular-nums tracking-tight",
+                isEmptyInquiries
+                  ? "text-sm font-medium text-muted-foreground"
+                  : "text-2xl font-semibold"
               )}
             >
               {stageSummary.qualified}건
@@ -573,16 +595,18 @@ export function InquiriesBoard({
         </Card>
         <Card
           className={cn(
-            "border-border/70",
-            isEmptyInquiries && "scale-[0.98] border-dashed bg-muted/15"
+            "border-border/60",
+            isEmptyInquiries && "border-dashed border-border/50 bg-muted/10"
           )}
         >
-          <CardContent className="p-3 sm:p-4">
-            <p className="text-[11px] font-medium text-muted-foreground">견적 발송 단계</p>
+          <CardContent className="px-2.5 py-2 sm:px-3 sm:py-2.5">
+            <p className="text-[10px] font-medium text-muted-foreground">견적 발송 단계</p>
             <p
               className={cn(
-                "mt-0.5 font-semibold tabular-nums tracking-tight",
-                isEmptyInquiries ? "text-lg" : "text-2xl"
+                "mt-0.5 tabular-nums tracking-tight",
+                isEmptyInquiries
+                  ? "text-sm font-medium text-muted-foreground"
+                  : "text-2xl font-semibold"
               )}
             >
               {stageSummary.quoted}건
