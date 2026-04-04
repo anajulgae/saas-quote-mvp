@@ -14,7 +14,7 @@ import {
 } from "@/lib/auth"
 import { maskEmailForDisplay } from "@/lib/mask-email"
 import { getSiteOrigin } from "@/lib/site-url"
-import { toUserFacingActionError } from "@/lib/action-errors"
+import { toPasswordResetEmailError, toUserFacingActionError } from "@/lib/action-errors"
 import { isDemoLoginEnabled, isDemoPasswordStrongEnoughForProduction } from "@/lib/demo-flags"
 import {
   createActivityLog,
@@ -449,7 +449,7 @@ export async function resendSignupConfirmationAction(
 
 export type RequestPasswordResetState =
   | undefined
-  | { error: string }
+  | { error: string; invalidEmail?: boolean }
   | { ok: true; maskedEmail: string; email: string }
 
 export async function requestPasswordResetAction(
@@ -458,11 +458,12 @@ export async function requestPasswordResetAction(
 ): Promise<RequestPasswordResetState> {
   const email = String(formData.get("email") ?? "").trim()
   if (!email) {
-    return { error: "이메일을 입력해 주세요." }
+    return { error: "이메일을 입력해 주세요.", invalidEmail: true }
   }
   if (!z.string().email().safeParse(email).success) {
     return {
       error: "이메일 형식을 확인해 주세요. 가입·로그인에 쓰는 주소를 정확히 입력했는지도 함께 확인해 주세요.",
+      invalidEmail: true,
     }
   }
 
@@ -484,10 +485,8 @@ export async function requestPasswordResetAction(
 
   if (error) {
     return {
-      error: toUserFacingActionError(
-        error,
-        "재설정 메일을 보내지 못했습니다. 잠시 후 다시 시도하거나 네트워크를 확인해 주세요."
-      ),
+      error: toPasswordResetEmailError(error),
+      invalidEmail: false,
     }
   }
 

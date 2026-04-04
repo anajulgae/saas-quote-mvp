@@ -144,7 +144,9 @@ function ForgotPasswordFormInner({ onTryAnother }: { onTryAnother: () => void })
               placeholder="name@company.kr"
               required
               className="h-11"
-              aria-invalid={Boolean(state && "error" in state)}
+              aria-invalid={Boolean(
+                state && "error" in state && !("ok" in state) && state.invalidEmail === true
+              )}
             />
           </div>
           {state && "error" in state ? (

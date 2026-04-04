@@ -50,3 +50,57 @@ export function toUserFacingActionError(error: unknown, fallback: string): strin
 
   return fallback
 }
+
+/**
+ * Supabase Auth `resetPasswordForEmail` 실패 시 사용자 안내 (리다이렉트 URL·SMTP·레이트 리밋 등)
+ */
+export function toPasswordResetEmailError(error: unknown): string {
+  const obj =
+    typeof error === "object" && error !== null
+      ? (error as { message?: unknown; code?: unknown; status?: unknown })
+      : null
+
+  const message =
+    error instanceof Error
+      ? error.message
+      : obj && typeof obj.message === "string"
+        ? obj.message
+        : ""
+
+  const code = String(obj?.code ?? "").toLowerCase()
+  const lower = message.toLowerCase()
+
+  if (
+    lower.includes("rate limit") ||
+    lower.includes("too many") ||
+    code.includes("over_email") ||
+    code === "too_many_requests"
+  ) {
+    return "짧은 시간에 메일 요청이 많습니다. 1~2분 후 다시 시도해 주세요."
+  }
+
+  if (
+    lower.includes("redirect") ||
+    lower.includes("redirect_uri") ||
+    lower.includes("redirect url") ||
+    lower.includes("invalid redirect")
+  ) {
+    return "재설정 메일의 링크 주소가 Supabase 설정과 맞지 않습니다. Authentication → URL Configuration에서 Redirect URLs에 배포 주소(예: https://본인도메인/auth/callback)가 등록돼 있는지 확인해 주세요."
+  }
+
+  if (
+    lower.includes("smtp") ||
+    lower.includes("535") ||
+    lower.includes("mailer") ||
+    lower.includes("sending email") ||
+    lower.includes("failed to send")
+  ) {
+    return "메일 발송에 실패했습니다. Supabase의 Custom SMTP 설정(발신 주소·호스트·비밀번호)을 확인하거나, 기본 메일 채널 제한 여부를 관리자에게 문의해 주세요."
+  }
+
+  return toUserFacingActionError(
+    error,
+    "재설정 메일을 보내지 못했습니다. 잠시 후 다시 시도하거나, 네트워크와 서버 설정을 확인해 주세요."
+  )
+}
+
