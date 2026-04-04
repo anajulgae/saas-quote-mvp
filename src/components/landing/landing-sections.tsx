@@ -3,6 +3,7 @@ import {
   ArrowRight,
   Bell,
   CheckCircle2,
+  ChevronDown,
   ClipboardList,
   FileText,
   LayoutDashboard,
@@ -25,25 +26,30 @@ export function LandingHero() {
 
   return (
     <section
-      className="border-b border-border/50 bg-gradient-to-b from-primary/[0.06] via-background to-background px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24"
+      className="relative border-b border-border/40 bg-gradient-to-b from-primary/[0.09] via-primary/[0.03] to-background px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-[5.5rem]"
       aria-labelledby="hero-heading"
     >
-      <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1fr_min(100%,440px)] lg:items-center lg:gap-14">
-        <div className="space-y-8">
-          <p className="inline-flex max-w-full items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-            소규모 사업자를 위한 견적·청구·수금 관리
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_50%_at_70%_-10%,oklch(0.55_0.08_175_/_0.08),transparent)]"
+        aria-hidden
+      />
+      <div className="relative mx-auto grid max-w-6xl gap-12 lg:grid-cols-[1fr_min(100%,460px)] lg:items-center lg:gap-16">
+        <div className="space-y-9">
+          <p className="inline-flex max-w-full items-center gap-2 rounded-full border border-primary/25 bg-primary/[0.11] px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-primary">
+            소규모 사업자 · 견적·청구·수금
           </p>
-          <div className="space-y-4">
+          <div className="space-y-5">
             <h1
               id="hero-heading"
-              className="text-balance text-3xl font-semibold tracking-tight text-foreground sm:text-4xl lg:text-[2.65rem] lg:leading-[1.12]"
+              className="text-balance text-[1.75rem] font-semibold leading-[1.15] tracking-tight text-foreground sm:text-4xl sm:leading-[1.12] lg:text-[2.875rem] lg:leading-[1.08]"
             >
-              고객 문의부터 수금까지,
-              <br className="hidden sm:block" /> 끊기지 않는 업무 흐름
+              <span className="text-foreground">고객 문의부터 수금까지,</span>
+              <br className="hidden sm:block" />
+              <span className="text-foreground/95">끊기지 않는 업무 흐름</span>
             </h1>
-            <p className="max-w-xl text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
-              프리랜서·1인 사업자·소규모 서비스업을 위한 운영 도구입니다. 견적과 청구를 한곳에서
-              정리하고, 입금 단계와 리마인드를 빠르게 확인하세요.
+            <p className="max-w-[26rem] text-pretty text-[15px] leading-relaxed text-muted-foreground sm:text-lg sm:leading-relaxed">
+              견적과 청구를 한곳에 두고, 입금 단계와 리마인드를 빠르게 확인하세요. 프리랜서·1인
+              사업자·소규모 서비스업 운영에 맞춰 두었습니다.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
@@ -51,7 +57,7 @@ export function LandingHero() {
               href="/signup"
               className={cn(
                 buttonVariants({ size: "lg" }),
-                "h-12 min-h-12 w-full justify-center bg-primary px-6 text-base font-semibold text-primary-foreground shadow-md hover:bg-primary/90 sm:w-auto"
+                "h-[3.25rem] min-h-[3.25rem] w-full justify-center bg-primary px-8 text-base font-semibold text-primary-foreground shadow-md ring-2 ring-primary/25 ring-offset-2 ring-offset-background transition-colors hover:bg-primary/92 sm:w-auto"
               )}
             >
               무료로 시작하기
@@ -60,32 +66,41 @@ export function LandingHero() {
               href="/login"
               className={cn(
                 buttonVariants({ variant: "outline", size: "lg" }),
-                "h-12 min-h-12 w-full justify-center border-2 border-border bg-background px-6 text-base font-semibold text-foreground shadow-sm hover:bg-muted/40 sm:w-auto"
+                "h-[3.25rem] min-h-[3.25rem] w-full justify-center border-2 border-border/80 bg-background/80 px-8 text-base font-semibold text-foreground shadow-sm backdrop-blur-[2px] transition-colors hover:border-border hover:bg-muted/50 sm:w-auto"
               )}
             >
               로그인
             </Link>
             <a
               href="#features"
-              className="inline-flex h-12 w-full items-center justify-center gap-1 text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline sm:h-auto sm:w-auto"
+              className="inline-flex h-11 w-full items-center justify-center gap-1.5 text-sm font-semibold text-primary/90 underline-offset-[5px] hover:text-primary hover:underline sm:h-auto sm:w-auto"
             >
               기능 살펴보기
               <ArrowRight className="size-4" aria-hidden />
             </a>
           </div>
-          <ul className="grid gap-3 sm:grid-cols-1 sm:gap-2.5">
-            {trust.map((line) => (
-              <li key={line} className="flex gap-2.5 text-sm leading-snug text-foreground">
-                <CheckCircle2
-                  className="mt-0.5 size-4 shrink-0 text-primary"
-                  aria-hidden
-                />
-                <span>{line}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="rounded-2xl border border-border/50 bg-card/70 p-4 shadow-sm ring-1 ring-black/[0.03] backdrop-blur-[2px] sm:p-5">
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              왜 Bill-IO인가
+            </p>
+            <ul className="grid gap-3 sm:gap-2.5">
+              {trust.map((line) => (
+                <li
+                  key={line}
+                  className="flex gap-3 text-sm font-medium leading-snug text-foreground"
+                >
+                  <CheckCircle2
+                    className="mt-0.5 size-[1.125rem] shrink-0 text-primary"
+                    strokeWidth={2}
+                    aria-hidden
+                  />
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-        <DashboardMockPreview className="lg:translate-y-1" />
+        <DashboardMockPreview className="lg:translate-y-0.5" />
       </div>
     </section>
   )
@@ -110,32 +125,44 @@ export function LandingProblemSolution() {
   return (
     <section
       id="pain"
-      className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
+      className="border-y border-border/35 bg-muted/45 px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
       aria-labelledby="pain-heading"
     >
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto mb-12 max-w-2xl text-center">
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/90">
+            Pain → 해결
+          </p>
           <h2
             id="pain-heading"
-            className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
+            className="text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]"
           >
             작은 팀에서 반복되는 정리 비용
           </h2>
-          <p className="mt-3 text-sm text-muted-foreground sm:text-base">
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
             Bill-IO는 실무에서 자주 겪는 세 가지를 기준으로 설계했습니다.
           </p>
         </div>
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-3 md:gap-6">
           {rows.map((row) => (
             <article
               key={row.problem}
-              className="flex flex-col rounded-2xl border border-border/60 bg-card p-6 shadow-sm ring-1 ring-primary/[0.04] transition-shadow duration-200 hover:shadow-md"
+              className="group flex flex-col overflow-hidden rounded-2xl border border-border/55 bg-card shadow-sm ring-1 ring-black/[0.03] transition-[box-shadow,border-color] duration-200 hover:border-primary/20 hover:shadow-md"
             >
-              <p className="text-xs font-semibold tracking-wide text-muted-foreground">문제</p>
-              <p className="mt-2 text-sm font-medium leading-snug text-foreground">{row.problem}</p>
-              <div className="my-4 h-px bg-border/80" />
-              <p className="text-xs font-semibold tracking-wide text-primary">Bill-IO</p>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{row.solve}</p>
+              <div className="border-b border-border/45 bg-muted/25 px-5 py-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  문제
+                </p>
+                <p className="mt-2 text-sm font-semibold leading-snug text-foreground">
+                  {row.problem}
+                </p>
+              </div>
+              <div className="flex flex-1 flex-col border-l-[3px] border-l-primary/70 bg-gradient-to-b from-primary/[0.04] to-card px-5 py-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                  Bill-IO
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{row.solve}</p>
+              </div>
             </article>
           ))}
         </div>
@@ -181,31 +208,34 @@ export function LandingFeatures() {
   return (
     <section
       id="features"
-      className="border-y border-border/50 bg-muted/30 px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
+      className="border-y border-border/35 bg-background px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
       aria-labelledby="features-heading"
     >
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto mb-12 max-w-2xl text-center">
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/90">
+            제품
+          </p>
           <h2
             id="features-heading"
-            className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
+            className="text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]"
           >
             핵심 기능
           </h2>
-          <p className="mt-3 text-sm text-muted-foreground sm:text-base">
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
             견적·청구 운영에 필요한 요소를 한 제품 안에서 다룹니다.
           </p>
         </div>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
           {items.map(({ icon: Icon, title, desc }) => (
             <article
               key={title}
-              className="group rounded-2xl border border-border/60 bg-card p-6 shadow-sm ring-1 ring-black/[0.02] transition-shadow duration-200 hover:shadow-md"
+              className="group rounded-2xl border border-border/50 bg-gradient-to-br from-card via-card to-muted/20 p-6 shadow-sm ring-1 ring-black/[0.025] transition-[box-shadow,border-color,transform] duration-200 hover:-translate-y-px hover:border-primary/22 hover:shadow-md"
             >
-              <div className="mb-4 flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
-                <Icon className="size-5" strokeWidth={1.75} aria-hidden />
+              <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-primary/[0.1] text-primary shadow-[inset_0_1px_0_0_oklch(1_0_0_/_0.06)] ring-1 ring-primary/18">
+                <Icon className="size-[1.35rem]" strokeWidth={1.65} aria-hidden />
               </div>
-              <h3 className="text-base font-semibold text-foreground">{title}</h3>
+              <h3 className="text-base font-semibold tracking-tight text-foreground">{title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{desc}</p>
             </article>
           ))}
@@ -226,35 +256,43 @@ export function LandingHowItWorks() {
   return (
     <section
       id="how"
-      className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
+      className="bg-muted/25 px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
       aria-labelledby="how-heading"
     >
       <div className="mx-auto max-w-6xl">
-        <div className="mx-auto mb-10 max-w-2xl text-center">
+        <div className="mx-auto mb-11 max-w-2xl text-center">
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/90">
+            온보딩
+          </p>
           <h2
             id="how-heading"
-            className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
+            className="text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]"
           >
             사용 흐름
           </h2>
-          <p className="mt-3 text-sm text-muted-foreground sm:text-base">
-            복잡한 온보딩 없이, 업무 순서대로 진행할 수 있습니다.
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
+            복잡한 설정 없이, 업무 순서대로 진행할 수 있습니다.
           </p>
         </div>
-        <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {steps.map((s) => (
+        <ol className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+          {steps.map((s, idx) => (
             <li
               key={s.step}
-              className="relative flex gap-4 rounded-2xl border border-border/60 bg-card p-5 shadow-sm ring-1 ring-black/[0.02]"
+              className={cn(
+                "relative flex gap-3.5 rounded-2xl border p-5 shadow-sm transition-[box-shadow,border-color] duration-200 hover:border-primary/18 hover:shadow-md",
+                idx % 2 === 0
+                  ? "border-border/50 bg-card ring-1 ring-black/[0.02]"
+                  : "border-border/45 bg-muted/20 ring-1 ring-border/30"
+              )}
             >
               <span
-                className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground shadow-sm"
+                className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm ring-1 ring-primary/30"
                 aria-hidden
               >
                 {s.step}
               </span>
-              <div>
-                <h3 className="font-semibold text-foreground">{s.title}</h3>
+              <div className="min-w-0">
+                <h3 className="font-semibold tracking-tight text-foreground">{s.title}</h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{s.desc}</p>
               </div>
             </li>
@@ -266,7 +304,17 @@ export function LandingHowItWorks() {
 }
 
 export function LandingPricing() {
-  const plans = [
+  const plans: {
+    name: string
+    price: string
+    period: string
+    blurb: string
+    tagline?: string
+    features: string[]
+    cta: string
+    href: string
+    highlight: boolean
+  }[] = [
     {
       name: "Starter",
       price: "₩0",
@@ -282,6 +330,7 @@ export function LandingPricing() {
       price: "₩39,000",
       period: "/월",
       blurb: "1인·소규모 팀에 적합",
+      tagline: "미수·템플릿·리마인드를 한 플랜에 — 대부분의 팀이 여기서 운영을 정착합니다.",
       features: [
         "Starter 전체",
         "미수·후속 정리 강화",
@@ -307,42 +356,52 @@ export function LandingPricing() {
   return (
     <section
       id="pricing"
-      className="border-y border-border/50 bg-muted/20 px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
+      className="border-y border-border/35 bg-gradient-to-b from-primary/[0.05] via-muted/30 to-muted/20 px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
       aria-labelledby="pricing-heading"
     >
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto mb-12 max-w-2xl text-center">
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/90">
+            요금
+          </p>
           <h2
             id="pricing-heading"
-            className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
+            className="text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]"
           >
             요금제
           </h2>
-          <p className="mt-3 text-sm text-muted-foreground sm:text-base">
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
             팀 규모에 맞게 선택하세요. 결제 연동 전에도 플랜 구조를 미리 확인할 수 있습니다.
           </p>
         </div>
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-5 lg:grid-cols-3 lg:gap-6 lg:items-stretch">
           {plans.map((plan) => (
             <article
               key={plan.name}
               className={cn(
-                "flex flex-col rounded-2xl border bg-card p-6 shadow-sm",
+                "flex flex-col rounded-2xl border p-6 sm:p-7",
                 plan.highlight
-                  ? "border-primary shadow-elevated-sm ring-2 ring-primary/20 lg:scale-[1.02]"
-                  : "border-border/60"
+                  ? "relative z-[1] border-primary/40 bg-card shadow-elevated ring-2 ring-primary/25 lg:scale-[1.03] lg:shadow-lg"
+                  : plan.name === "Business"
+                    ? "border-dashed border-border/60 bg-card/80 shadow-sm"
+                    : "border-border/55 bg-card/90 shadow-sm ring-1 ring-black/[0.02]"
               )}
             >
-              {plan.highlight ? (
-                <p className="mb-3 inline-flex w-fit rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground shadow-sm">
-                  추천
-                </p>
-              ) : (
-                <div className="mb-3 h-6" aria-hidden />
-              )}
-              <h3 className="text-lg font-semibold text-foreground">{plan.name}</h3>
+              <div className="mb-1 flex min-h-[1.75rem] items-center">
+                {plan.highlight ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-primary-foreground shadow-sm">
+                    추천
+                  </span>
+                ) : null}
+              </div>
+              <h3 className="text-lg font-semibold tracking-tight text-foreground">{plan.name}</h3>
               <p className="mt-1 text-sm text-muted-foreground">{plan.blurb}</p>
-              <p className="mt-5 flex items-baseline gap-0.5">
+              {plan.tagline ? (
+                <p className="mt-3 rounded-lg border border-primary/15 bg-primary/[0.06] px-3 py-2 text-xs font-medium leading-relaxed text-foreground">
+                  {plan.tagline}
+                </p>
+              ) : null}
+              <p className="mt-5 flex items-baseline gap-1">
                 <span className="text-3xl font-semibold tracking-tight text-foreground">
                   {plan.price}
                 </span>
@@ -350,9 +409,13 @@ export function LandingPricing() {
               </p>
               <ul className="mt-6 flex flex-1 flex-col gap-2.5 text-sm text-muted-foreground">
                 {plan.features.map((f) => (
-                  <li key={f} className="flex gap-2">
-                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
-                    <span>{f}</span>
+                  <li key={f} className="flex gap-2.5">
+                    <CheckCircle2
+                      className="mt-0.5 size-4 shrink-0 text-primary"
+                      strokeWidth={2}
+                      aria-hidden
+                    />
+                    <span className="leading-snug">{f}</span>
                   </li>
                 ))}
               </ul>
@@ -360,10 +423,10 @@ export function LandingPricing() {
                 href={plan.href}
                 className={cn(
                   buttonVariants({ size: "lg" }),
-                  "mt-8 h-11 w-full justify-center font-semibold",
+                  "mt-8 h-12 w-full justify-center text-[15px] font-semibold",
                   plan.highlight
-                    ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
-                    : "border-2 border-border/70 bg-background font-semibold hover:bg-muted/60"
+                    ? "bg-primary text-primary-foreground shadow-md ring-1 ring-primary/30 hover:bg-primary/90"
+                    : "border-2 border-border/75 bg-background hover:border-border hover:bg-muted/50"
                 )}
               >
                 {plan.cta}
@@ -403,34 +466,43 @@ export function LandingFaq() {
   return (
     <section
       id="faq"
-      className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
+      className="bg-background px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
       aria-labelledby="faq-heading"
     >
       <div className="mx-auto max-w-3xl">
-        <div className="mb-10 text-center">
+        <div className="mb-11 text-center">
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/90">
+            FAQ
+          </p>
           <h2
             id="faq-heading"
-            className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
+            className="text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]"
           >
             자주 묻는 질문
           </h2>
-          <p className="mt-3 text-sm text-muted-foreground sm:text-base">
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
             도입 전에 궁금한 점을 정리했습니다.
           </p>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {faqItems.map((item) => (
             <details
               key={item.q}
-              className="group rounded-xl border border-border/70 bg-card px-4 py-1 shadow-sm open:pb-3 open:shadow-md"
+              className="group rounded-2xl border border-border/55 bg-card/95 shadow-sm ring-1 ring-black/[0.02] open:border-border/65 open:shadow-md"
             >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 text-left text-sm font-semibold text-foreground outline-none marker:content-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
-                {item.q}
-                <span className="text-muted-foreground transition group-open:rotate-180">▼</span>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3.5 text-left outline-none marker:content-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden sm:px-5 sm:py-4">
+                <span className="text-sm font-semibold leading-snug text-foreground pr-2">
+                  {item.q}
+                </span>
+                <ChevronDown
+                  className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+                  strokeWidth={2}
+                  aria-hidden
+                />
               </summary>
-              <p className="border-t border-border/60 pt-3 text-sm leading-relaxed text-muted-foreground">
-                {item.a}
-              </p>
+              <div className="border-t border-border/50 px-4 pb-4 pt-3 sm:px-5 sm:pb-5">
+                <p className="text-sm leading-relaxed text-muted-foreground">{item.a}</p>
+              </div>
             </details>
           ))}
         </div>
@@ -442,31 +514,33 @@ export function LandingFaq() {
 export function LandingFinalCta() {
   return (
     <section
-      className="shadow-elevated relative mx-4 mb-16 overflow-hidden rounded-3xl border border-primary/20 bg-primary px-6 py-14 text-center sm:mx-6 sm:py-16 lg:mx-auto lg:max-w-6xl lg:px-8"
+      className="shadow-elevated relative mx-4 mb-16 overflow-hidden rounded-3xl border border-primary/25 bg-primary px-6 py-16 text-center sm:mx-6 sm:py-[4.25rem] lg:mx-auto lg:max-w-6xl lg:px-12"
       aria-labelledby="final-cta-heading"
     >
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,oklch(1_0_0_/_0.12),transparent_65%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_75%_55%_at_50%_0%,oklch(1_0_0_/_0.14),transparent_60%)]"
         aria-hidden
       />
-      <div className="relative">
-        <LayoutDashboard className="mx-auto mb-4 size-10 text-primary-foreground/90" aria-hidden />
+      <div className="relative mx-auto max-w-2xl">
+        <div className="mx-auto mb-5 flex size-12 items-center justify-center rounded-2xl bg-primary-foreground/12 ring-1 ring-primary-foreground/20">
+          <LayoutDashboard className="size-6 text-primary-foreground" strokeWidth={1.75} aria-hidden />
+        </div>
         <h2
           id="final-cta-heading"
-          className="text-balance text-2xl font-semibold tracking-tight text-primary-foreground sm:text-3xl"
+          className="text-balance text-[1.65rem] font-semibold leading-tight tracking-tight text-primary-foreground sm:text-3xl sm:leading-snug lg:text-[2rem]"
         >
-          지금 바로 운영 흐름을 정리해 보세요
+          몇 분 안에 시작할 수 있습니다
         </h2>
-        <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-primary-foreground/85 sm:text-base">
-          가입 후 고객과 견적·청구를 한곳에서 이어 관리할 수 있습니다. 별도 설치 없이 웹에서
-          시작합니다.
+        <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-primary-foreground/88 sm:text-base">
+          가입 후 바로 고객과 견적·청구를 같은 흐름으로 이어 관리하세요. 설치나 별도 연동 없이
+          브라우저에서 운영할 수 있습니다.
         </p>
-        <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:justify-center">
+        <div className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:justify-center sm:gap-4">
           <Link
             href="/signup"
             className={cn(
               buttonVariants({ size: "lg" }),
-              "h-12 min-h-12 border-0 bg-primary-foreground px-8 text-base font-semibold text-primary shadow-md hover:bg-primary-foreground/92"
+              "h-[3.25rem] min-w-[12rem] border-0 bg-primary-foreground px-10 text-base font-semibold text-primary shadow-lg hover:bg-primary-foreground/95"
             )}
           >
             무료로 시작하기
@@ -475,14 +549,14 @@ export function LandingFinalCta() {
             href="/login"
             className={cn(
               buttonVariants({ variant: "outline", size: "lg" }),
-              "h-12 min-h-12 border-2 border-primary-foreground/35 bg-transparent px-8 text-base font-semibold text-primary-foreground hover:bg-primary-foreground/10"
+              "h-[3.25rem] min-w-[10rem] border-2 border-primary-foreground/40 bg-transparent px-8 text-base font-semibold text-primary-foreground backdrop-blur-[1px] hover:border-primary-foreground/55 hover:bg-primary-foreground/[0.08]"
             )}
           >
             로그인
           </Link>
         </div>
-        <p className="mt-6 text-xs text-primary-foreground/75">
-          계정별 데이터 분리 · SSL 접속 · 상용 서비스 기준으로 운영됩니다
+        <p className="mt-8 text-[11px] font-medium uppercase tracking-wider text-primary-foreground/65">
+          계정별 데이터 분리 · SSL · 상용 운영 기준
         </p>
       </div>
     </section>
@@ -500,7 +574,7 @@ export function LandingFooter() {
 
   return (
     <footer
-      className="border-t border-border/70 bg-muted/30 px-4 py-12 sm:px-6 lg:px-8"
+      className="border-t border-border/50 bg-muted/40 px-4 py-12 sm:px-6 lg:px-8"
       role="contentinfo"
     >
       <div className="mx-auto flex max-w-6xl flex-col gap-8 md:flex-row md:items-start md:justify-between">

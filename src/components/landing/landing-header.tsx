@@ -45,7 +45,7 @@ export function LandingHeader() {
             <a
               key={item.href}
               href={item.href}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
             >
               {item.label}
             </a>
@@ -66,7 +66,7 @@ export function LandingHeader() {
             href="/signup"
             className={cn(
               buttonVariants({ variant: "default", size: "default" }),
-              "hidden h-9 bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 sm:inline-flex"
+              "hidden h-9 bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm ring-1 ring-primary/30 hover:bg-primary/90 sm:inline-flex"
             )}
           >
             무료로 시작하기
@@ -110,7 +110,7 @@ export function LandingHeader() {
                 </Link>
                 <Link
                   href="/signup"
-                  className="mx-3 mt-1 flex h-10 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+                  className="mx-3 mt-1 flex h-10 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground shadow-sm ring-1 ring-primary/30 hover:bg-primary/90"
                   onClick={() => setOpen(false)}
                 >
                   무료로 시작하기
