@@ -1037,17 +1037,11 @@ export async function getInquiriesPageData(): Promise<{
   const context = await getDataContext()
 
   if (context.mode === "demo") {
+    // 샘플 문의/고객을 넣으면 초기 온보딩 UI가 절대 보이지 않아, 데모는 빈 워크스페이스로 둡니다.
     return {
-      inquiries: demoInquiries.map((inquiry) => ({
-        ...inquiry,
-        customer: demoCustomers.find((customer) => customer.id === inquiry.customerId),
-      })),
-      customers: demoCustomers,
-      stageSummary: {
-        new: demoInquiries.filter((item) => item.stage === "new").length,
-        qualified: demoInquiries.filter((item) => item.stage === "qualified").length,
-        quoted: demoInquiries.filter((item) => item.stage === "quoted").length,
-      },
+      inquiries: [],
+      customers: [],
+      stageSummary: { new: 0, qualified: 0, quoted: 0 },
     }
   }
 
@@ -1101,12 +1095,7 @@ export async function getCustomersPageData(): Promise<{
 
   if (context.mode === "demo") {
     return {
-      customers: demoCustomers.map((customer) => ({
-        ...customer,
-        inquiryCount: demoInquiries.filter((item) => item.customerId === customer.id).length,
-        quoteCount: demoQuotes.filter((item) => item.customerId === customer.id).length,
-        invoiceCount: demoInvoices.filter((item) => item.customerId === customer.id).length,
-      })),
+      customers: [],
     }
   }
 
@@ -1545,15 +1534,10 @@ export async function getDashboardPageData(): Promise<{
   const context = await getDataContext()
 
   if (context.mode === "demo") {
-    const todayKey = new Date().toISOString().slice(0, 10)
+    const baseMetrics = getDashboardMetrics()
     return {
-      metrics: getDashboardMetrics(),
-      followUps: demoInquiries
-        .filter((item) => item.followUpAt?.startsWith(todayKey))
-        .map((item) => ({
-          ...item,
-          customer: demoCustomers.find((customer) => customer.id === item.customerId),
-        })),
+      metrics: { ...baseMetrics, followUpsToday: 0 },
+      followUps: [],
       overdueInvoices: demoInvoices
         .filter((invoice) => invoice.paymentStatus === "overdue")
         .map((invoice) => ({
@@ -1563,15 +1547,18 @@ export async function getDashboardPageData(): Promise<{
         })),
       recentActivities: demoActivityLogs,
       pipelineSummary: {
-        new: demoInquiries.filter((item) => item.stage === "new").length,
-        qualified: demoInquiries.filter((item) => item.stage === "qualified").length,
-        quoted: demoInquiries.filter((item) => item.stage === "quoted").length,
-        won: demoInquiries.filter((item) => item.stage === "won").length,
+        new: 0,
+        qualified: 0,
+        quoted: 0,
+        won: 0,
       },
-      showBetaOnboarding: false,
+      showBetaOnboarding:
+        demoCustomers.length === 0 &&
+        demoInquiries.length === 0 &&
+        demoQuotes.length === 0,
       counts: {
-        customers: demoCustomers.length,
-        inquiries: demoInquiries.length,
+        customers: 0,
+        inquiries: 0,
         quotes: demoQuotes.length,
         invoices: demoInvoices.length,
       },
