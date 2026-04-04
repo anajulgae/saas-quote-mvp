@@ -10,6 +10,7 @@ const PUBLIC_PATHS = [
   "/forgot-password",
   "/auth/callback",
   "/signup/check-email",
+  "/reset-password",
 ]
 
 function hasSessionCookie(request: NextRequest) {

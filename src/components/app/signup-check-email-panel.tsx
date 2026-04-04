@@ -9,76 +9,128 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 
-export function SignupCheckEmailPanel() {
+export function SignupCheckEmailPanel({
+  prefillEmail = "",
+  maskedEmail = null,
+}: {
+  /** URL 등에서 넘긴 가입 이메일(재전송 입력 기본값) */
+  prefillEmail?: string
+  /** 표시용 마스킹 주소 */
+  maskedEmail?: string | null
+}) {
   const [state, formAction, isPending] = useActionState(resendSignupConfirmationAction, undefined)
 
   return (
     <Card className="border-border/80 bg-background/95 shadow-md ring-1 ring-border/40">
-      <CardHeader className="space-y-2 pb-2">
+      <CardHeader className="space-y-3 pb-2">
         <div className="flex size-11 items-center justify-center rounded-xl bg-foreground text-background">
           <Mail className="size-5" aria-hidden />
         </div>
+        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.07] px-3 py-2.5 text-sm leading-snug text-foreground">
+          <p className="font-semibold text-emerald-900 dark:text-emerald-100">가입이 거의 완료되었습니다</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            마지막 단계로 이메일 인증만 진행해 주세요. 인증 후 로그인하면 바로 서비스를 이용할 수
+            있습니다.
+          </p>
+        </div>
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          가입 완료 · 다음 단계
+          회원가입 · 이메일 인증
         </p>
         <CardTitle className="text-xl font-semibold tracking-tight">이메일 인증을 마쳐 주세요</CardTitle>
         <CardDescription className="text-sm leading-relaxed text-muted-foreground">
-          방금 가입하신 주소로 인증 메일을 보냈습니다. 메일의 링크를 눌러 인증을 완료한 뒤, 로그인
-          화면에서 접속하면 대시보드로 이어집니다.
+          {maskedEmail ? (
+            <>
+              인증 메일을 보냈습니다. 확인 주소:{" "}
+              <span className="font-medium text-foreground">{maskedEmail}</span>
+            </>
+          ) : (
+            <>가입에 사용하신 주소로 인증 메일을 보냈습니다.</>
+          )}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-5">
-        <ol className="list-inside list-decimal space-y-1.5 rounded-lg border border-border/60 bg-muted/20 px-3 py-3 text-xs leading-relaxed text-muted-foreground">
-          <li className="text-foreground">
-            <span className="font-medium">메일함</span>에서 발신 메일을 엽니다.
+      <CardContent className="space-y-6">
+        <ol className="list-inside list-decimal space-y-1.5 text-sm leading-snug text-muted-foreground">
+          <li>
+            <span className="text-foreground">받은편지함</span>에서 인증 메일을 확인합니다.
           </li>
           <li>
-            <span className="font-medium text-foreground">인증 링크</span>를 눌러 완료합니다.
+            메일의 <span className="text-foreground">인증 링크</span>를 누릅니다.
           </li>
           <li>
-            이 화면을 닫고 <span className="font-medium text-foreground">로그인</span>으로 들어갑니다.
+            인증이 끝나면 <span className="text-foreground">로그인</span>합니다.
           </li>
         </ol>
-        <form action={formAction} className="space-y-3">
-          <p className="text-sm font-medium text-foreground">메일이 오지 않았나요?</p>
-          <div className="space-y-2">
-            <label htmlFor="resend-email" className="sr-only">
-              이메일
-            </label>
-            <Input
-              id="resend-email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="가입에 사용한 이메일"
-              required
-              className="h-11"
-            />
-          </div>
-          {state?.error ? (
-            <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {state.error}
-            </p>
-          ) : null}
-          {state?.ok ? (
-            <p className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-200">
-              인증 메일을 다시 보냈습니다. 메일함을 확인해 주세요.
-            </p>
-          ) : null}
-          <Button type="submit" variant="outline" className="h-10 w-full" disabled={isPending}>
-            {isPending ? (
-              <>
-                <LoaderCircle className="size-4 animate-spin" aria-hidden />
-                발송 중…
-              </>
-            ) : (
-              "인증 메일 다시 보내기"
-            )}
-          </Button>
-        </form>
-        <p className="text-center text-sm text-muted-foreground">
-          <Link href="/login" className="font-medium text-foreground underline-offset-4 hover:underline">
-            로그인으로 돌아가기
+
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          메일 도착까지 <span className="text-foreground/90">1~2분</span> 정도 걸릴 수 있습니다.
+          보이지 않으면 <span className="text-foreground/90">스팸·프로모션함</span>도 확인해 주세요.
+        </p>
+
+        <div className="rounded-lg border border-dashed border-border/80 bg-muted/15 px-3 py-3 text-center text-sm">
+          <p className="text-muted-foreground">이미 인증을 마치셨나요?</p>
+          <Link
+            href="/login"
+            className="mt-1 inline-block font-semibold text-foreground underline-offset-4 hover:underline"
+          >
+            로그인하기
+          </Link>
+        </div>
+
+        <div className="space-y-3 border-t border-border/60 pt-5">
+          <p className="text-sm font-semibold text-foreground">메일을 받지 못하셨나요?</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            가입에 사용한 이메일 주소를 아래에 입력하면 인증 메일을 다시 보냅니다. 주소를 잘못
+            입력했다면{" "}
+            <Link href="/signup" className="font-medium text-foreground underline-offset-4 hover:underline">
+              회원가입
+            </Link>
+            을 처음부터 다시 시도해 주세요.
+          </p>
+          <form action={formAction} className="space-y-3">
+            <div className="space-y-2">
+              <label htmlFor="resend-email" className="text-sm font-medium text-foreground">
+                이메일
+              </label>
+              <Input
+                id="resend-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                placeholder="name@company.kr"
+                defaultValue={prefillEmail}
+                required
+                className="h-11"
+              />
+            </div>
+            {state?.error ? (
+              <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {state.error}
+              </p>
+            ) : null}
+            {state?.ok ? (
+              <p className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-200">
+                인증 메일을 다시 보냈습니다. 잠시 후 메일함을 확인해 주세요.
+              </p>
+            ) : null}
+            <Button type="submit" className="h-11 w-full text-base font-semibold" disabled={isPending}>
+              {isPending ? (
+                <>
+                  <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                  발송 중…
+                </>
+              ) : (
+                "인증 메일 다시 보내기"
+              )}
+            </Button>
+          </form>
+        </div>
+
+        <p className="border-t border-border/50 pt-4 text-center">
+          <Link
+            href="/login"
+            className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            로그인 화면으로 돌아가기
           </Link>
         </p>
       </CardContent>

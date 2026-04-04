@@ -21,7 +21,8 @@ export function UpdatePasswordForm() {
         <div className="space-y-1.5 pt-1">
           <CardTitle className="text-2xl font-semibold tracking-tight">새 비밀번호 설정</CardTitle>
           <CardDescription className="text-sm leading-relaxed text-muted-foreground">
-            메일 링크로 들어온 경우에만 이 화면이 표시됩니다. 저장 후 대시보드로 이동합니다.
+            재설정 메일의 링크를 통해 들어온 경우에만 이 화면을 사용할 수 있습니다. 저장하면 로그인된
+            상태로 대시보드로 이동합니다.
           </CardDescription>
         </div>
       </CardHeader>
@@ -85,9 +86,12 @@ export function UpdatePasswordForm() {
             )}
           </Button>
         </form>
-        <p className="text-center text-sm text-muted-foreground">
-          <Link href="/login" className="font-medium text-foreground underline-offset-4 hover:underline">
-            로그인으로 돌아가기
+        <p className="border-t border-border/50 pt-4 text-center">
+          <Link
+            href="/login"
+            className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            로그인 화면으로
           </Link>
         </p>
       </CardContent>

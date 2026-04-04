@@ -404,7 +404,7 @@ export async function signupAction(_: { error?: string } | undefined, formData: 
     redirect("/dashboard")
   }
 
-  redirect("/signup/check-email")
+  redirect(`/signup/check-email?email=${encodeURIComponent(email)}`)
 }
 
 export async function resendSignupConfirmationAction(
@@ -471,7 +471,7 @@ export async function requestPasswordResetAction(
 
   const origin = getSiteOrigin()
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/auth/update-password")}`,
+    redirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
   })
 
   if (error) {
