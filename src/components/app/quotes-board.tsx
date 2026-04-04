@@ -247,40 +247,68 @@ function QuotesBoardPanel({
   }, [form.customerId, inquiries])
 
   const formValidation = useMemo(() => {
-    const issues: string[] = []
+    const issues: { key: string; text: string }[] = []
     if (!form.customerId) {
-      issues.push("고객을 선택해 주세요.")
+      issues.push({
+        key: "customer",
+        text: "거래처(고객)를 목록에서 선택해 주세요.",
+      })
     }
     if (!form.title.trim()) {
-      issues.push("견적 제목을 입력해 주세요.")
+      issues.push({
+        key: "title",
+        text: "견적 제목을 한 줄 이상 입력해 주세요.",
+      })
     }
-    let emptyNameRows = 0
-    let badQtyRows = 0
-    let badPriceRows = 0
-    form.items.forEach((item) => {
+    const emptyNameRows: number[] = []
+    const badQtyRows: number[] = []
+    const badPriceRows: number[] = []
+    form.items.forEach((item, index) => {
+      const row = index + 1
       if (!item.name.trim()) {
-        emptyNameRows += 1
+        emptyNameRows.push(row)
       }
       const q = Number(item.quantity)
       const p = Number(item.unitPrice)
       if (!Number.isFinite(q) || q <= 0) {
-        badQtyRows += 1
+        badQtyRows.push(row)
       }
       if (!Number.isFinite(p) || p < 0) {
-        badPriceRows += 1
+        badPriceRows.push(row)
       }
     })
-    if (emptyNameRows > 0) {
-      issues.push("최소 한 줄 이상, 항목명을 입력해 주세요.")
+    if (emptyNameRows.length > 0) {
+      const head = emptyNameRows.slice(0, 4).join(", ")
+      const tail =
+        emptyNameRows.length > 4 ? ` … 외 ${emptyNameRows.length - 4}줄` : ""
+      issues.push({
+        key: "item-names",
+        text: `견적 항목: ${head}번째 줄의 항목명이 비어 있습니다. (각 줄마다 이름 필요)${tail}`,
+      })
     }
-    if (badQtyRows > 0) {
-      issues.push("수량을 확인해 주세요. (0보다 큰 숫자)")
+    if (badQtyRows.length > 0) {
+      issues.push({
+        key: "qty",
+        text: `수량: ${badQtyRows.slice(0, 4).join(", ")}번째 줄은 0보다 큰 숫자로 입력해 주세요.${
+          badQtyRows.length > 4 ? ` … 외 ${badQtyRows.length - 4}줄` : ""
+        }`,
+      })
     }
-    if (badPriceRows > 0) {
-      issues.push("단가를 확인해 주세요. (0 이상 숫자)")
+    if (badPriceRows.length > 0) {
+      issues.push({
+        key: "price",
+        text: `단가: ${badPriceRows.slice(0, 4).join(", ")}번째 줄은 0 이상 숫자로 입력해 주세요.${
+          badPriceRows.length > 4 ? ` … 외 ${badPriceRows.length - 4}줄` : ""
+        }`,
+      })
     }
     return { ok: issues.length === 0, issues }
   }, [form])
+
+  const validationSummaryForTitle = useMemo(
+    () => formValidation.issues.map((i) => i.text).join("\n"),
+    [formValidation.issues]
+  )
 
   const selectedCustomerLabel = useMemo(() => {
     const c = customers.find((x) => x.id === form.customerId)
@@ -446,13 +474,30 @@ function QuotesBoardPanel({
   const formFields = (
     <div className="grid gap-5">
       <section className="rounded-lg border border-border/60 bg-muted/10 px-3 py-3 sm:px-4">
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           1) 고객 · 문의
         </p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium">고객</label>
-            <p className="text-[11px] text-muted-foreground">견적서에 표시되는 거래처입니다.</p>
+        <p className="mb-3 text-[11px] leading-snug text-muted-foreground sm:grid sm:grid-cols-2 sm:gap-4">
+          <span>
+            <span className="font-medium text-foreground/80">왼쪽</span> — 견적을 받을{" "}
+            <span className="font-medium text-foreground">거래처(고객)</span>
+          </span>
+          <span>
+            <span className="font-medium text-foreground/80">오른쪽</span> —{" "}
+            <span className="font-medium text-foreground">연결 문의</span>(선택, 있으면 제목·요약 자동 반영)
+          </span>
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+          <div className="space-y-1.5 sm:border-l-2 sm:border-primary/35 sm:pl-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-sm font-semibold tracking-tight">거래처(고객)</label>
+              <span className="rounded border border-destructive/25 bg-destructive/10 px-1.5 py-px text-[10px] font-semibold text-destructive">
+                필수
+              </span>
+            </div>
+            <p className="text-[11px] leading-snug text-muted-foreground">
+              견적서·안내에 쓰이는 상대 고객입니다.
+            </p>
             <Select
               value={form.customerId}
               onValueChange={(value) =>
@@ -484,20 +529,30 @@ function QuotesBoardPanel({
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium">연결 문의</label>
-            <p className="text-[11px] text-muted-foreground">
+          <div className="space-y-1.5 sm:border-l-2 sm:border-border/80 sm:pl-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-sm font-semibold tracking-tight">연결 문의</label>
+              <span className="rounded border border-border/60 bg-background/80 px-1.5 py-px text-[10px] font-medium text-muted-foreground">
+                선택
+              </span>
+            </div>
+            <p className="text-[11px] leading-snug text-muted-foreground">
               {form.customerId
-                ? "선택 시 제목·요약이 자동으로 채워집니다. 필요하면 수정하세요."
-                : "먼저 고객을 선택하면 해당 고객의 문의만 표시됩니다."}
+                ? "문의 연결은 선택입니다. 고를 경우 제목·요약이 채워지며, 없어도 견적 작성은 가능합니다."
+                : "왼쪽에서 고객을 먼저 고르면, 해당 고객의 문의만 여기에 나타납니다."}
             </p>
             {!form.customerId ? (
               <div className="flex min-h-9 items-center rounded-lg border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-                먼저 고객을 선택해 주세요
+                먼저 왼쪽에서 고객을 선택해 주세요
               </div>
             ) : availableInquiries.length === 0 ? (
-              <div className="flex min-h-9 items-center rounded-lg border border-border/60 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
-                연결 가능한 문의 없음
+              <div className="space-y-1.5">
+                <div className="flex min-h-9 items-center rounded-lg border border-border/60 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
+                  이 고객에 연결 가능한 문의가 없습니다
+                </div>
+                <p className="text-[10px] leading-snug text-muted-foreground">
+                  문의 없이도 견적을 이어서 작성할 수 있습니다.
+                </p>
               </div>
             ) : (
               <Select
@@ -564,18 +619,23 @@ function QuotesBoardPanel({
           </p>
         ) : null}
         <div className="space-y-1.5">
-          <label className="text-xs font-medium">견적 제목</label>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-xs font-semibold">견적 제목</label>
+            <span className="rounded border border-destructive/25 bg-destructive/10 px-1.5 py-px text-[10px] font-semibold text-destructive">
+              필수
+            </span>
+          </div>
           <Input
             className="h-9"
             value={form.title}
             onChange={(event) =>
               setForm((current) => ({ ...current, title: event.target.value }))
             }
-            placeholder="예: ○○ 프로젝트 — 견적"
+            placeholder="예: 브랜드 영상 제작 — 견적"
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-xs font-medium">견적 요약</label>
+          <label className="text-xs font-semibold">견적 요약</label>
           <p className="text-[11px] text-muted-foreground">
             설정의 기본 견적 템플릿·문의 내용이 여기에 들어갑니다. 견적 상단 안내 문구로 쓰입니다.
           </p>
@@ -585,6 +645,7 @@ function QuotesBoardPanel({
               setForm((current) => ({ ...current, summary: event.target.value }))
             }
             className="min-h-[5.5rem] text-sm"
+            placeholder="예: 포함 범위, 납기, 결제 조건 등 고객에게 전달할 안내를 적어 주세요"
           />
         </div>
         <details className="rounded-lg border border-border/50 bg-muted/20 [&_summary]:cursor-pointer [&_summary]:select-none">
@@ -668,9 +729,15 @@ function QuotesBoardPanel({
           <table className="w-full min-w-[640px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-border/60 bg-muted/40 text-left text-[11px] font-medium text-muted-foreground">
-                <th className="px-2 py-2 pl-3">항목명</th>
-                <th className="w-24 px-2 py-2 text-right">수량</th>
-                <th className="w-32 px-2 py-2 text-right">단가</th>
+                <th className="px-2 py-2 pl-3">
+                  항목명 <span className="text-destructive">*</span>
+                </th>
+                <th className="w-24 px-2 py-2 text-right">
+                  수량 <span className="text-destructive">*</span>
+                </th>
+                <th className="w-32 px-2 py-2 text-right">
+                  단가 <span className="text-destructive">*</span>
+                </th>
                 <th className="w-32 px-2 py-2 text-right">금액</th>
                 <th className="w-11 p-2" aria-label="삭제" />
               </tr>
@@ -695,7 +762,7 @@ function QuotesBoardPanel({
                         onChange={(event) =>
                           updateItem(index, { description: event.target.value })
                         }
-                        placeholder="선택 입력"
+                        placeholder="설명·비고 (선택) — 예: 원본 4K 제공"
                       />
                     </td>
                     <td className="px-2 py-2 align-top">
@@ -706,6 +773,7 @@ function QuotesBoardPanel({
                           updateItem(index, { quantity: event.target.value })
                         }
                         inputMode="decimal"
+                        placeholder="1"
                       />
                     </td>
                     <td className="px-2 py-2 align-top">
@@ -716,6 +784,7 @@ function QuotesBoardPanel({
                           updateItem(index, { unitPrice: event.target.value })
                         }
                         inputMode="numeric"
+                        placeholder="예: 500000"
                       />
                     </td>
                     <td className="px-2 py-2 align-top">
@@ -768,7 +837,7 @@ function QuotesBoardPanel({
                   </Button>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] text-muted-foreground">항목명</label>
+                  <label className="text-[11px] text-muted-foreground">항목명 *</label>
                   <Input
                     className="h-9"
                     value={item.name}
@@ -784,12 +853,12 @@ function QuotesBoardPanel({
                     onChange={(event) =>
                       updateItem(index, { description: event.target.value })
                     }
-                    placeholder="선택 입력"
+                    placeholder="설명·비고 (선택) — 예: 원본 4K 제공"
                   />
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="space-y-1">
-                    <label className="text-[11px] text-muted-foreground">수량</label>
+                    <label className="text-[11px] text-muted-foreground">수량 *</label>
                     <Input
                       className="h-9 text-right tabular-nums"
                       value={item.quantity}
@@ -797,10 +866,11 @@ function QuotesBoardPanel({
                         updateItem(index, { quantity: event.target.value })
                       }
                       inputMode="decimal"
+                      placeholder="1"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[11px] text-muted-foreground">단가</label>
+                    <label className="text-[11px] text-muted-foreground">단가 *</label>
                     <Input
                       className="h-9 text-right tabular-nums"
                       value={item.unitPrice}
@@ -808,6 +878,7 @@ function QuotesBoardPanel({
                         updateItem(index, { unitPrice: event.target.value })
                       }
                       inputMode="numeric"
+                      placeholder="예: 500000"
                     />
                   </div>
                   <div className="space-y-1">
@@ -841,23 +912,25 @@ function QuotesBoardPanel({
         </div>
         <div
           key={`tot-${previewTotal.total}-${previewTotal.subtotal}`}
-          className="flex flex-col justify-center rounded-xl border-2 border-primary/30 bg-gradient-to-b from-primary/[0.07] to-primary/[0.02] px-4 py-3.5 shadow-md ring-1 ring-primary/10 lg:sticky lg:top-3 lg:self-start"
+          className="flex flex-col justify-center rounded-xl border border-primary/25 bg-gradient-to-b from-primary/[0.06] to-background/95 px-4 py-3.5 shadow-sm ring-1 ring-primary/10 backdrop-blur-sm lg:sticky lg:top-4 lg:min-w-[280px] lg:self-start lg:shadow-md"
         >
           <p className="text-[11px] font-bold uppercase tracking-wide text-primary">합계</p>
-          <p className="mt-0.5 text-[10px] text-muted-foreground">항목의 수량×단가를 합산한 뒤 부가세 10%를 더한 금액입니다.</p>
+          <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
+            항목마다 수량×단가를 더한 뒤, 부가세 10%를 더합니다. 입력이 바뀌면 즉시 반영됩니다.
+          </p>
           <div className="mt-3 space-y-2 text-sm">
             <div className="flex justify-between gap-4 tabular-nums">
               <span className="text-muted-foreground">공급가 합계</span>
-              <span className="font-medium">{formatCurrency(previewTotal.subtotal)}</span>
+              <span className="font-medium tabular-nums">{formatCurrency(previewTotal.subtotal)}</span>
             </div>
             <div className="flex justify-between gap-4 tabular-nums">
               <span className="text-muted-foreground">부가세 (10%)</span>
-              <span className="font-medium">{formatCurrency(previewTotal.tax)}</span>
+              <span className="font-medium tabular-nums">{formatCurrency(previewTotal.tax)}</span>
             </div>
             <div className="border-t border-primary/20 pt-2.5">
               <div className="flex items-baseline justify-between gap-4 tabular-nums">
                 <span className="text-sm font-semibold text-foreground">총액</span>
-                <span className="text-xl font-bold tracking-tight text-primary sm:text-2xl">
+                <span className="text-xl font-bold tracking-tight text-primary tabular-nums">
                   {formatCurrency(previewTotal.total)}
                 </span>
               </div>
@@ -873,8 +946,8 @@ function QuotesBoardPanel({
         >
           <p className="font-semibold">아래를 채우면 저장할 수 있습니다</p>
           <ul className="mt-1.5 list-inside list-disc space-y-0.5 marker:text-amber-600">
-            {formValidation.issues.map((msg) => (
-              <li key={msg}>{msg}</li>
+            {formValidation.issues.map((issue) => (
+              <li key={issue.key}>{issue.text}</li>
             ))}
           </ul>
         </div>
@@ -913,10 +986,11 @@ function QuotesBoardPanel({
             {formFields}
           </div>
           <div className="flex shrink-0 flex-col gap-2 border-t border-border/60 bg-background/95 px-4 py-3 shadow-[0_-6px_16px_rgba(0,0,0,0.06)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:shadow-[0_-6px_20px_rgba(0,0,0,0.25)]">
-            <p className="text-[11px] leading-snug text-muted-foreground sm:max-w-[55%]">
+            <p className="text-[11px] leading-snug text-muted-foreground sm:max-w-[58%]">
               {!formValidation.ok ? (
                 <span className="font-medium text-amber-900 dark:text-amber-100">
-                  필수 항목을 입력하면 저장할 수 있습니다.
+                  위쪽 노란색 안내에 적힌 항목을 채우면 저장됩니다. 저장 버튼 위에 마우스를 올리면
+                  요약 힌트를 볼 수 있습니다.
                 </span>
               ) : (
                 <>입력을 마쳤다면 저장으로 견적을 등록합니다.</>
@@ -926,18 +1000,34 @@ function QuotesBoardPanel({
               <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
                 취소
               </Button>
-              <Button
-                type="button"
-                onClick={saveCreate}
-                disabled={isPending || !formValidation.ok}
-                className="gap-2"
-                title={!formValidation.ok ? formValidation.issues.join(" ") : undefined}
+              <span
+                className={cn(
+                  "inline-flex",
+                  !formValidation.ok && !isPending ? "cursor-help" : ""
+                )}
+                title={
+                  !formValidation.ok && !isPending
+                    ? validationSummaryForTitle || "필수 항목을 채워 주세요"
+                    : undefined
+                }
               >
-                {isPending ? (
-                  <Loader2 className="size-4 animate-spin" aria-hidden />
-                ) : null}
-                저장
-              </Button>
+                <Button
+                  type="button"
+                  onClick={saveCreate}
+                  disabled={isPending || !formValidation.ok}
+                  className="gap-2"
+                  title={
+                    formValidation.ok && !isPending
+                      ? "입력한 내용으로 견적을 저장합니다"
+                      : undefined
+                  }
+                >
+                  {isPending ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                  ) : null}
+                  저장
+                </Button>
+              </span>
             </div>
           </div>
         </DialogContent>
@@ -1221,10 +1311,11 @@ function QuotesBoardPanel({
             {formFields}
           </div>
           <div className="flex shrink-0 flex-col gap-2 border-t border-border/60 bg-background/95 px-4 py-3 shadow-[0_-6px_16px_rgba(0,0,0,0.06)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:shadow-[0_-6px_20px_rgba(0,0,0,0.25)]">
-            <p className="text-[11px] leading-snug text-muted-foreground sm:max-w-[55%]">
+            <p className="text-[11px] leading-snug text-muted-foreground sm:max-w-[58%]">
               {!formValidation.ok ? (
                 <span className="font-medium text-amber-900 dark:text-amber-100">
-                  필수 항목을 입력하면 저장할 수 있습니다.
+                  위쪽 노란색 안내에 적힌 항목을 채우면 저장됩니다. 저장 버튼 위에 마우스를 올리면
+                  요약 힌트를 볼 수 있습니다.
                 </span>
               ) : (
                 <>수정 내용을 저장하면 DB에 반영됩니다.</>
@@ -1234,18 +1325,34 @@ function QuotesBoardPanel({
               <Button variant="outline" type="button" onClick={resetForm}>
                 닫기
               </Button>
-              <Button
-                type="button"
-                onClick={saveEdit}
-                disabled={isPending || !formValidation.ok}
-                className="gap-2"
-                title={!formValidation.ok ? formValidation.issues.join(" ") : undefined}
+              <span
+                className={cn(
+                  "inline-flex",
+                  !formValidation.ok && !isPending ? "cursor-help" : ""
+                )}
+                title={
+                  !formValidation.ok && !isPending
+                    ? validationSummaryForTitle || "필수 항목을 채워 주세요"
+                    : undefined
+                }
               >
-                {isPending ? (
-                  <Loader2 className="size-4 animate-spin" aria-hidden />
-                ) : null}
-                저장
-              </Button>
+                <Button
+                  type="button"
+                  onClick={saveEdit}
+                  disabled={isPending || !formValidation.ok}
+                  className="gap-2"
+                  title={
+                    formValidation.ok && !isPending
+                      ? "수정한 내용을 저장합니다"
+                      : undefined
+                  }
+                >
+                  {isPending ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                  ) : null}
+                  저장
+                </Button>
+              </span>
             </div>
           </div>
         </DialogContent>
