@@ -464,6 +464,8 @@ export function SettingsForm({
         </CardContent>
       </Card>
 
+      <SettingsPublicInquiryCard siteOrigin={siteOrigin} initialSettings={settings} />
+
       <div className="relative py-1">
         <div className="absolute inset-0 flex items-center" aria-hidden>
           <span className="w-full border-t border-border/60" />
