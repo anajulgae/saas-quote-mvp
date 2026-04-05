@@ -52,7 +52,8 @@ export function middleware(request: NextRequest) {
   const isPublic =
     PUBLIC_PATHS.some((path) => pathname.startsWith(path)) ||
     pathname.startsWith("/quote-view") ||
-    pathname.startsWith("/invoice-view")
+    pathname.startsWith("/invoice-view") ||
+    pathname.startsWith("/request/")
   const isAuthenticated = hasSessionCookie(request)
 
   if (pathname === "/") {

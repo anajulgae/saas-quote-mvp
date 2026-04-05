@@ -3,43 +3,14 @@ import { NextResponse } from "next/server"
 import { planAllowsFeature } from "@/lib/plan-features"
 import { reportServerError } from "@/lib/observability"
 import { getAuthenticatedUserForApi } from "@/lib/server/api-auth"
+import {
+  parseInquiryStructure,
+  type InquiryStructuredPayload,
+} from "@/lib/server/inquiry-structure-core"
 import { completeJsonChatForFeature, OpenAiError } from "@/lib/server/openai-chat"
 import { openAiErrorUserPayload } from "@/lib/server/openai-user-errors"
 
-/** API 응답·AI 계약 (필드명은 env 프롬프트와 일치) */
-export type InquiryStructuredPayload = {
-  title: string
-  channel: string
-  scopeSummary: string
-  structuredSummary: string
-  followUpNote: string
-}
-
-function str(o: Record<string, unknown>, k: string): string {
-  return typeof o[k] === "string" ? (o[k] as string).trim() : ""
-}
-
-function parseStructure(obj: unknown): InquiryStructuredPayload {
-  if (!obj || typeof obj !== "object") {
-    throw new Error("객체 형식이 아닙니다.")
-  }
-  const o = obj as Record<string, unknown>
-  const title = str(o, "title") || str(o, "suggestedTitle")
-  const channel = str(o, "channel") || "카카오톡"
-  const scopeSummary = str(o, "scopeSummary") || str(o, "estimatedScope")
-  const structuredSummary = str(o, "structuredSummary") || str(o, "requestSummary")
-  const followUpNote = str(o, "followUpNote") || str(o, "followupMemo")
-  if (!structuredSummary.trim() && !title.trim()) {
-    throw new Error("structuredSummary 또는 title 이 필요합니다.")
-  }
-  return {
-    title: title.trim() || "신규 문의",
-    channel,
-    scopeSummary,
-    structuredSummary,
-    followUpNote,
-  }
-}
+export type { InquiryStructuredPayload }
 
 const SYSTEM_PROMPT = `한국어 문의 원문→구조화. JSON만 출력. 설명 문장 금지.
 키: title(한 줄), channel(카카오톡|전화|이메일|방문|기타), scopeSummary(업종·범위 한 줄), structuredSummary(핵심 요약 2~4문장), followUpNote(내부 팔로업 한 줄, 없으면 "").
@@ -75,7 +46,7 @@ export async function POST(req: Request) {
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: rawText.slice(0, 8000) },
       ],
-      parse: parseStructure,
+      parse: (raw) => parseInquiryStructure(raw, { defaultChannel: "카카오톡" }),
     })
 
     if (!structured.title.trim()) {

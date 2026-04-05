@@ -11,6 +11,7 @@ import {
   MoreHorizontal,
   Pencil,
   Plus,
+  Share2,
   Sparkles,
   UserPlus,
 } from "lucide-react"
@@ -18,6 +19,7 @@ import { toast } from "sonner"
 
 import { createInquiryAction, updateInquiryAction } from "@/app/actions"
 import { EmptyState } from "@/components/app/empty-state"
+import { InquiryFormShareDialog } from "@/components/app/inquiry-form-share-dialog"
 import { PageHeader } from "@/components/app/page-header"
 import { OpsToolbarFilterButton } from "@/components/app/ops-status-chip"
 import { InquiryStageBadge } from "@/components/app/status-badge"
@@ -61,6 +63,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { inquiryStageOptions } from "@/lib/constants"
+import type { PublicInquiryFormSnippet } from "@/lib/data"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import type { Customer, InquiryWithCustomer, InquiryStage } from "@/types/domain"
@@ -118,6 +121,9 @@ export function InquiriesBoard({
   stageSummary,
   initialCustomerId,
   initialCreateOpen = false,
+  publicInquiryForm,
+  siteOrigin,
+  isDemoWorkspace,
 }: {
   inquiries: InquiryWithCustomer[]
   customers: Customer[]
@@ -125,6 +131,9 @@ export function InquiriesBoard({
   /** 고객 카드 등에서 전달: `/inquiries?customer=uuid&new=1` */
   initialCustomerId?: string
   initialCreateOpen?: boolean
+  publicInquiryForm: PublicInquiryFormSnippet | null
+  siteOrigin: string
+  isDemoWorkspace: boolean
 }) {
   const router = useRouter()
   const flowStepsRef = useRef<HTMLDivElement>(null)
@@ -141,7 +150,13 @@ export function InquiriesBoard({
   const [channelFilter, setChannelFilter] = useState<string>("all")
   const [customerFilterId, setCustomerFilterId] = useState<string | "all">("all")
   const [structureBusy, setStructureBusy] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
   const deepLinkAppliedRef = useRef(false)
+
+  const publicFormUrl =
+    publicInquiryForm?.publicInquiryFormEnabled && publicInquiryForm.publicInquiryFormToken
+      ? `${siteOrigin.replace(/\/$/, "")}/request/${publicInquiryForm.publicInquiryFormToken}`
+      : ""
 
   useEffect(() => {
     if (!initialCreateOpen && !initialCustomerId?.trim()) {
@@ -591,6 +606,32 @@ export function InquiriesBoard({
         description="문의에 채널·일정·예상 금액을 남기고, 후속조치와 견적까지 한 흐름으로 관리합니다."
         action={
           <div className="flex w-full flex-col gap-1.5 sm:w-auto sm:items-end">
+            <div className="flex w-full flex-wrap justify-end gap-2">
+              {isDemoWorkspace ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  disabled
+                  title="데모 워크스페이스에서는 공개 문의 폼을 쓸 수 없습니다"
+                >
+                  <Share2 className="size-3.5" aria-hidden />
+                  공개 문의 폼
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 gap-1.5"
+                  onClick={() => setShareOpen(true)}
+                >
+                  <Share2 className="size-3.5" aria-hidden />
+                  공개 문의 폼
+                </Button>
+              )}
+            </div>
             {hasCustomers ? (
               <Button type="button" className="h-9 w-full gap-2 sm:w-auto" onClick={openCreateDialog}>
                 <Plus className="size-4" />
@@ -1167,6 +1208,13 @@ export function InquiriesBoard({
           </div>
         ) : null}
       </OpsDetailSheet>
+
+      <InquiryFormShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        formUrl={publicFormUrl}
+        businessName={publicInquiryForm?.businessName ?? ""}
+      />
     </div>
   )
 }

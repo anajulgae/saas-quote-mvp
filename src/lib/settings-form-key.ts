@@ -15,6 +15,12 @@ export function computeBusinessSettingsFormKey(settings: BusinessSettings): stri
     settings.reminderMessage,
     settings.sealImageUrl ?? "",
     settings.sealEnabled ? "1" : "0",
+    settings.publicInquiryFormEnabled ? "1" : "0",
+    settings.publicInquiryFormToken ?? "",
+    settings.publicInquiryIntro,
+    settings.publicInquiryConsentIntro,
+    settings.publicInquiryConsentRetention,
+    settings.publicInquiryCompletionMessage,
   ].join("\u001f")
 }
 

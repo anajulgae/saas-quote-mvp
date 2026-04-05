@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation"
 import { Loader2, Save } from "lucide-react"
 import { toast } from "sonner"
 
-import { saveBusinessSettingsOnlyAction, saveSealSettingsAction, saveTemplatesSettingsAction } from "@/app/actions"
+import {
+  saveBusinessSettingsOnlyAction,
+  saveSealSettingsAction,
+  saveTemplatesSettingsAction,
+} from "@/app/actions"
+import { SettingsPublicInquiryCard } from "@/components/app/settings-public-inquiry-card"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -80,11 +85,13 @@ export function SettingsForm({
   templates,
   currentPlan,
   planColumnMissing,
+  siteOrigin,
 }: {
   initialSettings: BusinessSettings
   templates: Template[]
   currentPlan: BillingPlan
   planColumnMissing: boolean
+  siteOrigin: string
 }) {
   const router = useRouter()
   const [isBizPending, startBizTransition] = useTransition()

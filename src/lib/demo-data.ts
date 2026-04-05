@@ -36,6 +36,12 @@ export const demoBusinessSettings: BusinessSettings = {
   sealEnabled: false,
   sealImageUrl: undefined,
   updatedAt: "2026-01-01T00:00:00.000Z",
+  publicInquiryFormEnabled: false,
+  publicInquiryFormToken: null,
+  publicInquiryIntro: "",
+  publicInquiryConsentIntro: "",
+  publicInquiryConsentRetention: "",
+  publicInquiryCompletionMessage: "",
 }
 
 export const demoCustomers: Customer[] = [

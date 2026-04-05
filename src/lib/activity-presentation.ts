@@ -33,6 +33,14 @@ const headlineByAction: Record<string, string> = {
   "invoice.public_link_opened": "청구 링크 열람",
   "settings.saved": "설정 저장",
   "settings.seal_updated": "직인 설정",
+  "inquiry_form.token_issued": "공개 문의 폼 링크",
+  "inquiry_form.settings_saved": "공개 문의 폼 설정",
+  "inquiry_form.disabled": "공개 문의 폼",
+  "inquiry_form.link_copied": "문의 폼 링크 복사",
+  "inquiry_form.email_opened": "문의 폼 메일 작성",
+  "inquiry_form.kakao_copied": "문의 폼 카카오 문구",
+  "inquiry_form.sms_copied": "문의 폼 문자 문구",
+  "inquiry_form.qr_viewed": "문의 폼 QR",
 }
 
 export function resolveActivityKind(action: string): ActivityKind {
@@ -50,6 +58,9 @@ export function resolveActivityKind(action: string): ActivityKind {
   }
   if (action.startsWith("invoice.")) {
     return "invoice"
+  }
+  if (action.startsWith("inquiry_form.")) {
+    return "inquiry"
   }
   return "other"
 }

@@ -162,6 +162,14 @@ export interface BusinessSettings {
   sealEnabled: boolean
   /** 서버 행 갱신 시각 — 클라이언트 폼과 서버 스냅샷 동기화용 */
   updatedAt?: string
+  /** 고객 공개 문의 폼 (0007 마이그레이션) */
+  publicInquiryFormEnabled: boolean
+  /** 공개 URL `/request/[token]` — 없으면 비활성·미발급 */
+  publicInquiryFormToken: string | null
+  publicInquiryIntro: string
+  publicInquiryConsentIntro: string
+  publicInquiryConsentRetention: string
+  publicInquiryCompletionMessage: string
 }
 
 export type ActivityKind =

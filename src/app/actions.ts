@@ -32,7 +32,9 @@ import {
   getBusinessFromIdentity,
   getInvoiceOutboundSnapshot,
   getQuoteOutboundSnapshot,
+  logInquiryFormShareActionRecord,
   saveBusinessSettingsRecord,
+  savePublicInquiryFormRecord,
   saveTemplatesRecord,
   updateBusinessSealSettingsRecord,
   updateInquiryRecord,
@@ -1351,5 +1353,62 @@ export async function sendInvoiceEmailAction(input: z.infer<typeof sendInvoiceEm
       ok: false as const,
       error: toUserFacingActionError(error, "이메일을 보내지 못했습니다."),
     }
+  }
+}
+
+const publicInquiryFormSaveSchema = z.object({
+  enabled: z.boolean(),
+  intro: z.string().max(4000).optional().default(""),
+  consentIntro: z.string().max(8000).optional().default(""),
+  consentRetention: z.string().max(8000).optional().default(""),
+  completionMessage: z.string().max(4000).optional().default(""),
+  regenerateToken: z.boolean().optional().default(false),
+})
+
+export async function savePublicInquiryFormSettingsAction(raw: z.infer<typeof publicInquiryFormSaveSchema>) {
+  const session = await getAppSession()
+  if (!session?.user?.id) {
+    return { ok: false as const, error: "로그인이 필요합니다." }
+  }
+  if (session.mode === "demo") {
+    return { ok: false as const, error: "데모 환경에서는 공개 문의 폼을 사용할 수 없습니다." }
+  }
+  try {
+    const parsed = publicInquiryFormSaveSchema.parse(raw)
+    const result = await savePublicInquiryFormRecord({
+      enabled: parsed.enabled,
+      intro: parsed.intro ?? "",
+      consentIntro: parsed.consentIntro ?? "",
+      consentRetention: parsed.consentRetention ?? "",
+      completionMessage: parsed.completionMessage ?? "",
+      regenerateToken: parsed.regenerateToken ?? false,
+    })
+    revalidatePath("/settings")
+    revalidatePath("/inquiries")
+    return { ok: true as const, settings: result.settings }
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      return { ok: false as const, error: e.issues[0]?.message ?? "입력값을 확인해 주세요." }
+    }
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(e, "공개 문의 폼 설정을 저장하지 못했습니다."),
+    }
+  }
+}
+
+export async function logInquiryFormShareAction(kind: string) {
+  const session = await getAppSession()
+  if (!session?.user?.id || session.mode === "demo") {
+    return
+  }
+  const allowed = new Set(["link_copied", "email_opened", "kakao_copied", "sms_copied", "qr_viewed"])
+  if (!allowed.has(kind)) {
+    return
+  }
+  try {
+    await logInquiryFormShareActionRecord(kind)
+  } catch {
+    return
   }
 }

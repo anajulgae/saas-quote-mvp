@@ -202,6 +202,12 @@ function mapBusinessSettings(row: BusinessSettingsRow): BusinessSettings {
     sealImageUrl: row.seal_image_url ?? undefined,
     sealEnabled: Boolean(row.seal_enabled),
     updatedAt: row.updated_at,
+    publicInquiryFormEnabled: Boolean(row.public_inquiry_form_enabled),
+    publicInquiryFormToken: row.public_inquiry_form_token ?? null,
+    publicInquiryIntro: row.public_inquiry_intro ?? "",
+    publicInquiryConsentIntro: row.public_inquiry_consent_intro ?? "",
+    publicInquiryConsentRetention: row.public_inquiry_consent_retention ?? "",
+    publicInquiryCompletionMessage: row.public_inquiry_completion_message ?? "",
   }
 }
 
@@ -1845,6 +1851,126 @@ export async function saveBusinessSettingsRecord(input: {
   }
 }
 
+export type PublicInquiryFormSnippet = Pick<
+  BusinessSettings,
+  | "publicInquiryFormEnabled"
+  | "publicInquiryFormToken"
+  | "businessName"
+  | "publicInquiryIntro"
+  | "publicInquiryConsentIntro"
+  | "publicInquiryConsentRetention"
+  | "publicInquiryCompletionMessage"
+>
+
+export async function savePublicInquiryFormRecord(input: {
+  enabled: boolean
+  intro: string
+  consentIntro: string
+  consentRetention: string
+  completionMessage: string
+  regenerateToken: boolean
+}) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    throw new Error("데모 환경에서는 공개 문의 폼을 저장할 수 없습니다.")
+  }
+
+  const { data: cur, error: curErr } = await context.supabase
+    .from("business_settings")
+    .select("public_inquiry_form_token")
+    .eq("user_id", context.userId)
+    .maybeSingle()
+
+  if (curErr) {
+    throw curErr
+  }
+
+  const prevToken = (cur as { public_inquiry_form_token?: string | null } | null)
+    ?.public_inquiry_form_token
+
+  let nextToken = prevToken ?? null
+  if (input.enabled) {
+    if (!nextToken || input.regenerateToken) {
+      nextToken = randomBytes(16).toString("hex")
+    }
+  }
+
+  const patch = {
+    public_inquiry_form_enabled: input.enabled,
+    public_inquiry_form_token: nextToken,
+    public_inquiry_intro: input.intro.trim() || null,
+    public_inquiry_consent_intro: input.consentIntro.trim() || null,
+    public_inquiry_consent_retention: input.consentRetention.trim() || null,
+    public_inquiry_completion_message: input.completionMessage.trim() || null,
+  }
+
+  const { error } = await context.supabase
+    .from("business_settings")
+    .update(patch)
+    .eq("user_id", context.userId)
+
+  if (error) {
+    const msg = String((error as { message?: string }).message ?? "")
+    const code = (error as { code?: string }).code
+    const missing =
+      msg.includes("public_inquiry") || code === "PGRST204" || code === "42703"
+    if (missing) {
+      throw new Error(
+        "DB에 공개 문의 폼 컬럼이 없습니다. Supabase에 supabase/migrations/0007_public_inquiry_form.sql 을 적용해 주세요."
+      )
+    }
+    throw error
+  }
+
+  const { data: row, error: rowError } = await context.supabase
+    .from("business_settings")
+    .select("*")
+    .eq("user_id", context.userId)
+    .single()
+
+  if (rowError || !row) {
+    throw rowError ?? new Error("business_settings 조회에 실패했습니다.")
+  }
+
+  const issued = input.enabled && nextToken && (!prevToken || input.regenerateToken)
+  await createActivityLog({
+    action: issued ? "inquiry_form.token_issued" : "inquiry_form.settings_saved",
+    description: input.enabled
+      ? issued
+        ? "공개 문의 폼 링크가 발급·갱신되었습니다."
+        : "공개 문의 폼 설정이 저장되었습니다."
+      : "공개 문의 폼이 비활성화되었습니다.",
+    metadata: {
+      enabled: input.enabled,
+    },
+  })
+
+  return {
+    mode: "supabase" as const,
+    settings: mapBusinessSettings(row as BusinessSettingsRow),
+  }
+}
+
+export async function logInquiryFormShareActionRecord(kind: string) {
+  const context = await getDataContext()
+  if (context.mode === "demo") {
+    return
+  }
+  const labels: Record<string, string> = {
+    link_copied: "문의 폼 링크를 복사했습니다.",
+    email_opened: "문의 폼 안내 메일 작성 화면을 열었습니다.",
+    kakao_copied: "카카오톡용 문의 폼 안내 문구를 복사했습니다.",
+    sms_copied: "문자용 문의 폼 안내 문구를 복사했습니다.",
+    qr_viewed: "문의 폼 QR 코드를 확인했습니다.",
+  }
+  await createActivityLog({
+    action: `inquiry_form.${kind}`,
+    description: labels[kind] ?? "문의 폼 공유 동작이 기록되었습니다.",
+    metadata: { kind },
+  })
+}
+
 export async function saveTemplatesRecord(
   templates: Array<{
     id?: string
@@ -1918,6 +2044,8 @@ export async function getInquiriesPageData(): Promise<{
   inquiries: InquiryWithCustomer[]
   customers: Customer[]
   stageSummary: Record<"new" | "qualified" | "quoted", number>
+  publicInquiryForm: PublicInquiryFormSnippet | null
+  isDemoWorkspace: boolean
 }> {
   const context = await getDataContext()
 
@@ -1927,20 +2055,40 @@ export async function getInquiriesPageData(): Promise<{
       inquiries: [],
       customers: [],
       stageSummary: { new: 0, qualified: 0, quoted: 0 },
+      publicInquiryForm: {
+        publicInquiryFormEnabled: demoBusinessSettings.publicInquiryFormEnabled,
+        publicInquiryFormToken: demoBusinessSettings.publicInquiryFormToken,
+        businessName: demoBusinessSettings.businessName,
+        publicInquiryIntro: demoBusinessSettings.publicInquiryIntro,
+        publicInquiryConsentIntro: demoBusinessSettings.publicInquiryConsentIntro,
+        publicInquiryConsentRetention: demoBusinessSettings.publicInquiryConsentRetention,
+        publicInquiryCompletionMessage: demoBusinessSettings.publicInquiryCompletionMessage,
+      },
+      isDemoWorkspace: true,
     }
   }
 
-  const [{ data: customerRows, error: customerError }, { data: inquiryRows, error: inquiryError }] =
-    await Promise.all([
-      context.supabase
-        .from("customers")
-        .select("*")
-        .order("created_at", { ascending: false }),
-      context.supabase
-        .from("inquiries")
-        .select("*")
-        .order("created_at", { ascending: false }),
-    ])
+  const [
+    { data: customerRows, error: customerError },
+    { data: inquiryRows, error: inquiryError },
+    { data: bsRow, error: bsError },
+  ] = await Promise.all([
+    context.supabase
+      .from("customers")
+      .select("*")
+      .order("created_at", { ascending: false }),
+    context.supabase
+      .from("inquiries")
+      .select("*")
+      .order("created_at", { ascending: false }),
+    context.supabase
+      .from("business_settings")
+      .select(
+        "public_inquiry_form_enabled, public_inquiry_form_token, business_name, public_inquiry_intro, public_inquiry_consent_intro, public_inquiry_consent_retention, public_inquiry_completion_message"
+      )
+      .eq("user_id", context.userId)
+      .maybeSingle(),
+  ])
 
   if (customerError) {
     throw customerError
@@ -1948,6 +2096,10 @@ export async function getInquiriesPageData(): Promise<{
 
   if (inquiryError) {
     throw inquiryError
+  }
+
+  if (bsError) {
+    throw bsError
   }
 
   const customerRowsSafe = (customerRows ?? []) as CustomerRow[]
@@ -1962,6 +2114,28 @@ export async function getInquiriesPageData(): Promise<{
     }
   })
 
+  const bs = bsRow as {
+    public_inquiry_form_enabled?: boolean | null
+    public_inquiry_form_token?: string | null
+    business_name?: string | null
+    public_inquiry_intro?: string | null
+    public_inquiry_consent_intro?: string | null
+    public_inquiry_consent_retention?: string | null
+    public_inquiry_completion_message?: string | null
+  } | null
+
+  const publicInquiryForm: PublicInquiryFormSnippet | null = bs
+    ? {
+        publicInquiryFormEnabled: Boolean(bs.public_inquiry_form_enabled),
+        publicInquiryFormToken: bs.public_inquiry_form_token ?? null,
+        businessName: bs.business_name ?? "",
+        publicInquiryIntro: bs.public_inquiry_intro ?? "",
+        publicInquiryConsentIntro: bs.public_inquiry_consent_intro ?? "",
+        publicInquiryConsentRetention: bs.public_inquiry_consent_retention ?? "",
+        publicInquiryCompletionMessage: bs.public_inquiry_completion_message ?? "",
+      }
+    : null
+
   return {
     inquiries,
     customers,
@@ -1970,6 +2144,8 @@ export async function getInquiriesPageData(): Promise<{
       qualified: inquiries.filter((item) => item.stage === "qualified").length,
       quoted: inquiries.filter((item) => item.stage === "quoted").length,
     },
+    publicInquiryForm,
+    isDemoWorkspace: false,
   }
 }
 
@@ -2688,6 +2864,12 @@ export async function getSettingsPageData(): Promise<{
         sealEnabled: false,
         sealImageUrl: undefined,
         updatedAt: undefined,
+        publicInquiryFormEnabled: false,
+        publicInquiryFormToken: null,
+        publicInquiryIntro: "",
+        publicInquiryConsentIntro: "",
+        publicInquiryConsentRetention: "",
+        publicInquiryCompletionMessage: "",
       }
 
   const templates = ((templateRows ?? []) as TemplateRow[]).map(mapTemplate)

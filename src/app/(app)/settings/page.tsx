@@ -2,6 +2,7 @@ import { PageHeader } from "@/components/app/page-header"
 import { SettingsForm } from "@/components/app/settings-form"
 import { getSettingsPageData } from "@/lib/data"
 import { computeBusinessSettingsFormKey } from "@/lib/settings-form-key"
+import { getSiteOrigin } from "@/lib/site-url"
 
 /** 저장 직후에도 DB 최신값이 내려가도록 RSC 캐시 비활성화 */
 export const dynamic = "force-dynamic"
@@ -10,6 +11,7 @@ export const revalidate = 0
 export default async function SettingsPage() {
   const { settings, templates, currentPlan, planColumnMissing } = await getSettingsPageData()
   const businessFormKey = computeBusinessSettingsFormKey(settings)
+  const siteOrigin = getSiteOrigin()
 
   return (
     <div className="space-y-5 md:space-y-6">
@@ -23,6 +25,7 @@ export default async function SettingsPage() {
         templates={templates}
         currentPlan={currentPlan}
         planColumnMissing={planColumnMissing}
+        siteOrigin={siteOrigin}
       />
     </div>
   )

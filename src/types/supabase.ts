@@ -37,6 +37,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       business_settings: {
         Row: {
@@ -53,6 +54,12 @@ export interface Database {
           reminder_message: string | null
           seal_image_url: string | null
           seal_enabled: boolean
+          public_inquiry_form_enabled: boolean
+          public_inquiry_form_token: string | null
+          public_inquiry_intro: string | null
+          public_inquiry_consent_intro: string | null
+          public_inquiry_consent_retention: string | null
+          public_inquiry_completion_message: string | null
           created_at: string
           updated_at: string
         }
@@ -70,6 +77,12 @@ export interface Database {
           reminder_message?: string | null
           seal_image_url?: string | null
           seal_enabled?: boolean
+          public_inquiry_form_enabled?: boolean
+          public_inquiry_form_token?: string | null
+          public_inquiry_intro?: string | null
+          public_inquiry_consent_intro?: string | null
+          public_inquiry_consent_retention?: string | null
+          public_inquiry_completion_message?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -87,9 +100,16 @@ export interface Database {
           reminder_message?: string | null
           seal_image_url?: string | null
           seal_enabled?: boolean
+          public_inquiry_form_enabled?: boolean
+          public_inquiry_form_token?: string | null
+          public_inquiry_intro?: string | null
+          public_inquiry_consent_intro?: string | null
+          public_inquiry_consent_retention?: string | null
+          public_inquiry_completion_message?: string | null
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       customers: {
         Row: {
@@ -128,6 +148,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       inquiries: {
         Row: {
@@ -178,6 +199,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       quotes: {
         Row: {
@@ -240,6 +262,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       quote_items: {
         Row: {
@@ -275,6 +298,7 @@ export interface Database {
           line_total?: number
           created_at?: string
         }
+        Relationships: []
       }
       invoices: {
         Row: {
@@ -334,6 +358,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       reminders: {
         Row: {
@@ -363,6 +388,7 @@ export interface Database {
           sent_at?: string
           created_at?: string
         }
+        Relationships: []
       }
       activity_logs: {
         Row: {
@@ -401,6 +427,7 @@ export interface Database {
           metadata?: Json
           created_at?: string
         }
+        Relationships: []
       }
       templates: {
         Row: {
@@ -433,6 +460,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
     }
     Views: Record<string, never>
@@ -452,6 +480,38 @@ export interface Database {
       bump_invoice_share_open: {
         Args: { p_token: string }
         Returns: undefined
+      }
+      get_public_inquiry_form_payload: {
+        Args: { p_token: string }
+        Returns: Json
+      }
+      submit_public_inquiry: {
+        Args: {
+          p_token: string
+          p_name: string
+          p_phone: string
+          p_email: string
+          p_title: string
+          p_details: string
+          p_service_category: string
+          p_hoped_date: string | null
+          p_budget_min: number | null
+          p_budget_max: number | null
+          p_extra_notes: string
+          p_consent: boolean
+          p_honeypot: string
+        }
+        Returns: Json
+      }
+      apply_public_inquiry_ai_draft: {
+        Args: {
+          p_token: string
+          p_inquiry_id: string
+          p_title: string
+          p_service_category: string
+          p_details: string
+        }
+        Returns: boolean
       }
     }
     Enums: {
