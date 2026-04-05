@@ -216,6 +216,16 @@ const flowSteps = [
 /** Select 내부 값 전용(라벨과 다름). 트리거에는 표시하지 않음 */
 const NO_LINKED_INQUIRY = "flowbill:no-inquiry"
 
+const quoteStatusSelectItems = Object.fromEntries(
+  quoteStatusOptions.map((o) => [o.value, o.label])
+) as Record<string, string>
+
+const quoteToolbarSortSelectItems: Record<string, string> = {
+  created_desc: "최신 작성순",
+  total_desc: "총액 높은순",
+  valid_until_asc: "유효기한 임박순",
+}
+
 function QuotesBoardPanel({
   quotes,
   customers,
@@ -418,6 +428,46 @@ function QuotesBoardPanel({
       inquiryStageOptions.find((o) => o.value === inv.stage)?.label ?? ""
     return stage ? `${inv.title} · ${stage}` : inv.title
   }, [form.customerId, form.inquiryId, inquiries, availableInquiries])
+
+  const quoteFormCustomerSelectItems = useMemo(() => {
+    const r: Record<string, string> = {}
+    for (const c of customers) {
+      r[c.id] = formatCustomerSelectLabel(c)
+    }
+    return r
+  }, [customers])
+
+  const quoteFormInquiryLinkSelectItems = useMemo(() => {
+    const r: Record<string, string> = {
+      [NO_LINKED_INQUIRY]: "문의 선택 안 함",
+    }
+    for (const inquiry of availableInquiries) {
+      const det = inquiry.details?.trim() ?? ""
+      const stage =
+        inquiryStageOptions.find((o) => o.value === inquiry.stage)?.label ?? ""
+      const head = stage ? `${inquiry.title} · ${stage}` : inquiry.title
+      r[inquiry.id] = det
+        ? `${head} — ${det.slice(0, 72)}${det.length > 72 ? "…" : ""}`
+        : head
+    }
+    return r
+  }, [availableInquiries])
+
+  const quoteListCustomerFilterItems = useMemo(() => {
+    const r: Record<string, string> = { all: "전체 고객" }
+    for (const c of customers) {
+      r[c.id] = formatCustomerSelectLabel(c)
+    }
+    return r
+  }, [customers])
+
+  const quickInquirySelectItems = useMemo(() => {
+    const r: Record<string, string> = {}
+    for (const i of inquiries) {
+      r[i.id] = i.title
+    }
+    return r
+  }, [inquiries])
 
   const processedQuotes = useMemo(() => {
     let list = [...quotes]
@@ -743,6 +793,7 @@ function QuotesBoardPanel({
             </p>
             <Select
               value={form.customerId}
+              items={quoteFormCustomerSelectItems}
               onValueChange={(value) =>
                 setForm((current) => ({
                   ...current,
@@ -800,6 +851,7 @@ function QuotesBoardPanel({
             ) : (
               <Select
                 value={form.inquiryId ? form.inquiryId : NO_LINKED_INQUIRY}
+                items={quoteFormInquiryLinkSelectItems}
                 onValueChange={(value) => {
                   if (!value || value === NO_LINKED_INQUIRY) {
                     setForm((current) => ({ ...current, inquiryId: "" }))
@@ -901,6 +953,7 @@ function QuotesBoardPanel({
               <p className="text-[10px] text-muted-foreground">처음에는 초안으로 두고, 발송 후 바꿀 수 있습니다.</p>
               <Select
                 value={form.status}
+                items={quoteStatusSelectItems}
                 onValueChange={(value) =>
                   setForm((current) => ({
                     ...current,
@@ -1422,6 +1475,7 @@ function QuotesBoardPanel({
                 <label className="text-[11px] font-medium text-muted-foreground">고객</label>
                 <Select
                   value={customerFilterId}
+                  items={quoteListCustomerFilterItems}
                   onValueChange={(v) => setCustomerFilterId(v ?? "all")}
                 >
                   <SelectTrigger className="h-9">
@@ -1441,6 +1495,7 @@ function QuotesBoardPanel({
                 <label className="text-[11px] font-medium text-muted-foreground">정렬</label>
                 <Select
                   value={sortBy}
+                  items={quoteToolbarSortSelectItems}
                   onValueChange={(v) => setSortBy((v as QuoteListSort) ?? "created_desc")}
                 >
                   <SelectTrigger className="h-9">
@@ -1531,6 +1586,7 @@ function QuotesBoardPanel({
                   <label className="text-[11px] font-medium text-muted-foreground">빠른 시작 · 문의 선택</label>
                   <Select
                     value={quickInquiryId}
+                    items={quickInquirySelectItems}
                     onValueChange={(value) => setQuickInquiryId(value ?? "")}
                   >
                     <SelectTrigger className="h-9 w-full">
@@ -1707,6 +1763,7 @@ function QuotesBoardPanel({
                       <td className={opsTableCellClass} onClick={(e) => e.stopPropagation()}>
                         <Select
                           value={quote.status}
+                          items={quoteStatusSelectItems}
                           onValueChange={(value) => {
                             const next = (value as QuoteStatus | null) ?? quote.status
                             if (next === quote.status) {
@@ -1895,6 +1952,7 @@ function QuotesBoardPanel({
               <p className="text-xs font-semibold text-muted-foreground">상태 변경</p>
               <Select
                 value={drawerQuote.status}
+                items={quoteStatusSelectItems}
                 onValueChange={(value) => {
                   const next = (value as QuoteStatus | null) ?? drawerQuote.status
                   if (next === drawerQuote.status) {

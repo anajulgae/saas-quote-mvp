@@ -35,6 +35,13 @@ export function openAiErrorUserPayload(e: OpenAiError): { error: string; status:
           status: 429,
         }
       }
+      if (s === 404) {
+        return {
+          error:
+            "지정한 AI 모델을 찾을 수 없습니다(HTTP 404). Vercel 환경 변수의 모델명을 확인해 주세요. 예: OPENAI_MODEL=gpt-4o-mini , 기능별 값(OPENAI_MODEL_COMPOSE_MESSAGE 등)은 비우거나 동일한 유효한 모델로 맞춘 뒤 재배포합니다.",
+          status: 502,
+        }
+      }
       if (s === 503 || s === 502) {
         return {
           error: "OpenAI 서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해 주세요.",

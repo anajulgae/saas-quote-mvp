@@ -95,6 +95,27 @@ const flowSteps = [
   { step: 3, title: "견적 단계로 이동", hint: "견적 메뉴에서 이어서 진행합니다" },
 ] as const
 
+const inquiryStageSelectItems = Object.fromEntries(
+  inquiryStageOptions.map((o) => [o.value, o.label])
+) as Record<string, string>
+
+const inquiryStageFilterSelectItems: Record<string, string> = {
+  all: "전체 단계",
+  ...inquiryStageSelectItems,
+}
+
+const followupFilterSelectItems: Record<string, string> = {
+  all: "팔로업 전체",
+  overdue: "일정 지남",
+  week: "7일 이내",
+}
+
+const inquirySortSelectItems: Record<string, string> = {
+  created_desc: "최신 등록순",
+  followup_asc: "팔로업 임박순",
+  followup_desc: "팔로업 늦은순",
+}
+
 export function InquiriesBoard({
   inquiries,
   customers,
@@ -168,6 +189,30 @@ export function InquiriesBoard({
     }
     return [...set].sort((a, b) => a.localeCompare(b, "ko"))
   }, [inquiries])
+
+  const inquiryFormCustomerSelectItems = useMemo(() => {
+    const r: Record<string, string> = {}
+    for (const c of customers) {
+      r[c.id] = c.companyName ?? c.name
+    }
+    return r
+  }, [customers])
+
+  const channelFilterSelectItems = useMemo(() => {
+    const r: Record<string, string> = { all: "전체 채널" }
+    for (const ch of channelOptions) {
+      r[ch] = ch
+    }
+    return r
+  }, [channelOptions])
+
+  const inquiryListCustomerFilterItems = useMemo(() => {
+    const r: Record<string, string> = { all: "전체 고객" }
+    for (const c of customers) {
+      r[c.id] = c.companyName ?? c.name
+    }
+    return r
+  }, [customers])
 
   useEffect(() => {
     if (deepLinkAppliedRef.current) {
@@ -404,6 +449,7 @@ export function InquiriesBoard({
           <label className="text-sm font-medium">고객</label>
           <Select
             value={form.customerId}
+            items={inquiryFormCustomerSelectItems}
             onValueChange={(value) =>
               setForm((current) => ({
                 ...current,
@@ -427,6 +473,7 @@ export function InquiriesBoard({
           <label className="text-sm font-medium">상태</label>
           <Select
             value={form.stage}
+            items={inquiryStageSelectItems}
             onValueChange={(value) =>
               setForm((current) => ({
                 ...current,
@@ -777,6 +824,7 @@ export function InquiriesBoard({
           />
           <Select
             value={stageFilter}
+            items={inquiryStageFilterSelectItems}
             onValueChange={(v) => setStageFilter((v as InquiryStage | "all") ?? "all")}
           >
             <SelectTrigger className="h-9 w-full sm:w-[150px]">
@@ -793,6 +841,7 @@ export function InquiriesBoard({
           </Select>
           <Select
             value={followupFilter}
+            items={followupFilterSelectItems}
             onValueChange={(v) => setFollowupFilter((v as FollowupFilter) ?? "all")}
           >
             <SelectTrigger className="h-9 w-full sm:w-[160px]">
@@ -804,7 +853,11 @@ export function InquiriesBoard({
               <SelectItem value="week">7일 이내</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={sortKey} onValueChange={(v) => setSortKey((v as InquirySort) ?? "created_desc")}>
+          <Select
+            value={sortKey}
+            items={inquirySortSelectItems}
+            onValueChange={(v) => setSortKey((v as InquirySort) ?? "created_desc")}
+          >
             <SelectTrigger className="h-9 w-full sm:w-[180px]">
               <SelectValue />
             </SelectTrigger>
@@ -817,7 +870,11 @@ export function InquiriesBoard({
           <OpsCollapsibleFilters open={extraFiltersOpen} onOpenChange={setExtraFiltersOpen}>
             <div className="min-w-0 flex-1 space-y-1">
               <label className="text-[11px] font-medium text-muted-foreground">채널</label>
-              <Select value={channelFilter} onValueChange={(v) => setChannelFilter(v ?? "all")}>
+              <Select
+                value={channelFilter}
+                items={channelFilterSelectItems}
+                onValueChange={(v) => setChannelFilter(v ?? "all")}
+              >
                 <SelectTrigger className="h-9 w-full sm:w-[160px]">
                   <SelectValue placeholder="전체" />
                 </SelectTrigger>
@@ -835,6 +892,7 @@ export function InquiriesBoard({
               <label className="text-[11px] font-medium text-muted-foreground">고객</label>
               <Select
                 value={customerFilterId}
+                items={inquiryListCustomerFilterItems}
                 onValueChange={(v) => setCustomerFilterId((v as string | null) ?? "all")}
               >
                 <SelectTrigger className="h-9 w-full sm:min-w-[12rem]">
@@ -1065,6 +1123,7 @@ export function InquiriesBoard({
               <p className="text-xs font-semibold text-muted-foreground">단계 변경</p>
               <Select
                 value={drawerInquiry.stage}
+                items={inquiryStageSelectItems}
                 onValueChange={(value) => {
                   const next = (value as InquiryStage | null) ?? drawerInquiry.stage
                   if (next === drawerInquiry.stage) {

@@ -123,6 +123,12 @@ function CustomerSignalBadges({ customer }: { customer: CustomerSummary }) {
 
 type SortKey = "activity_desc" | "name_asc" | "company_asc"
 
+const customerSortSelectItems = [
+  { value: "activity_desc" as const, label: "최근 활동순" },
+  { value: "name_asc" as const, label: "담당자 이름순" },
+  { value: "company_asc" as const, label: "회사·표시명순" },
+]
+
 export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
@@ -145,6 +151,14 @@ export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) 
     }
     return [...set].sort((a, b) => a.localeCompare(b, "ko"))
   }, [customers])
+
+  const tagFilterSelectItems = useMemo(() => {
+    const record: Record<string, string> = { all: "전체 태그" }
+    for (const t of allTags) {
+      record[t] = t
+    }
+    return record
+  }, [allTags])
 
   const filtered = useMemo(() => {
     let list = [...customers]
@@ -300,7 +314,11 @@ export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) 
           onChange={setSearchQuery}
           placeholder="이름, 회사, 연락처, 이메일, 태그…"
         />
-        <Select value={tagFilter} onValueChange={(v) => setTagFilter(v ?? "all")}>
+        <Select
+          value={tagFilter}
+          items={tagFilterSelectItems}
+          onValueChange={(v) => setTagFilter(v ?? "all")}
+        >
           <SelectTrigger className="h-9 w-full sm:w-[160px]">
             <SelectValue placeholder="태그" />
           </SelectTrigger>
@@ -315,6 +333,7 @@ export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) 
         </Select>
         <Select
           value={sortKey}
+          items={customerSortSelectItems}
           onValueChange={(v) => setSortKey((v as SortKey) ?? "activity_desc")}
         >
           <SelectTrigger className="h-9 w-full sm:w-[180px]">

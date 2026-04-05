@@ -95,6 +95,41 @@ type PaymentQuickFilter = "all" | "unpaid" | "overdue" | "paid"
 
 type InvoiceListSort = "requested_desc" | "due_asc" | "amount_desc" | "customer"
 
+const paymentStatusSelectItemsRecord = Object.fromEntries(
+  paymentStatusOptions.map((o) => [o.value, o.label])
+) as Record<string, string>
+
+const invoiceTypeSelectItemsRecord = Object.fromEntries(
+  invoiceTypeOptions.map((o) => [o.value, o.label])
+) as Record<string, string>
+
+const invoiceTypeFilterSelectItems: Record<string, string> = {
+  all: "전체",
+  ...invoiceTypeSelectItemsRecord,
+}
+
+const invoiceSortSelectItemsRecord: Record<string, string> = {
+  requested_desc: "최신 청구순",
+  due_asc: "입금 기한 임박순",
+  amount_desc: "금액 높은순",
+  customer: "고객명순",
+}
+
+const paymentStatusFilterSelectItems: Record<string, string> = {
+  all: "상세 상태 · 전체",
+  ...paymentStatusSelectItemsRecord,
+}
+
+const reminderChannelSelectItemsRecord = Object.fromEntries(
+  reminderChannelOptions.map((o) => [o.value, o.label])
+) as Record<string, string>
+
+const reminderToneSelectItemsRecord: Record<string, string> = {
+  polite: "정중형",
+  neutral: "기본형",
+  firm: "단호형",
+}
+
 function invoiceListSearchHaystack(inv: InvoiceWithReminders): string {
   const c = inv.customer
   return [
@@ -331,6 +366,30 @@ function InvoicesBoardPanel({
   const hasQuotes = quotes.length > 0
   const hasInvoices = invoices.length > 0
 
+  const invoiceFormCustomerSelectItems = useMemo(() => {
+    const r: Record<string, string> = {}
+    for (const c of customers) {
+      r[c.id] = formatCustomerLines(c).primary
+    }
+    return r
+  }, [customers])
+
+  const invoiceListCustomerFilterItems = useMemo(() => {
+    const r: Record<string, string> = { all: "전체 고객" }
+    for (const c of customers) {
+      r[c.id] = c.companyName?.trim() || c.name
+    }
+    return r
+  }, [customers])
+
+  const quickQuoteSelectItems = useMemo(() => {
+    const r: Record<string, string> = {}
+    for (const quote of quotes) {
+      r[quote.id] = formatQuoteLines(quote, customers).primary
+    }
+    return r
+  }, [quotes, customers])
+
   useEffect(() => {
     setQuickQuoteId((current) => {
       if (current && quotes.some((q) => q.id === current)) {
@@ -357,6 +416,14 @@ function InvoicesBoardPanel({
     () => quotes.filter((quote) => !form.customerId || quote.customerId === form.customerId),
     [form.customerId, quotes]
   )
+
+  const invoiceFormAvailableQuoteSelectItems = useMemo(() => {
+    const r: Record<string, string> = {}
+    for (const q of availableQuotes) {
+      r[q.id] = formatQuoteLines(q, customers).primary
+    }
+    return r
+  }, [availableQuotes, customers])
 
   const selectedQuote = useMemo(
     () => quotes.find((q) => q.id === form.quoteId) ?? null,
@@ -777,6 +844,7 @@ function InvoicesBoardPanel({
             ) : (
               <Select
                 value={form.customerId}
+                items={invoiceFormCustomerSelectItems}
                 disabled={Boolean(form.quoteId) && customers.length > 0}
                 onValueChange={(value) => {
                   setAmountFollowsSuggestion(true)
@@ -868,6 +936,7 @@ function InvoicesBoardPanel({
             ) : (
               <Select
                 value={form.quoteId || undefined}
+                items={invoiceFormAvailableQuoteSelectItems}
                 onValueChange={(value) => {
                   const q = quotes.find((quote) => quote.id === value)
                   setAmountFollowsSuggestion(true)
@@ -949,6 +1018,7 @@ function InvoicesBoardPanel({
             </div>
             <Select
               value={form.invoiceType}
+              items={invoiceTypeSelectItemsRecord}
               onValueChange={(value) => {
                 setForm((current) => {
                   const nextType =
@@ -990,6 +1060,7 @@ function InvoicesBoardPanel({
             </div>
             <Select
               value={form.paymentStatus}
+              items={paymentStatusSelectItemsRecord}
               onValueChange={(value) => {
                 setForm((current) => {
                   const next = (value as PaymentStatus | null) ?? current.paymentStatus
@@ -1284,6 +1355,7 @@ function InvoicesBoardPanel({
             <span className="text-xs font-medium text-muted-foreground">청구 유형</span>
             <Select
               value={invoiceTypeFilter}
+              items={invoiceTypeFilterSelectItems}
               onValueChange={(value) =>
                 setInvoiceTypeFilter((value as InvoiceType | "all" | null) ?? "all")
               }
@@ -1305,6 +1377,7 @@ function InvoicesBoardPanel({
             <span className="text-xs font-medium text-muted-foreground">정렬</span>
             <Select
               value={invoiceSort}
+              items={invoiceSortSelectItemsRecord}
               onValueChange={(value) =>
                 setInvoiceSort((value as InvoiceListSort | null) ?? "requested_desc")
               }
@@ -1348,6 +1421,7 @@ function InvoicesBoardPanel({
             </div>
             <Select
               value={paymentStatusFilter}
+              items={paymentStatusFilterSelectItems}
               onValueChange={(value) => {
                 setPaymentStatusFilter((value as PaymentStatus | "all") ?? "all")
                 setPaymentQuickFilter("all")
@@ -1375,6 +1449,7 @@ function InvoicesBoardPanel({
               <label className="text-[11px] font-medium text-muted-foreground">고객으로 좁히기</label>
               <Select
                 value={customerFilterId}
+                items={invoiceListCustomerFilterItems}
                 onValueChange={(v) => setCustomerFilterId((v as string | null) ?? "all")}
               >
                 <SelectTrigger className="h-9 w-full sm:min-w-[14rem]">
@@ -1429,6 +1504,7 @@ function InvoicesBoardPanel({
                     </label>
                     <Select
                       value={quickQuoteId}
+                      items={quickQuoteSelectItems}
                       onValueChange={(value) => setQuickQuoteId(value ?? "")}
                     >
                       <SelectTrigger className="h-8 w-full text-sm">
@@ -1631,6 +1707,7 @@ function InvoicesBoardPanel({
                           <PaymentStatusBadge status={invoice.paymentStatus} />
                           <Select
                             value={invoice.paymentStatus}
+                            items={paymentStatusSelectItemsRecord}
                             onValueChange={(value) =>
                               updatePaymentStatus(
                                 invoice.id,
@@ -1791,6 +1868,7 @@ function InvoicesBoardPanel({
               <p className="text-xs font-semibold text-muted-foreground">결제 상태 변경</p>
               <Select
                 value={drawerInvoice.paymentStatus}
+                items={paymentStatusSelectItemsRecord}
                 onValueChange={(value) =>
                   updatePaymentStatus(
                     drawerInvoice.id,
@@ -1978,6 +2056,7 @@ function InvoicesBoardPanel({
               <label className="text-sm font-medium">채널</label>
               <Select
                 value={reminderForm.channel}
+                items={reminderChannelSelectItemsRecord}
                 onValueChange={(value) =>
                   setReminderForm((current) => ({
                     ...current,
@@ -1986,7 +2065,10 @@ function InvoicesBoardPanel({
                 }
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue />
+                  <SelectValue>
+                    {reminderChannelOptions.find((o) => o.value === reminderForm.channel)?.label ??
+                      reminderForm.channel}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {reminderChannelOptions.map((option) => (
@@ -2002,12 +2084,13 @@ function InvoicesBoardPanel({
                 <label className="text-sm font-medium">문체</label>
                 <Select
                   value={reminderTone}
+                  items={reminderToneSelectItemsRecord}
                   onValueChange={(value) =>
                     setReminderTone((value as "polite" | "neutral" | "firm" | null) ?? "neutral")
                   }
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue />
+                    <SelectValue>{reminderToneSelectItemsRecord[reminderTone]}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="polite">정중형</SelectItem>

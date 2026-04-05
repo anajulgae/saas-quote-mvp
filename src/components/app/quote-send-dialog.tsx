@@ -33,6 +33,12 @@ import type { QuoteWithItems } from "@/types/domain"
 
 type MessageTone = "polite" | "neutral" | "firm"
 
+const messageToneSelectItems: Record<MessageTone, string> = {
+  polite: "정중형",
+  neutral: "기본형",
+  firm: "단호형",
+}
+
 export function QuoteSendDialog({
   quote,
   open,
@@ -390,10 +396,11 @@ export function QuoteSendDialog({
                   <label className="text-[11px] font-medium text-muted-foreground">문체</label>
                   <Select
                     value={messageTone}
+                    items={messageToneSelectItems}
                     onValueChange={(v) => setMessageTone((v as MessageTone) ?? "neutral")}
                   >
                     <SelectTrigger className="h-9">
-                      <SelectValue />
+                      <SelectValue>{messageToneSelectItems[messageTone]}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="polite">정중형</SelectItem>

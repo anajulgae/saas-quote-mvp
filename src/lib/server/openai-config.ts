@@ -1,6 +1,9 @@
 /**
  * 기능별 OpenAI 모델·출력 한도 — 전부 환경 변수 (하드코딩 금지).
  * 운영에서 모델만 바꿀 때는 Vercel env 와 이 파일의 ENV 키 이름만 보면 됨.
+ *
+ * 기능 전용 env(예: OPENAI_MODEL_COMPOSE_MESSAGE)가 비어 있으면 **OPENAI_MODEL**을 사용합니다.
+ * 잘못된 기능별 모델명으로 400/404가 나면 openai-chat에서 OPENAI_MODEL로 1회 재시도합니다.
  */
 
 export type AiFeatureKey = "inquiry_structure" | "compose_message" | "quote_draft"
@@ -35,11 +38,15 @@ export type ResolvedModel = { model: string } | { missingEnv: string }
 
 export function resolveModelForFeature(feature: AiFeatureKey): ResolvedModel {
   const envName = MODEL_ENV_NAME[feature]
-  const v = process.env[envName]?.trim()
-  if (!v) {
-    return { missingEnv: envName }
+  const specific = process.env[envName]?.trim()
+  if (specific) {
+    return { model: specific }
   }
-  return { model: v }
+  const shared = process.env.OPENAI_MODEL?.trim()
+  if (shared) {
+    return { model: shared }
+  }
+  return { missingEnv: envName }
 }
 
 export function getMaxOutputTokensForFeature(feature: AiFeatureKey, override?: number): number {

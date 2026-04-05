@@ -11,6 +11,9 @@ type ChatRole = "system" | "user" | "assistant"
 export type ChatMessage = { role: ChatRole; content: string }
 
 export class OpenAiError extends Error {
+  /** true면 OPENAI_MODEL 등 다른 모델로 한 번 재시도해 볼 만한 오류(존재하지 않는 모델명 등) */
+  modelRetrySuggested?: boolean
+
   constructor(
     message: string,
     readonly code:
@@ -80,15 +83,47 @@ export async function completeJsonChatForFeature<T>(params: JsonChatFeatureReque
     phase,
   })
 
-  return runOpenAiJsonChat<T>({
-    apiKey: key,
-    model,
-    messages: params.messages,
-    parse: params.parse,
-    maxOutputTokens,
-    timeoutMs,
-    temperature,
-  })
+  const run = () =>
+    runOpenAiJsonChat<T>({
+      apiKey: key,
+      model,
+      messages: params.messages,
+      parse: params.parse,
+      maxOutputTokens,
+      timeoutMs,
+      temperature,
+    })
+
+  try {
+    return await run()
+  } catch (first) {
+    const fallback = process.env.OPENAI_MODEL?.trim()
+    const retriable =
+      first instanceof OpenAiError &&
+      first.code === "HTTP" &&
+      first.modelRetrySuggested &&
+      fallback &&
+      fallback !== model &&
+      !params.modelOverride
+    if (!retriable) {
+      throw first
+    }
+    logAiInvocation({
+      feature: params.feature,
+      model: fallback,
+      maxOutputTokens,
+      phase: "fallback",
+    })
+    return runOpenAiJsonChat<T>({
+      apiKey: key,
+      model: fallback,
+      messages: params.messages,
+      parse: params.parse,
+      maxOutputTokens,
+      timeoutMs,
+      temperature,
+    })
+  }
 }
 
 type RunParams<T> = {
@@ -99,6 +134,37 @@ type RunParams<T> = {
   maxOutputTokens: number
   timeoutMs: number
   temperature: number
+}
+
+/** 잘못된 모델명 등으로 다른 모델 재시도가 의미 있을 때만 true */
+function openAiErrorSuggestsModelRetry(status: number, bodyText: string): boolean {
+  if (status === 404) {
+    return true
+  }
+  if (status !== 400) {
+    return false
+  }
+  try {
+    const j = JSON.parse(bodyText) as { error?: { message?: string; code?: string; param?: string } }
+    const msg = (j.error?.message ?? "").toLowerCase()
+    const code = (j.error?.code ?? "").toLowerCase()
+    const param = (j.error?.param ?? "").toLowerCase()
+    if (code === "model_not_found") {
+      return true
+    }
+    if (param === "model") {
+      return true
+    }
+    return (
+      msg.includes("model") &&
+      (msg.includes("does not exist") ||
+        msg.includes("not found") ||
+        msg.includes("invalid") ||
+        msg.includes("unknown"))
+    )
+  } catch {
+    return false
+  }
 }
 
 async function runOpenAiJsonChat<T>(p: RunParams<T>): Promise<T> {
@@ -127,11 +193,19 @@ async function runOpenAiJsonChat<T>(p: RunParams<T>): Promise<T> {
     throw e
   }
 
+  const bodyText = await res.text()
   if (!res.ok) {
-    throw new OpenAiError(`OpenAI 요청 실패 (${res.status})`, "HTTP", res.status)
+    const err = new OpenAiError(`OpenAI 요청 실패 (${res.status})`, "HTTP", res.status)
+    err.modelRetrySuggested = openAiErrorSuggestsModelRetry(res.status, bodyText)
+    throw err
   }
 
-  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> }
+  let data: { choices?: Array<{ message?: { content?: string } }> }
+  try {
+    data = JSON.parse(bodyText) as { choices?: Array<{ message?: { content?: string } }> }
+  } catch {
+    throw new OpenAiError("OpenAI 응답 본문이 JSON이 아닙니다.", "JSON")
+  }
   const raw = data.choices?.[0]?.message?.content
   if (!raw?.trim()) {
     throw new OpenAiError("응답이 비어 있습니다.", "EMPTY")
