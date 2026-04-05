@@ -49,6 +49,18 @@ export function toUserFacingActionError(error: unknown, fallback: string): strin
     return "이미 존재하는 번호이거나 중복된 값입니다."
   }
 
+  if (lower.includes("resend_api_key") || (lower.includes("resend") && lower.includes("설정"))) {
+    return "이메일 발송 서비스가 아직 연결되지 않았습니다. 운영자에게 RESEND_API_KEY 설정을 요청하거나, 잠시 후 다시 시도해 주세요."
+  }
+
+  if (lower.includes("openai_api_key") || (lower.includes("openai") && lower.includes("설정"))) {
+    return "AI 기능이 아직 설정되지 않았습니다. OPENAI_API_KEY 환경 변수를 확인해 주세요."
+  }
+
+  if (lower.includes("timeout") || lower.includes("timed out") || lower.includes("etimedout")) {
+    return "응답이 지연되었습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요."
+  }
+
   return fallback
 }
 

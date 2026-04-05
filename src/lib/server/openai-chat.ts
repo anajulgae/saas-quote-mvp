@@ -5,7 +5,7 @@ export type ChatMessage = { role: ChatRole; content: string }
 export class OpenAiError extends Error {
   constructor(
     message: string,
-    readonly code: "NOT_CONFIGURED" | "HTTP" | "EMPTY" | "JSON" | "PARSE"
+    readonly code: "NOT_CONFIGURED" | "HTTP" | "EMPTY" | "JSON" | "PARSE" | "TIMEOUT"
   ) {
     super(message)
     this.name = "OpenAiError"
@@ -19,20 +19,31 @@ export async function completeJsonChat<T>(messages: ChatMessage[], parse: (obj: 
   }
 
   const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini"
+  const timeoutMs = Math.min(Math.max(Number(process.env.OPENAI_TIMEOUT_MS ?? "55000") || 55000, 5000), 120000)
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${key}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.35,
-      response_format: { type: "json_object" },
-      messages,
-    }),
-  })
+  let res: Response
+  try {
+    res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0.35,
+        response_format: { type: "json_object" },
+        messages,
+      }),
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+  } catch (e) {
+    const name = e instanceof Error ? e.name : ""
+    if (name === "TimeoutError" || name === "AbortError") {
+      throw new OpenAiError("AI 응답이 지연되어 중단되었습니다. 잠시 후 다시 시도해 주세요.", "TIMEOUT")
+    }
+    throw e
+  }
 
   if (!res.ok) {
     throw new OpenAiError(`OpenAI 요청 실패 (${res.status})`, "HTTP")

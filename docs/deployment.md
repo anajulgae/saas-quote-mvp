@@ -31,11 +31,23 @@ Vercel 프로젝트 **Settings → Environment Variables**에서 설정합니다
 | `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase **Project URL** (`https://xxxxx.supabase.co`) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase **anon public** API 키 (Settings → API) |
 
+### 운영 기능에 가깝게 필요
+
+| 이름 | Production | 설명 |
+|------|------------|------|
+| `NEXT_PUBLIC_SITE_URL` | 강력 권장 | 고정 도메인(슬래시 없음). 인증·재설정·공유 링크 기준. 미설정 시 `VERCEL_URL`에 의존해 Supabase Redirect와 어긋나기 쉬움 (`src/lib/site-url.ts`) |
+| `RESEND_API_KEY` | 견적 메일 발송 시 사실상 필수 | Resend API 키. 없으면 `sendQuoteEmailAction`이 사용자에게 명시적 오류를 반환 (`src/lib/send-resend.ts`) |
+| `RESEND_FROM` | 권장 | 인증된 발신 주소. 미설정 시 설정 화면 이메일 또는 테스트 주소 시도(403/422 가능) |
+| `OPENAI_API_KEY` | AI 기능 사용 시 필수 | 견적 초안·문의 구조화·발송 문구 API (`/api/ai/*`) |
+| `OPENAI_MODEL` | 선택 | 기본 `gpt-4o-mini` |
+| `OPENAI_TIMEOUT_MS` | 선택 | 기본 `55000` (ms) |
+
 ### 선택
 
 | 이름 | 설명 |
 |------|------|
 | `NEXT_PUBLIC_APP_NAME` | UI 표시용 앱 이름 (기본 없어도 동작) |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | 랜딩 `/billing#business` 문의 링크 |
 | `ENABLE_DEMO_LOGIN` | `true`/`1` 이면 **모든** 배포 환경에서 데모 로그인 허용. 비공개 베타 **Production**에서는 보통 **비움** 또는 `false` |
 | `DEMO_LOGIN_EMAIL` | 데모용 이메일 (`src/app/actions.ts`의 데모 분기에서만 사용) |
 | `DEMO_LOGIN_PASSWORD` | 데모용 비밀번호 |
@@ -89,8 +101,10 @@ Supabase **SQL Editor**에서 저장소의 파일을 **아래 순서 그대로**
 1. `supabase/migrations/0001_mvp_schema.sql` — 테이블·ENUM·초기 RLS  
 2. `supabase/migrations/0002_phase2_foundation.sql` — `updated_at` 트리거, `auth.users` 가입 시 `public.users` / `business_settings` 시드 트리거 등  
 3. `supabase/migrations/0003_rls_tenant_fk_enforcement.sql` — 문의/견적/청구 등 **FK 테넌트 정합** RLS 보강  
+4. `supabase/migrations/0003_quote_seal_share_document.sql` — 견적 공유·직인·문서 RPC 등  
+5. `supabase/migrations/0004_user_plan.sql` — `public.users.plan` (`free` / `pro`). **미적용 시** 앱은 `free`로 완화 동작하지만 설정 화면에 **플랜 컬럼 미적용** 안내가 뜹니다.
 
-`0003` 미적용 시 RLS가 `user_id`만 검사해 **타인의 `customer_id` 등을 조합하는** 위험이 남습니다. 베타 오픈 전 **반드시 3개 모두 적용**했는지 확인하세요.
+`0003_rls` 미적용 시 RLS가 `user_id`만 검사해 **타인의 `customer_id` 등을 조합하는** 위험이 남습니다. 오픈 전 **위 순서 전부** 적용했는지 확인하세요.
 
 ---
 
@@ -124,7 +138,7 @@ Preview 환경에만 `ENABLE_DEMO_LOGIN=true` 를 추가하고, Production에는
 
 ## 7. 자주 발생할 수 있는 실수 5가지 (이 프로젝트 기준)
 
-1. **마이그레이션 `0003` 누락** — `0001`만 돌리고 끝내는 경우. 베타 전 `0003`까지 적용했는지 다시 확인하세요.  
+1. **마이그레이션 누락** — 특히 `0003_rls`·`0003_quote_seal`·`0004_user_plan` 중 일부만 적용된 경우. [§4](#4-migration-적용-순서-고정) 순서대로 재확인하세요.  
 2. **anon 키와 service_role 혼동** — `NEXT_PUBLIC_SUPABASE_ANON_KEY` 에 **anon public** 만 넣어야 합니다. service_role 을 넣으면 RLS 우회·유출 시 치명적입니다.  
 3. **Auth Site URL이 localhost로 남음** — 프로덕션 배포 후에도 Supabase Site URL이 `http://localhost:3000` 이면 리다이렉트·세션이 깨질 수 있습니다. **실제 Vercel URL**로 바꾸고 Redirect 목록에도 추가하세요.  
 4. **Production에 `ENABLE_DEMO_LOGIN=true` 남김** — 의도치 않게 데모 계정이 열립니다. Production 변수 목록에서 제거하거나 `false` 로 고정하세요.  
@@ -136,12 +150,15 @@ Preview 환경에만 `ENABLE_DEMO_LOGIN=true` 를 추가하고, Production에는
 
 사람이 **배포 버튼 누르기 전**에 아래를 순서대로 확인합니다.
 
-- [ ] Supabase에 **`0001` → `0002` → `0003`** 마이그레이션 **전부** 적용 (파일명은 위 §4 참고)  
+- [ ] Supabase에 **§4 순서대로** 마이그레이션 **전부** 적용 (`0004_user_plan` 포함)  
 - [ ] Vercel에 **`NEXT_PUBLIC_SUPABASE_URL`**, **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** 입력 (사용하는 **Production·Preview** 모두)  
-- [ ] Supabase **Authentication → URL Configuration**: **Site URL**·**Redirect URLs**에 Vercel URL 반영  
+- [ ] (권장) **`NEXT_PUBLIC_SITE_URL`** — 프로덕션 고정 도메인  
+- [ ] (견적 메일) **`RESEND_API_KEY`** 및 권장 **`RESEND_FROM`**  
+- [ ] (AI) **`OPENAI_API_KEY`** — AI 버튼 사용 시  
+- [ ] Supabase **Authentication → URL Configuration**: **Site URL**·**Redirect URLs**에 Vercel URL 반영 (`/auth/callback`, `/reset-password`)  
 - [ ] **Production**에서 데모 불필요 시 **`ENABLE_DEMO_LOGIN` 미설정 또는 `false`**  
-- [ ] **첫 베타 테스트 계정**으로 프로덕션 URL **로그인** 성공  
-- [ ] **문의 → 견적 → 청구 → 결제/상태 변경 → 리마인드** 흐름을 한 번에 수동 검증  
+- [ ] **회원가입 또는 테스트 계정**으로 프로덕션 URL **로그인** 성공  
+- [ ] **[production-e2e-checklist.md](./production-e2e-checklist.md)** 또는 **문의 → 견적 → 메일 → 청구 → 리마인드 → 재설정** 흐름 수동 검증  
 
 이후 [beta-qa-checklist.md](./beta-qa-checklist.md)로 스모크를 이어가면 됩니다.
 
@@ -163,11 +180,14 @@ Preview 환경에만 `ENABLE_DEMO_LOGIN=true` 를 추가하고, Production에는
 | 로그인 액션 | `src/app/actions.ts` (`loginAction`) |
 | 데이터·RLS 클라이언트 | `src/lib/supabase/server.ts`, `src/lib/data.ts` |
 | 환경 변수 예시 | `.env.example` |
+| 플랜·결제 진입점 | `/billing`, `src/lib/billing/catalog.ts` |
+| 운영 오류 대응 표 | [operations-errors.md](./operations-errors.md) |
+| E2E 출시 체크 | [production-e2e-checklist.md](./production-e2e-checklist.md) |
 
 ---
 
 ## 더 보기
 
 - **실전 실행 순서(Runbook)**: [deploy-runbook.md](./deploy-runbook.md)  
-- 로컬 실행·MVP 범위·보안 요약: 루트 [README.md](../README.md)  
+- 로컬 실행·보안 요약: 루트 [README.md](../README.md)  
 - 운영 스모크 체크리스트: [beta-qa-checklist.md](./beta-qa-checklist.md)

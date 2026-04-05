@@ -88,6 +88,12 @@ export async function POST(req: Request) {
       if (e.code === "NOT_CONFIGURED") {
         return NextResponse.json({ error: "AI 기능이 설정되지 않았습니다." }, { status: 503 })
       }
+      if (e.code === "TIMEOUT") {
+        return NextResponse.json(
+          { error: "AI 응답이 너무 오래 걸렸습니다. 잠시 후 다시 시도해 주세요." },
+          { status: 504 }
+        )
+      }
       reportServerError(e.message, { route: "compose-message", code: e.code })
       return NextResponse.json({ error: "문구 생성에 실패했습니다." }, { status: 502 })
     }

@@ -337,8 +337,8 @@ export function LandingPricing() {
         "리마인드·템플릿",
         "이메일 지원",
       ],
-      cta: "Pro 시작하기",
-      href: "/signup",
+      cta: "Pro 안내·가입",
+      href: "/billing?plan=pro",
       highlight: true,
     },
     {
@@ -348,7 +348,7 @@ export function LandingPricing() {
       blurb: "맞춤·다수 좌석",
       features: ["Pro 기준 협의", "온보딩·운영 문의", "도입 일정 조율"],
       cta: "문의하기",
-      href: "/signup",
+      href: "/billing#business",
       highlight: false,
     },
   ]
@@ -567,6 +567,7 @@ export function LandingFooter() {
   const links = [
     { href: "#features", label: "기능" },
     { href: "#pricing", label: "요금제" },
+    { href: "/billing", label: "플랜·업그레이드" },
     { href: "#faq", label: "FAQ" },
     { href: "/privacy", label: "개인정보처리방침" },
     { href: "/terms", label: "이용약관" },

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation"
 
 import { demoUser } from "@/lib/demo-data"
 import { isDemoLoginEnabled } from "@/lib/demo-flags"
-import { normalizePlan } from "@/lib/plan-features"
+import { fetchUserPlanRow } from "@/lib/user-plan"
 import { FLOWBILL_DEMO_SESSION_COOKIE } from "@/lib/demo-session"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 
@@ -136,7 +136,7 @@ export async function getAppSession() {
 
   const profile = await ensureUserProfile(supabase, user)
 
-  const { data: planRow } = await supabase.from("users").select("plan").eq("id", user.id).maybeSingle()
+  const { plan } = await fetchUserPlanRow(supabase, user.id)
 
   return {
     mode: "supabase" as const,
@@ -146,7 +146,7 @@ export async function getAppSession() {
       businessName: profile.businessName ?? "내 사업장",
       email: user.email ?? "",
       phone: profile.phone ?? "",
-      plan: normalizePlan((planRow as { plan?: string } | null)?.plan),
+      plan,
     },
   }
 }

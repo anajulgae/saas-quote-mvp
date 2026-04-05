@@ -76,6 +76,12 @@ estimatedScope(업종·서비스 범위 한 줄), followupMemo(내부 팔로업 
           { status: 503 }
         )
       }
+      if (e.code === "TIMEOUT") {
+        return NextResponse.json(
+          { error: "AI 응답이 너무 오래 걸렸습니다. 잠시 후 다시 시도해 주세요." },
+          { status: 504 }
+        )
+      }
       reportServerError(e.message, { route: "inquiry-structure", code: e.code })
       return NextResponse.json({ error: "구조화에 실패했습니다. 잠시 후 다시 시도해 주세요." }, { status: 502 })
     }

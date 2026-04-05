@@ -2,10 +2,13 @@
 
 국내 1인 사업자용 **문의 · 견적 · 청구 · 수금** 관리 MVP입니다. Next.js App Router, TypeScript, Tailwind, Supabase를 사용합니다.
 
-**실전 배포 실행 순서(체크리스트)**: **[docs/deploy-runbook.md](./docs/deploy-runbook.md)**  
-**배포 상세 가이드**(환경변수·Auth URL·마이그레이션·데모·RC·흔한 실수): **[docs/deployment.md](./docs/deployment.md)**  
-**비공개 베타 운영**(이벤트 로그 확인·피드백·즉시 대응 신호): **[docs/beta-operations.md](./docs/beta-operations.md)**  
-**외부 점검용 공개 데모**(운영 DB와 분리·켜기/끄기): **[docs/public-demo.md](./docs/public-demo.md)**
+**실전 배포 실행 순서**: **[docs/deploy-runbook.md](./docs/deploy-runbook.md)**  
+**배포 상세**(환경변수·Auth URL·마이그레이션·Resend·OpenAI): **[docs/deployment.md](./docs/deployment.md)**  
+**출시 E2E 체크리스트**: **[docs/production-e2e-checklist.md](./docs/production-e2e-checklist.md)**  
+**운영 오류 대응 표**: **[docs/operations-errors.md](./docs/operations-errors.md)**  
+**배포 직후 스모크**: **[docs/beta-qa-checklist.md](./docs/beta-qa-checklist.md)**  
+**비공개 베타 운영**: **[docs/beta-operations.md](./docs/beta-operations.md)**  
+**공개 데모**(선택): **[docs/public-demo.md](./docs/public-demo.md)**
 
 ---
 
@@ -44,10 +47,17 @@ npm run build
 |------|----------|------|
 | `NEXT_PUBLIC_SUPABASE_URL` | 필수 권장 | Supabase 프로젝트 URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 필수 권장 | anon public 키 |
-| `ENABLE_DEMO_LOGIN` | 선택 | 데모 로그인·데모 쿠키 허용 여부 (아래 표 참고) |
-| `DEMO_LOGIN_EMAIL` | 선택 | 데모 계정 이메일 |
-| `DEMO_LOGIN_PASSWORD` | 선택 | 데모 비밀번호. **프로덕션에서 데모 허용 시 16자 이상 필수** (`docs/public-demo.md`) |
+| `NEXT_PUBLIC_SITE_URL` | 강력 권장 | 고정 도메인(슬래시 없음). 인증·재설정·공유 링크 기준 |
+| `RESEND_API_KEY` | 견적 메일 시 사실상 필수 | Resend에서 발급 |
+| `RESEND_FROM` | 권장 | 인증된 발신 주소 |
+| `OPENAI_API_KEY` | AI 사용 시 필수 | `/api/ai/*` |
+| `OPENAI_MODEL` | 선택 | 기본 `gpt-4o-mini` |
+| `ENABLE_DEMO_LOGIN` | 선택 | 데모 로그인 허용 (아래 표 참고) |
+| `DEMO_LOGIN_EMAIL` / `DEMO_LOGIN_PASSWORD` | 선택 | 데모 전용 |
 | `NEXT_PUBLIC_APP_NAME` | 선택 | 표시용 이름 |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | 선택 | `/billing` Business 문의 |
+
+전체 예시와 주석: **`.env.example`**
 
 ### `ENABLE_DEMO_LOGIN` 동작 (코드: `src/lib/demo-flags.ts`)
 
@@ -71,20 +81,22 @@ npm run build
 3. 로컬이면 `.env.local`, Vercel이면 프로젝트 **Settings → Environment Variables**에 다음을 넣습니다.  
    - `NEXT_PUBLIC_SUPABASE_URL`  
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-4. **Authentication → Providers**에서 Email 등 필요한 로그인 방식을 켭니다.  
-   - 앱 내 **회원가입 UI는 없음** → Supabase 대시보드에서 사용자 초대 또는 Auth 정책에 맞는 가입 경로를 사용합니다.
+4. **Authentication → Providers**에서 Email 로그인을 켭니다.  
+5. 사용자는 **`/signup`** 에서 가입하거나, Supabase 대시보드에서 사용자를 추가할 수 있습니다.
 
 ---
 
 ## 데이터베이스 마이그레이션 (순서 고정)
 
-**반드시 아래 순서대로** SQL Editor에서 실행하거나, CLI로 동일 순서를 적용하세요.
+**반드시 아래 순서대로** SQL Editor에서 실행하세요.
 
-1. `supabase/migrations/0001_mvp_schema.sql` — 스키마 + 초기 RLS  
-2. `supabase/migrations/0002_phase2_foundation.sql` — 트리거·인덱스 등  
-3. `supabase/migrations/0003_rls_tenant_fk_enforcement.sql` — **테넌트 간 FK 정합성 RLS 보강**
+1. `0001_mvp_schema.sql`  
+2. `0002_phase2_foundation.sql`  
+3. `0003_rls_tenant_fk_enforcement.sql` — 테넌트 FK RLS 보강  
+4. `0003_quote_seal_share_document.sql` — 견적 공유·직인·RPC  
+5. `0004_user_plan.sql` — `users.plan` (`free` / `pro`)
 
-`0003`을 빼면 `user_id`만 맞추고 **타인의 `customer_id` 등을 끼워 넣는** 공격면이 남을 수 있습니다. 비공개 베타 전 **`0003`까지 적용 완료**를 확인하세요.
+`0003_rls` 미적용 시 보안 공격면이 남습니다. `0004` 미적용 시 앱은 동작하지만 설정에 **플랜 마이그레이션 안내**가 표시됩니다.
 
 ---
 
@@ -141,36 +153,31 @@ npm run build
 
 ## 배포 후 QA 체크리스트 (운영자용)
 
-**배포 직후 약 10분 스모크**: **[docs/beta-qa-checklist.md](./docs/beta-qa-checklist.md)**  
-(Vercel 배포 직후 **최우선 5개** + 전체 체크박스 목록)
-
-요약:
-
-- [ ] 위 문서의 **최우선 5개** 완료  
-- [ ] 동일 문서 **전체 체크리스트**(로그인·데모 비활성·권한·CRUD·타임라인·설정·검색/필터·오류 메시지) 완료  
+- **10분 스모크**: [docs/beta-qa-checklist.md](./docs/beta-qa-checklist.md)  
+- **출시 E2E(가입·AI·메일·재설정 등)**: [docs/production-e2e-checklist.md](./docs/production-e2e-checklist.md)  
+- **오류 대응**: [docs/operations-errors.md](./docs/operations-errors.md)
 
 ---
 
 ## 배포 전 최종 체크포인트 (RC — 사람이 꼭 확인)
 
-- [ ] Supabase SQL **`0001_mvp_schema.sql` → `0002_phase2_foundation.sql` → `0003_rls_tenant_fk_enforcement.sql`** 순서로 **전부** 적용됨  
-- [ ] Vercel **Production**(및 사용 중인 Preview)에 **`NEXT_PUBLIC_SUPABASE_URL`**, **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** 입력됨 · **service_role** 은 어디에도 `NEXT_PUBLIC_` 로 넣지 않음  
-- [ ] Supabase **Authentication → URL Configuration**: **Site URL**·**Redirect URLs**에 실제 Vercel URL(및 필요 시 localhost) 반영됨  
-- [ ] **Production**에서 데모 로그인 비활성: **`ENABLE_DEMO_LOGIN` 미설정 또는 `false`** (데모가 필요 없을 때)  
-- [ ] **첫 베타 테스트 계정**으로 프로덕션 URL에서 **로그인** 성공  
-- [ ] 핵심 흐름 **문의 → 견적 → 청구 → 결제/상태 변경 → 리마인드** 한 사이클 수동 확인  
-- [ ] `npm run build` 로컬 통과  
-- [ ] [docs/beta-qa-checklist.md](./docs/beta-qa-checklist.md) 운영자용 10분 스모크 수행  
+- [ ] Supabase 마이그레이션 **전 순서** 적용 (`0004_user_plan` 포함)  
+- [ ] Vercel: **`NEXT_PUBLIC_SUPABASE_*`** · (권장) **`NEXT_PUBLIC_SITE_URL`** · (메일) **`RESEND_API_KEY`** · (AI) **`OPENAI_API_KEY`**  
+- [ ] Supabase Auth: **Site URL**·**Redirect URLs** (`/auth/callback`, `/reset-password`)  
+- [ ] Production: **`ENABLE_DEMO_LOGIN` 미설정 또는 `false`** (데모 불필요 시)  
+- [ ] 로그인·**견적 메일**(가능 시)·핵심 CRUD 수동 확인  
+- [ ] `npm run build` 통과  
+- [ ] [production-e2e-checklist.md](./docs/production-e2e-checklist.md) 또는 [beta-qa-checklist.md](./docs/beta-qa-checklist.md) 수행  
 
-상세 배포 절차: [docs/deployment.md](./docs/deployment.md)
+상세: [docs/deployment.md](./docs/deployment.md)
 
 ---
 
-## 현재 MVP 범위 및 비범위
+## 현재 제품 범위 요약
 
-**포함**: 고객, 문의, 견적(항목·상태), 청구(결제 상태), 리마인드 기록, 설정·템플릿, 대시보드, 활동 로그 타임라인, 검색·필터.
+**포함**: 회원가입·이메일 인증, 고객·문의·견적·청구, 견적 공유 링크·인쇄/PDF, **Resend 견적 메일**, **OpenAI 보조**(초안·문의 구조화·문구), 리마인드, 설정·직인, 플랜 컬럼(`free`/`pro`), **`/billing` 결제 진입점(문서·UI)**.
 
-**미포함**: AI API, PDF, 공유 고도화, 실제 이메일/SMS 발송, 회계·캘린더·팀 기능 등.
+**미포함**: 실제 PG(카드) 결제, 자동 청구서 발행, 회계·팀 좌석 본격 지원 등 — 플랜 게이트는 `src/lib/plan-features.ts` / `src/lib/billing/catalog.ts` 에서 확장합니다.
 
 ---
 

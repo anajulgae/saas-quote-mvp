@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic"
 export const revalidate = 0
 
 export default async function SettingsPage() {
-  const { settings, templates, currentPlan } = await getSettingsPageData()
+  const { settings, templates, currentPlan, planColumnMissing } = await getSettingsPageData()
 
   return (
     <div className="space-y-5 md:space-y-6">
@@ -15,7 +15,12 @@ export default async function SettingsPage() {
         title="설정"
         description="사업자·결제 안내는 위 카드에서, 견적·리마인드 초안은 아래 템플릿에서 각각 저장합니다."
       />
-      <SettingsForm initialSettings={settings} templates={templates} currentPlan={currentPlan} />
+      <SettingsForm
+        initialSettings={settings}
+        templates={templates}
+        currentPlan={currentPlan}
+        planColumnMissing={planColumnMissing}
+      />
     </div>
   )
 }

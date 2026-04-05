@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server"
-import { normalizePlan } from "@/lib/plan-features"
+import { fetchUserPlanRow } from "@/lib/user-plan"
 import type { BillingPlan } from "@/types/domain"
 
 export type ApiAuthOk = { ok: true; userId: string; plan: BillingPlan }
@@ -20,9 +20,7 @@ export async function getAuthenticatedUserForApi(): Promise<ApiAuthOk | ApiAuthF
     return { ok: false, status: 401, message: "로그인이 필요합니다." }
   }
 
-  const { data: row } = await supabase.from("users").select("plan").eq("id", user.id).maybeSingle()
-
-  const plan = normalizePlan((row as { plan?: string } | null)?.plan)
+  const { plan } = await fetchUserPlanRow(supabase, user.id)
 
   return { ok: true, userId: user.id, plan }
 }

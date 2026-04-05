@@ -77,10 +77,12 @@ export function SettingsForm({
   initialSettings,
   templates,
   currentPlan,
+  planColumnMissing,
 }: {
   initialSettings: BusinessSettings
   templates: Template[]
   currentPlan: BillingPlan
+  planColumnMissing: boolean
 }) {
   const router = useRouter()
   const [isBizPending, startBizTransition] = useTransition()
@@ -216,11 +218,29 @@ export function SettingsForm({
 
   return (
     <div className="space-y-5 md:space-y-6">
+      {planColumnMissing ? (
+        <div
+          className="rounded-xl border border-amber-500/40 bg-amber-500/[0.08] px-4 py-3 text-sm text-amber-950 dark:text-amber-50/95"
+          role="status"
+        >
+          <p className="font-semibold text-foreground">데이터베이스: 플랜 컬럼 미적용</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            Supabase에 <code className="rounded bg-background/80 px-1">0004_user_plan.sql</code> 마이그레이션이
+            적용되지 않은 것으로 보입니다. 지금은 모두 Free로 동작합니다. SQL Editor에서 해당 파일을 실행한 뒤 이
+            안내가 사라지는지 확인해 주세요.
+          </p>
+        </div>
+      ) : null}
+
       <Card className="border-border/60 bg-muted/10">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">요금제</CardTitle>
           <CardDescription>
-            계정 플랜입니다. 카드 결제·정기 구독 연동 시 이 구간에서 업그레이드·결제 내역을 다룹니다.
+            계정 플랜입니다. 상세·업그레이드 안내는{" "}
+            <a href="/billing" className="font-medium text-primary underline-offset-4 hover:underline">
+              요금제 페이지
+            </a>
+            에서 확인할 수 있습니다.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3 text-sm">

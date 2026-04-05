@@ -1,8 +1,12 @@
 /**
  * Resend HTTP API (의존성 없이 fetch).
- * 환경 변수: RESEND_API_KEY 필수
+ * 환경 변수: RESEND_API_KEY — 운영 견적 메일 발송에 필수
  * RESEND_FROM: 인증된 발신 주소(권장). 없으면 설정의 사용자 이메일을 From으로 시도(도메인 미인증 시 Resend가 거절할 수 있음).
  */
+export function isResendConfigured(): boolean {
+  return Boolean(process.env.RESEND_API_KEY?.trim())
+}
+
 function escapeFromDisplayName(name: string): string {
   return name.replace(/[\r\n"\\]/g, " ").trim().slice(0, 120) || "Bill-IO"
 }

@@ -9,11 +9,10 @@
 - [ ] 이 프로젝트가 올라간 **GitHub(또는 Vercel이 지원하는 Git) 저장소** URL
 - [ ] **Supabase** 계정 (새 프로젝트를 만들지·기존 것을 쓸지 결정)
 - [ ] **Vercel** 계정
-- [ ] 베타에서 쓸 **테스트용 이메일 주소**(로그인용; 앱에 회원가입 화면 없음)
-- [ ] 로컬에 클론된 저장소에서 `supabase/migrations/` 아래 **3개 SQL 파일** 접근 가능
-  - `0001_mvp_schema.sql`
-  - `0002_phase2_foundation.sql`
-  - `0003_rls_tenant_fk_enforcement.sql`
+- [ ] 베타에서 쓸 **테스트용 이메일 주소**(로그인·또는 `/signup` 가입 검증용)
+- [ ] 로컬에 클론된 저장소에서 `supabase/migrations/` 아래 **SQL 파일** 접근 가능 (순서는 §2-2)
+- [ ] (견적 메일) [Resend](https://resend.com) API 키 발급 여부
+- [ ] (AI) OpenAI API 키 — AI 버튼 검증 시
 
 ---
 
@@ -28,14 +27,17 @@
 
 Supabase **SQL Editor** → New query → 파일 내용을 **붙여넣기 → Run** 을 **아래 순서만** 수행합니다.
 
-- [ ] **1번째**: `supabase/migrations/0001_mvp_schema.sql` 전체 실행 → 성공 확인
-- [ ] **2번째**: `supabase/migrations/0002_phase2_foundation.sql` 전체 실행 → 성공 확인
-- [ ] **3번째**: `supabase/migrations/0003_rls_tenant_fk_enforcement.sql` 전체 실행 → 성공 확인
+- [ ] **1번째**: `0001_mvp_schema.sql` 전체 실행 → 성공 확인
+- [ ] **2번째**: `0002_phase2_foundation.sql` 전체 실행 → 성공 확인
+- [ ] **3번째**: `0003_rls_tenant_fk_enforcement.sql` 전체 실행 → 성공 확인
+- [ ] **4번째**: `0003_quote_seal_share_document.sql` 전체 실행 → 성공 확인
+- [ ] **5번째**: `0004_user_plan.sql` 전체 실행 → 성공 확인
 
 ### 2-3. 적용 후 확인
 
-- [ ] **Table Editor**에 `users`, `customers`, `inquiries`, `quotes`, `invoices` 등 테이블이 보이는지 확인
-- [ ] (선택) SQL Editor에서 오류 없이 끝났는지 다시 한 번 확인 — **0003을 빼먹지 않았는지** 특히 확인
+- [ ] **Table Editor**에 `users`, `customers`, … 테이블이 보이는지 확인
+- [ ] `users` 행에 **`plan`** 컬럼이 있는지 확인 (`0004` 적용)
+- [ ] **0003_rls**·**0004**를 빼먹지 않았는지 다시 확인
 
 ### 2-4. Auth 설정 위치
 
@@ -55,11 +57,9 @@ Supabase **SQL Editor** → New query → 파일 내용을 **붙여넣기 → Ru
 
 ### 2-6. 테스트 계정 준비
 
-이 앱에는 **회원가입 페이지가 없습니다.**
-
-- [ ] **Authentication** → **Users** → **Add user** / **Invite** 등으로 베타용 사용자 생성  
-  - 이메일·비밀번호를 정해 두고 **메모**해 둡니다.
-- [ ] 이메일 확인이 켜져 있으면, Supabase 설정에 맞게 **인증 메일 처리** 또는 대시보드에서 확인 완료 처리
+- [ ] **방법 A**: 프로덕션 URL에서 **`/signup`** 으로 신규 가입 → 메일 인증 → 로그인  
+- [ ] **방법 B**: **Authentication** → **Users** → **Add user** / **Invite** 로 베타용 사용자 생성  
+- [ ] 이메일 확인이 켜져 있으면 인증 메일·Redirect URL을 확인
 
 ### 2-7. API 키 복사 (Vercel에 넣을 값)
 
@@ -92,6 +92,13 @@ Supabase **SQL Editor** → New query → 파일 내용을 **붙여넣기 → Ru
 
 - [ ] `NEXT_PUBLIC_SUPABASE_URL` = Supabase Project URL  
 - [ ] `NEXT_PUBLIC_SUPABASE_ANON_KEY` = Supabase **anon public** 키  
+- [ ] (강력 권장) `NEXT_PUBLIC_SITE_URL` = 프로덕션 기준 URL (슬래시 없음)
+
+운영 기능:
+
+- [ ] (견적 메일) `RESEND_API_KEY` — 없으면 이메일 발송 액션이 실패 메시지로 종료  
+- [ ] (권장) `RESEND_FROM` — 인증된 발신 주소  
+- [ ] (AI) `OPENAI_API_KEY` — AI API 사용 시
 
 환경 범위 선택 시:
 
@@ -127,9 +134,11 @@ Supabase **SQL Editor** → New query → 파일 내용을 **붙여넣기 → Ru
 
 **Production URL**을 브라우저에서 열고, 아래를 **위에서부터** 진행합니다.
 
-- [ ] **로그인** — 2-6에서 만든 계정으로 `/login`에서 로그인 → 대시보드 진입
+- [ ] **로그인** — 가입 또는 2-6 계정으로 `/login` → 대시보드
+- [ ] **(선택) 비밀번호 재설정** — `/forgot-password` → 메일 → `/reset-password` → 재로그인
 - [ ] **문의 생성** — `/inquiries`에서 문의 등록 → 목록에 보임
-- [ ] **견적 생성** — `/quotes`에서 견적 생성 → 목록에 보임
+- [ ] **견적 생성** — `/quotes`에서 견적 생성(또는 AI 초안 후 생성) → 목록에 보임
+- [ ] **견적 메일** — 보내기에서 테스트 수신함으로 발송 확인 (`RESEND_*` 필요)
 - [ ] **청구 생성** — `/invoices`에서 청구 생성 → 목록에 보임
 - [ ] **결제 상태 변경** — 청구 카드에서 결제 상태 드롭다운 변경 → 반영 확인
 - [ ] **리마인드 기록** — 같은 청구 카드에서 리마인드 저장 → 이력 표시 확인
@@ -137,7 +146,7 @@ Supabase **SQL Editor** → New query → 파일 내용을 **붙여넣기 → Ru
 - [ ] **검색/필터** — 문의 검색창, 고객 검색, 견적 상태 필터, 청구 필터 중 1개 이상 동작 확인
 - [ ] **고객 타임라인** — `/customers` → 고객 상세 → 타임라인에 활동이 쌓이는지 확인
 
-더 촘촘한 체크는 [beta-qa-checklist.md](./beta-qa-checklist.md)를 이어서 사용합니다.
+전체 E2E는 [production-e2e-checklist.md](./production-e2e-checklist.md), 스모크는 [beta-qa-checklist.md](./beta-qa-checklist.md)를 이어서 사용합니다.
 
 ---
 
@@ -145,12 +154,12 @@ Supabase **SQL Editor** → New query → 파일 내용을 **붙여넣기 → Ru
 
 아래를 **위에서부터** 다시 확인합니다.
 
-1. [ ] Supabase SQL **`0001` → `0002` → `0003`** 세 개 **모두** 성공했는가 (0003 누락이 흔함)
-2. [ ] Vercel **Production**에 `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_ANON_KEY` 가 **들어가 있는가** (Preview만 넣고 Production 비운 실수)
+1. [ ] Supabase SQL **`0001` → … → `0004_user_plan`** 까지 **순서대로** 성공했는가
+2. [ ] Vercel **Production**에 `NEXT_PUBLIC_SUPABASE_*` · (권장) `NEXT_PUBLIC_SITE_URL` · (메일) `RESEND_API_KEY` 가 있는가
 3. [ ] `NEXT_PUBLIC_SUPABASE_ANON_KEY`가 **anon public** 이지 **service_role** 이 아닌가
 4. [ ] Supabase **Site URL**·**Redirect URLs**에 **실제 Vercel Production URL**이 들어가 있는가 (localhost만 있으면 실패)
 5. [ ] Production에 **`ENABLE_DEMO_LOGIN=true`를 실수로 넣지 않았는가** (데모를 원하지 않을 때)
-6. [ ] 테스트 사용자가 Supabase **Authentication → Users**에 있고 비밀번호가 맞는가 (앱에 가입 UI 없음)
+6. [ ] 테스트 사용자가 `/signup` 또는 Supabase **Users**에 있고 비밀번호·인증 상태가 맞는가
 
 그 다음: [deployment.md](./deployment.md) §7 **자주 발생할 수 있는 실수** 참고.
 
@@ -175,4 +184,6 @@ Supabase **SQL Editor** → New query → 파일 내용을 **붙여넣기 → Ru
 | [deploy-runbook.md](./deploy-runbook.md) (이 파일) | **실행 순서** 한 번에 따라가기 |
 | [deployment.md](./deployment.md) | 상세·배경·RC 체크·코드 기준 참조 |
 | [beta-qa-checklist.md](./beta-qa-checklist.md) | 배포 직후 운영 스모크 체크박스 |
-| [README.md](../README.md) | 로컬 실행·환경변수 표·MVP 범위 |
+| [production-e2e-checklist.md](./production-e2e-checklist.md) | 출시 마감 E2E |
+| [operations-errors.md](./operations-errors.md) | 사용자 오류·원인 표 |
+| [README.md](../README.md) | 로컬 실행·환경변수 표 |

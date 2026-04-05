@@ -1,5 +1,7 @@
 import { randomBytes } from "node:crypto"
 
+import type { SupabaseClient } from "@supabase/supabase-js"
+
 import { resolveActivityHeadline, resolveActivityKind } from "@/lib/activity-presentation"
 import {
   demoActivityLogs,
@@ -21,6 +23,7 @@ import {
   defaultReminderMessageFromTemplates,
 } from "@/lib/template-defaults"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
+import { fetchUserPlanRow } from "@/lib/user-plan"
 import type {
   ActivityLog,
   BillingPlan,
@@ -2347,6 +2350,7 @@ export async function getSettingsPageData(): Promise<{
   settings: BusinessSettings
   templates: Template[]
   currentPlan: BillingPlan
+  planColumnMissing: boolean
 }> {
   const context = await getDataContext()
 
@@ -2355,27 +2359,24 @@ export async function getSettingsPageData(): Promise<{
       settings: demoBusinessSettings,
       templates: demoTemplates,
       currentPlan: demoUser.plan,
+      planColumnMissing: false,
     }
   }
 
-  const [
-    { data: settingsRow, error: settingsError },
-    { data: templateRows, error: templateError },
-    { data: userPlanRow, error: userPlanError },
-  ] = await Promise.all([
-    context.supabase
-      .from("business_settings")
-      .select("*")
-      .eq("user_id", context.userId)
-      .maybeSingle(),
-    context.supabase
-      .from("templates")
-      .select("*")
-      .eq("user_id", context.userId)
-      .order("is_default", { ascending: false })
-      .order("created_at", { ascending: true }),
-    context.supabase.from("users").select("plan").eq("id", context.userId).maybeSingle(),
-  ])
+  const [{ data: settingsRow, error: settingsError }, { data: templateRows, error: templateError }] =
+    await Promise.all([
+      context.supabase
+        .from("business_settings")
+        .select("*")
+        .eq("user_id", context.userId)
+        .maybeSingle(),
+      context.supabase
+        .from("templates")
+        .select("*")
+        .eq("user_id", context.userId)
+        .order("is_default", { ascending: false })
+        .order("created_at", { ascending: true }),
+    ])
 
   if (settingsError) {
     throw settingsError
@@ -2385,9 +2386,10 @@ export async function getSettingsPageData(): Promise<{
     throw templateError
   }
 
-  if (userPlanError) {
-    throw userPlanError
-  }
+  const { plan: currentPlan, columnMissing: planColumnMissing } = await fetchUserPlanRow(
+    context.supabase as unknown as SupabaseClient<Database>,
+    context.userId
+  )
 
   const settings = settingsRow
     ? mapBusinessSettings(settingsRow as BusinessSettingsRow)
@@ -2407,13 +2409,11 @@ export async function getSettingsPageData(): Promise<{
 
   const templates = ((templateRows ?? []) as TemplateRow[]).map(mapTemplate)
 
-  const rawPlan = (userPlanRow as { plan?: string } | null)?.plan
-  const currentPlan = rawPlan === "pro" ? ("pro" as const) : ("free" as const)
-
   return {
     settings,
     templates,
     currentPlan,
+    planColumnMissing,
   }
 }
 

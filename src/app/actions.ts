@@ -39,7 +39,7 @@ import {
   updateQuoteRecord,
   updateQuoteStatusRecord,
 } from "@/lib/data"
-import { sendHtmlEmailViaResend } from "@/lib/send-resend"
+import { isResendConfigured, sendHtmlEmailViaResend } from "@/lib/send-resend"
 import type {
   InquiryStage,
   InvoiceFormInput,
@@ -1136,6 +1136,14 @@ export async function sendQuoteEmailAction(input: z.infer<typeof sendQuoteEmailI
     }
     if (!session) {
       return { ok: false as const, error: "로그인이 필요합니다." }
+    }
+
+    if (!isResendConfigured()) {
+      return {
+        ok: false as const,
+        error:
+          "견적 메일 발송 API(Resend)가 설정되지 않았습니다. 배포 환경에 RESEND_API_KEY를 넣고, 가능하면 RESEND_FROM(인증된 발신 주소)도 설정해 주세요.",
+      }
     }
 
     const sender = await getBusinessFromIdentity()

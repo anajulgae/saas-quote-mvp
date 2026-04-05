@@ -63,6 +63,10 @@ export function SignupCheckEmailPanel({
           메일 도착까지 <span className="text-foreground/90">1~2분</span> 정도 걸릴 수 있습니다.
           보이지 않으면 <span className="text-foreground/90">스팸·프로모션함</span>도 확인해 주세요.
         </p>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          인증 링크가 <span className="text-foreground/90">만료</span>되었거나 오류가 나면, 아래에서 같은 주소로
+          메일을 다시 보낸 뒤 새 링크를 열어 주세요.
+        </p>
 
         <div className="rounded-lg border border-dashed border-border/80 bg-muted/15 px-3 py-3 text-center text-sm">
           <p className="text-muted-foreground">이미 인증을 마치셨나요?</p>
