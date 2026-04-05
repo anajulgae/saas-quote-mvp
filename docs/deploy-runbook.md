@@ -98,7 +98,7 @@ Supabase **SQL Editor** → New query → 파일 내용을 **붙여넣기 → Ru
 
 - [ ] (견적 메일) `RESEND_API_KEY` — 없으면 이메일 발송 액션이 실패 메시지로 종료  
 - [ ] (권장) `RESEND_FROM` — 인증된 발신 주소  
-- [ ] (AI) `OPENAI_API_KEY` — AI API 사용 시
+- [ ] (AI) `OPENAI_API_KEY` + `OPENAI_MODEL_INQUIRY_STRUCTURE` + `OPENAI_MODEL_COMPOSE_MESSAGE` + `OPENAI_MODEL_QUOTE_DRAFT` — AI API 사용 시
 
 환경 범위 선택 시:
 

@@ -38,8 +38,15 @@ Vercel 프로젝트 **Settings → Environment Variables**에서 설정합니다
 | `NEXT_PUBLIC_SITE_URL` | 강력 권장 | 고정 도메인(슬래시 없음). 인증·재설정·공유 링크 기준. 미설정 시 `VERCEL_URL`에 의존해 Supabase Redirect와 어긋나기 쉬움 (`src/lib/site-url.ts`) |
 | `RESEND_API_KEY` | 견적 메일 발송 시 사실상 필수 | Resend API 키. 없으면 `sendQuoteEmailAction`이 사용자에게 명시적 오류를 반환 (`src/lib/send-resend.ts`) |
 | `RESEND_FROM` | 권장 | 인증된 발신 주소. 미설정 시 설정 화면 이메일 또는 테스트 주소 시도(403/422 가능) |
-| `OPENAI_API_KEY` | AI 기능 사용 시 필수 | 견적 초안·문의 구조화·발송 문구 API (`/api/ai/*`) |
-| `OPENAI_MODEL` | 선택 | 기본 `gpt-4o-mini` |
+| `OPENAI_API_KEY` | AI 기능 사용 시 필수 | 모든 `/api/ai/*` 호출 |
+| `OPENAI_MODEL_INQUIRY_STRUCTURE` | AI 사용 시 필수 | `POST /api/ai/inquiry-structure` — 짧은 구조화용(권장 `gpt-5.4-nano`) |
+| `OPENAI_MODEL_COMPOSE_MESSAGE` | AI 사용 시 필수 | `POST /api/ai/compose-message` — 발송·리마인드 문구(권장 `gpt-5.4-nano`) |
+| `OPENAI_MODEL_QUOTE_DRAFT` | AI 사용 시 필수 | `POST /api/ai/quote-draft` — 견적 초안(권장 `gpt-5.4-mini`) |
+| `OPENAI_MODEL_FALLBACK` | 선택 | `OPENAI_QUOTE_DRAFT_FALLBACK` 활성 시 초안 재시도 모델(권장 `gpt-5.4-nano`) |
+| `OPENAI_QUOTE_DRAFT_FALLBACK` | 선택 | `true`/`1`/`yes` 이면 초안 API가 일부 실패 시 fallback 모델로 **1회** 재호출 |
+| `OPENAI_MAX_OUTPUT_TOKENS_INQUIRY` | 선택 | 문의 구조화 max output (미설정 시 **500**) |
+| `OPENAI_MAX_OUTPUT_TOKENS_MESSAGE` | 선택 | 문구 생성 max output (미설정 시 **600**) |
+| `OPENAI_MAX_OUTPUT_TOKENS_QUOTE` | 선택 | 견적 초안 max output (미설정 시 **1400**) |
 | `OPENAI_TIMEOUT_MS` | 선택 | 기본 `55000` (ms) |
 
 ### 선택
@@ -60,6 +67,16 @@ Vercel 프로젝트 **Settings → Environment Variables**에서 설정합니다
 
 - **Production**: 베타 사용자용 URL. `NEXT_PUBLIC_SUPABASE_*` 필수.
 - **Preview**: 동일 Supabase를 쓰거나 별도 프로젝트를 쓸 수 있습니다. Preview만 데모를 켤 경우 `ENABLE_DEMO_LOGIN=true` 를 **Preview에만** 넣고 Production에는 넣지 않습니다.
+
+### OpenAI: 왜 기능마다 모델을 나누는지
+
+- **문의 구조화**·**발송 문구**: 출력이 짧고 반복적이라 **경량 모델(`gpt-5.4-nano` 권장)**으로 비용을 줄입니다.
+- **견적 초안**: 항목·결제·고객 안내까지 한 번에 써야 해 **품질 여유가 더 큰 모델(`gpt-5.4-mini` 권장)**을 씁니다.
+- **코드에 모델명 없음** — 반드시 `OPENAI_MODEL_*` 환경 변수만 사용합니다. 교체 시 Vercel 변수 수정 → Redeploy.
+- **호출 추적**: 서버 표준 출력에 `[bill-io-ai]` JSON 로그(`feature`, `model`, `maxOutputTokens`, `phase`)가 남아 이후 비용 분석에 쓸 수 있습니다.
+- **초안만 선택적 fallback**: `OPENAI_QUOTE_DRAFT_FALLBACK=true` + `OPENAI_MODEL_FALLBACK` 시 mini 실패(HTTP·빈 응답·JSON·파싱·타임아웃)에 한해 nano로 **1회** 재시도합니다. 기본은 꺼져 있어 이중 과금을 피합니다.
+
+구현 위치: `src/lib/server/openai-config.ts`(모델·토큰 상한 env), `src/lib/server/openai-chat.ts`(공통 호출·로깅).
 
 ---
 
@@ -154,7 +171,7 @@ Preview 환경에만 `ENABLE_DEMO_LOGIN=true` 를 추가하고, Production에는
 - [ ] Vercel에 **`NEXT_PUBLIC_SUPABASE_URL`**, **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** 입력 (사용하는 **Production·Preview** 모두)  
 - [ ] (권장) **`NEXT_PUBLIC_SITE_URL`** — 프로덕션 고정 도메인  
 - [ ] (견적 메일) **`RESEND_API_KEY`** 및 권장 **`RESEND_FROM`**  
-- [ ] (AI) **`OPENAI_API_KEY`** — AI 버튼 사용 시  
+- [ ] (AI) **`OPENAI_API_KEY`** 및 기능별 **`OPENAI_MODEL_INQUIRY_STRUCTURE`**, **`OPENAI_MODEL_COMPOSE_MESSAGE`**, **`OPENAI_MODEL_QUOTE_DRAFT`** — AI 버튼 사용 시  
 - [ ] Supabase **Authentication → URL Configuration**: **Site URL**·**Redirect URLs**에 Vercel URL 반영 (`/auth/callback`, `/reset-password`)  
 - [ ] **Production**에서 데모 불필요 시 **`ENABLE_DEMO_LOGIN` 미설정 또는 `false`**  
 - [ ] **회원가입 또는 테스트 계정**으로 프로덕션 URL **로그인** 성공  

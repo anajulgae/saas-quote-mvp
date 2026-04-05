@@ -355,12 +355,11 @@ export function InquiriesBoard({
         const data = (await res.json()) as {
           error?: string
           structured?: {
-            suggestedTitle: string
-            customerHint: string
-            requestSummary: string
+            title: string
             channel: string
-            estimatedScope: string
-            followupMemo: string
+            scopeSummary: string
+            structuredSummary: string
+            followUpNote: string
           }
         }
         if (!res.ok) {
@@ -374,20 +373,14 @@ export function InquiriesBoard({
         }
         setForm((current) => ({
           ...current,
-          title: s.suggestedTitle || current.title,
-          serviceCategory: s.estimatedScope || current.serviceCategory,
+          title: s.title || current.title,
+          serviceCategory: s.scopeSummary || current.serviceCategory,
           channel: s.channel || current.channel,
-          details: [s.requestSummary, s.followupMemo ? `■ 팔로업 메모\n${s.followupMemo}` : ""]
+          details: [s.structuredSummary, s.followUpNote ? `■ 팔로업\n${s.followUpNote}` : ""]
             .filter(Boolean)
             .join("\n\n"),
         }))
-        if (s.customerHint) {
-          toast.message("고객은 목록에서 직접 선택해 주세요.", {
-            description: `추정: ${s.customerHint}`,
-          })
-        } else {
-          toast.success("AI가 제목·채널·범위·요약을 채웠습니다.")
-        }
+        toast.success("AI가 제목·채널·범위·요약을 채웠습니다.")
       } catch {
         toast.error("네트워크 오류로 구조화에 실패했습니다.")
       } finally {

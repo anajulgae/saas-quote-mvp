@@ -3,30 +3,47 @@ import { NextResponse } from "next/server"
 import { planAllowsFeature } from "@/lib/plan-features"
 import { reportServerError } from "@/lib/observability"
 import { getAuthenticatedUserForApi } from "@/lib/server/api-auth"
-import { completeJsonChat, OpenAiError } from "@/lib/server/openai-chat"
+import { completeJsonChatForFeature, OpenAiError } from "@/lib/server/openai-chat"
 import { openAiErrorUserPayload } from "@/lib/server/openai-user-errors"
 
-function parseStructure(obj: unknown): {
-  suggestedTitle: string
-  customerHint: string
-  requestSummary: string
+/** API 응답·AI 계약 (필드명은 env 프롬프트와 일치) */
+export type InquiryStructuredPayload = {
+  title: string
   channel: string
-  estimatedScope: string
-  followupMemo: string
-} {
+  scopeSummary: string
+  structuredSummary: string
+  followUpNote: string
+}
+
+function str(o: Record<string, unknown>, k: string): string {
+  return typeof o[k] === "string" ? (o[k] as string).trim() : ""
+}
+
+function parseStructure(obj: unknown): InquiryStructuredPayload {
   if (!obj || typeof obj !== "object") {
     throw new Error("객체 형식이 아닙니다.")
   }
   const o = obj as Record<string, unknown>
+  const title = str(o, "title") || str(o, "suggestedTitle")
+  const channel = str(o, "channel") || "카카오톡"
+  const scopeSummary = str(o, "scopeSummary") || str(o, "estimatedScope")
+  const structuredSummary = str(o, "structuredSummary") || str(o, "requestSummary")
+  const followUpNote = str(o, "followUpNote") || str(o, "followupMemo")
+  if (!structuredSummary.trim() && !title.trim()) {
+    throw new Error("structuredSummary 또는 title 이 필요합니다.")
+  }
   return {
-    suggestedTitle: typeof o.suggestedTitle === "string" ? o.suggestedTitle.trim() : "",
-    customerHint: typeof o.customerHint === "string" ? o.customerHint.trim() : "",
-    requestSummary: typeof o.requestSummary === "string" ? o.requestSummary.trim() : "",
-    channel: typeof o.channel === "string" ? o.channel.trim() : "카카오톡",
-    estimatedScope: typeof o.estimatedScope === "string" ? o.estimatedScope.trim() : "",
-    followupMemo: typeof o.followupMemo === "string" ? o.followupMemo.trim() : "",
+    title: title.trim() || "신규 문의",
+    channel,
+    scopeSummary,
+    structuredSummary,
+    followUpNote,
   }
 }
+
+const SYSTEM_PROMPT = `한국어 문의 원문→구조화. JSON만 출력. 설명 문장 금지.
+키: title(한 줄), channel(카카오톡|전화|이메일|방문|기타), scopeSummary(업종·범위 한 줄), structuredSummary(핵심 요약 2~4문장), followUpNote(내부 팔로업 한 줄, 없으면 "").
+값은 짧게.`
 
 export async function POST(req: Request) {
   const auth = await getAuthenticatedUserForApi()
@@ -50,32 +67,30 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "문의 원문을 조금 더 입력해 주세요." }, { status: 400 })
   }
 
-  const system = `한국어로 문의 원문을 구조화합니다. JSON만 출력.
-키: suggestedTitle(한 줄 제목), customerHint(거래처/담당자 추정 이름 또는 빈 문자열),
-requestSummary(핵심 요청 요약), channel(카카오톡|전화|이메일|방문|기타 중 하나),
-estimatedScope(업종·서비스 범위 한 줄), followupMemo(내부 팔로업 메모)`
-
   try {
-    const structured = await completeJsonChat(
-      [
-        { role: "system", content: system },
-        { role: "user", content: rawText.slice(0, 12000) },
+    const structured = await completeJsonChatForFeature({
+      feature: "inquiry_structure",
+      temperature: 0.2,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: rawText.slice(0, 8000) },
       ],
-      parseStructure
-    )
+      parse: parseStructure,
+    })
 
-    if (!structured.suggestedTitle) {
-      structured.suggestedTitle = "신규 문의"
+    if (!structured.title.trim()) {
+      structured.title = "신규 문의"
     }
 
     return NextResponse.json({ ok: true as const, structured })
   } catch (e) {
     if (e instanceof OpenAiError) {
-      if (e.code !== "NOT_CONFIGURED") {
+      if (e.code !== "NOT_CONFIGURED" && e.code !== "MODEL_NOT_CONFIGURED") {
         reportServerError(e.message, {
           route: "inquiry-structure",
           code: e.code,
           httpStatus: e.httpStatus,
+          missingEnv: e.missingEnv,
         })
       }
       const { error, status } = openAiErrorUserPayload(e)

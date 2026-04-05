@@ -9,6 +9,11 @@ export function openAiErrorUserPayload(e: OpenAiError): { error: string; status:
           "AI가 아직 연결되지 않았습니다. Vercel(또는 서버) 환경 변수에 OPENAI_API_KEY를 넣고 재배포한 뒤 다시 시도해 주세요.",
         status: 503,
       }
+    case "MODEL_NOT_CONFIGURED":
+      return {
+        error: `AI 모델이 설정되지 않았습니다. ${e.missingEnv ?? "OPENAI_MODEL_INQUIRY_STRUCTURE 등 기능별 모델"} 환경 변수에 모델명을 넣고 재배포해 주세요.`,
+        status: 503,
+      }
     case "TIMEOUT":
       return {
         error: "AI 응답이 너무 오래 걸렸습니다. 잠시 후 다시 시도해 주세요.",
@@ -45,7 +50,8 @@ export function openAiErrorUserPayload(e: OpenAiError): { error: string; status:
     case "JSON":
     case "PARSE":
       return {
-        error: "AI가 예상한 형식으로 답하지 못했습니다. 다시 시도하거나 제목·본문을 직접 입력해 주세요.",
+        error:
+          "AI 응답을 처리하지 못했습니다. 잠시 후 다시 시도하거나 해당 화면에서 직접 입력해 주세요.",
         status: 502,
       }
     default:

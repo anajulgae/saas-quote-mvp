@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 import { planAllowsFeature } from "@/lib/plan-features"
 import { reportServerError } from "@/lib/observability"
 import { getAuthenticatedUserForApi } from "@/lib/server/api-auth"
-import { completeJsonChat, OpenAiError } from "@/lib/server/openai-chat"
+import { completeJsonChatForFeature, OpenAiError } from "@/lib/server/openai-chat"
 import { openAiErrorUserPayload } from "@/lib/server/openai-user-errors"
 
 type Kind = "quote_send" | "invoice_notice" | "overdue_reminder"
@@ -20,14 +20,26 @@ function parseMessage(obj: unknown): { subject?: string; body: string } {
     throw new Error("body 가 비어 있습니다.")
   }
   const subject = typeof o.subject === "string" ? o.subject.trim() : undefined
+  if (body.length > 4000) {
+    throw new Error("body 가 너무 깁니다.")
+  }
   return { subject, body }
 }
 
 const toneLabel: Record<Tone, string> = {
-  polite: "매우 정중하고 부드럽게",
-  neutral: "간결하고 업무적으로",
-  firm: "단호하되 무례하지 않게, 연체·독촉 맥락에 맞게",
+  polite: "매우 정중·간결",
+  neutral: "업무적·짧게",
+  firm: "단호·무례 금지, 사실 위주",
 }
+
+/** 한 줄 지시 — 토큰 절약 */
+const kindLine: Record<Kind, string> = {
+  quote_send: "견적 메일: 인사+본문+맺음. URL 있으면 1회만 포함.",
+  invoice_notice: "청구·입금 안내: 금액·기한·계좌 맥락 반영, 과장 없음.",
+  overdue_reminder: "연체 리마인드: 납부 재확인, 짧게.",
+}
+
+const SYSTEM_PREFIX = `한국어 비즈니스 문구. JSON만. 키: subject(선택,≤80자), body(필수,≤1200자, 이메일·문자용). 장황한 마케팅 금지.`
 
 export async function POST(req: Request) {
   const auth = await getAuthenticatedUserForApi()
@@ -61,40 +73,43 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "요청이 올바르지 않습니다." }, { status: 400 })
   }
 
-  const ctxJson = JSON.stringify(context, null, 0)
-
-  const kindInstruction: Record<Kind, string> = {
-    quote_send:
-      "견적서 이메일 본문. 제목 제안도 함께. 링크 URL이 있으면 본문에 자연스럽게 포함. 인사·맺음말 포함.",
-    invoice_notice: "청구·입금 안내 문자/이메일에 붙이기 좋은 짧은~중간 길이 본문. 계좌·금액·기한 반영.",
-    overdue_reminder: "미수·연체 리마인드. 납부 재확인 요청. 과장 없이 사실 위주.",
+  let ctxJson = JSON.stringify(context)
+  if (ctxJson.length > 5000) {
+    ctxJson = ctxJson.slice(0, 5000) + "…"
   }
 
-  const system = `한국어 비즈니스 문구 작성. JSON만 출력: subject(제목, 선택), body(본문 전체, 이메일·문자·카카오 붙여넣기용).
+  const system = `${SYSTEM_PREFIX}
 톤: ${toneLabel[tone]}.
-용도: ${kindInstruction[kind]}`
+${kindLine[kind]}`
 
   try {
-    const message = await completeJsonChat(
-      [
+    const message = await completeJsonChatForFeature({
+      feature: "compose_message",
+      temperature: 0.25,
+      messages: [
         { role: "system", content: system },
-        { role: "user", content: `맥락(JSON): ${ctxJson}` },
+        { role: "user", content: ctxJson },
       ],
-      parseMessage
-    )
+      parse: parseMessage,
+    })
 
     return NextResponse.json({ ok: true as const, message })
   } catch (e) {
     if (e instanceof OpenAiError) {
-      if (e.code !== "NOT_CONFIGURED") {
+      if (e.code !== "NOT_CONFIGURED" && e.code !== "MODEL_NOT_CONFIGURED") {
         reportServerError(e.message, {
           route: "compose-message",
           code: e.code,
           httpStatus: e.httpStatus,
+          missingEnv: e.missingEnv,
         })
       }
       const { error, status } = openAiErrorUserPayload(e)
-      return NextResponse.json({ error }, { status })
+      const msg =
+        e.code === "EMPTY" || e.code === "JSON" || e.code === "PARSE"
+          ? "문구 생성에 실패했습니다. 잠시 후 다시 시도하거나 제목·본문을 직접 입력해 주세요."
+          : error
+      return NextResponse.json({ error: msg }, { status })
     }
     reportServerError(e instanceof Error ? e.message : "unknown", { route: "compose-message" })
     return NextResponse.json({ error: "문구 생성에 실패했습니다." }, { status: 502 })

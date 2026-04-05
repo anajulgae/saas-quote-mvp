@@ -51,13 +51,33 @@ npm run build
 | `RESEND_API_KEY` | 견적 메일 시 사실상 필수 | Resend에서 발급 |
 | `RESEND_FROM` | 권장 | 인증된 발신 주소 |
 | `OPENAI_API_KEY` | AI 사용 시 필수 | `/api/ai/*` |
-| `OPENAI_MODEL` | 선택 | 기본 `gpt-4o-mini` |
+| `OPENAI_MODEL_INQUIRY_STRUCTURE` | AI 사용 시 필수 | 문의 구조화 → 기본 `gpt-5.4-nano` (`.env.example` 참고) |
+| `OPENAI_MODEL_COMPOSE_MESSAGE` | AI 사용 시 필수 | 발송·리마인드 문구 → 기본 `gpt-5.4-nano` |
+| `OPENAI_MODEL_QUOTE_DRAFT` | AI 사용 시 필수 | 견적 초안 → 기본 `gpt-5.4-mini` |
+| `OPENAI_MODEL_FALLBACK` | 선택 | 견적 초안 실패 시 재시도 모델 (`OPENAI_QUOTE_DRAFT_FALLBACK=true`일 때) |
+| `OPENAI_MAX_OUTPUT_TOKENS_*` | 선택 | 기능별 출력 토큰 상한 |
+| `OPENAI_QUOTE_DRAFT_FALLBACK` | 선택 | `true`면 초안 API가 실패 시 fallback 모델 1회 재시도 |
 | `ENABLE_DEMO_LOGIN` | 선택 | 데모 로그인 허용 (아래 표 참고) |
 | `DEMO_LOGIN_EMAIL` / `DEMO_LOGIN_PASSWORD` | 선택 | 데모 전용 |
 | `NEXT_PUBLIC_APP_NAME` | 선택 | 표시용 이름 |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | 선택 | `/billing` Business 문의 |
 
 전체 예시와 주석: **`.env.example`**
+
+### OpenAI: 기능별 모델 (비용·품질 분리)
+
+| API | 환경 변수 | 권장 기본값(예시) | 역할 |
+|-----|-----------|-------------------|------|
+| `/api/ai/inquiry-structure` | `OPENAI_MODEL_INQUIRY_STRUCTURE` | `gpt-5.4-nano` | 짧은 구조화·채널·요약 |
+| `/api/ai/compose-message` | `OPENAI_MODEL_COMPOSE_MESSAGE` | `gpt-5.4-nano` | 발송·청구·리마인드 문구 |
+| `/api/ai/quote-draft` | `OPENAI_MODEL_QUOTE_DRAFT` | `gpt-5.4-mini` | 견적 초안(항목·결제·안내) |
+
+- **모델명은 코드에 없음.** 바꿀 때는 배포 환경 변수만 수정 후 재배포. 설정 집약지: `src/lib/server/openai-config.ts`, 호출: `src/lib/server/openai-chat.ts`.
+- **비용**: 짧은 작업은 nano, 초안만 mini. `OPENAI_MAX_OUTPUT_TOKENS_INQUIRY` / `_MESSAGE` / `_QUOTE` 로 출력 상한 조절.
+- **운영 로그**: `[bill-io-ai]` + JSON (`feature`, `model`, `maxOutputTokens`, `phase`) — 이후 사용량·비용 분석에 활용.
+- **초안 fallback(선택)**: `OPENAI_QUOTE_DRAFT_FALLBACK=true` 이고 `OPENAI_MODEL_FALLBACK` 이 있으면, 주 모델이 실패할 때만 nano로 1회 재시도.
+
+상세 표·체크리스트: **`docs/deployment.md`**.
 
 ### `ENABLE_DEMO_LOGIN` 동작 (코드: `src/lib/demo-flags.ts`)
 
@@ -162,7 +182,7 @@ npm run build
 ## 배포 전 최종 체크포인트 (RC — 사람이 꼭 확인)
 
 - [ ] Supabase 마이그레이션 **전 순서** 적용 (`0004_user_plan` 포함)  
-- [ ] Vercel: **`NEXT_PUBLIC_SUPABASE_*`** · (권장) **`NEXT_PUBLIC_SITE_URL`** · (메일) **`RESEND_API_KEY`** · (AI) **`OPENAI_API_KEY`**  
+- [ ] Vercel: **`NEXT_PUBLIC_SUPABASE_*`** · (권장) **`NEXT_PUBLIC_SITE_URL`** · (메일) **`RESEND_API_KEY`** · (AI) **`OPENAI_API_KEY`** + 기능별 **`OPENAI_MODEL_INQUIRY_STRUCTURE`**, **`OPENAI_MODEL_COMPOSE_MESSAGE`**, **`OPENAI_MODEL_QUOTE_DRAFT`**  
 - [ ] Supabase Auth: **Site URL**·**Redirect URLs** (`/auth/callback`, `/reset-password`)  
 - [ ] Production: **`ENABLE_DEMO_LOGIN` 미설정 또는 `false`** (데모 불필요 시)  
 - [ ] 로그인·**견적 메일**(가능 시)·핵심 CRUD 수동 확인  

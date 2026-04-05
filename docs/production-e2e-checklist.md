@@ -1,7 +1,7 @@
 # 운영 계정 기준 E2E 체크리스트 (출시 마감용)
 
 **목적**: 실제 프로덕션 URL·Supabase·Vercel 환경에서 아래를 **순서대로** 한 번에 통과하는지 검증합니다.  
-**전제**: [deployment.md](./deployment.md) 마이그레이션·환경 변수·Auth URL 적용 완료, `RESEND_API_KEY`·`OPENAI_API_KEY` 설정(해당 기능 사용 시).
+**전제**: [deployment.md](./deployment.md) 마이그레이션·환경 변수·Auth URL 적용 완료, `RESEND_API_KEY`·`OPENAI_API_KEY`·기능별 `OPENAI_MODEL_*` 설정(해당 기능 사용 시).
 
 ---
 
@@ -10,7 +10,7 @@
 - [ ] Supabase 마이그레이션: `0001` → `0002` → `0003_rls_tenant_fk_enforcement.sql` → `0003_quote_seal_share_document.sql` → `0004_user_plan.sql` 적용
 - [ ] Vercel: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL`(권장)
 - [ ] Vercel: `RESEND_API_KEY` (+ 권장 `RESEND_FROM`)
-- [ ] Vercel: `OPENAI_API_KEY` (+ 선택 `OPENAI_MODEL`)
+- [ ] Vercel: `OPENAI_API_KEY` + `OPENAI_MODEL_INQUIRY_STRUCTURE` + `OPENAI_MODEL_COMPOSE_MESSAGE` + `OPENAI_MODEL_QUOTE_DRAFT` (+ 선택 `OPENAI_MODEL_FALLBACK` / `OPENAI_QUOTE_DRAFT_FALLBACK`)
 - [ ] Supabase Auth: Redirect URLs에 `{SITE_URL}/auth/callback`, `{SITE_URL}/reset-password`
 
 ---
