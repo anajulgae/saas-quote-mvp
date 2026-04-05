@@ -64,22 +64,33 @@ export async function ensureUserProfile(
     }
   )
 
-  await ((supabase.from("business_settings") as unknown) as {
-    upsert: (
-      value: {
-        user_id: string
-        business_name: string
-        owner_name: string
-        email: string | null
-        phone: string | null
-        payment_terms: string
-        bank_account: string
-        reminder_message: string
-      },
-      options: { onConflict: string }
-    ) => Promise<unknown>
-  }).upsert(
-    {
+  // ⚠️ business_settings 는 여기서 upsert 하면 안 됨: 매 요청마다 가입 시 기본값으로 설정 화면 저장분을 덮어씀.
+  // 행이 없을 때만(트리거 누락·레거시 계정) 초기 삽입한다.
+  const { data: existingSettings, error: settingsLookupError } = await supabase
+    .from("business_settings")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle()
+
+  if (settingsLookupError) {
+    throw settingsLookupError
+  }
+
+  if (!existingSettings) {
+    const { error: insertSettingsError } = await (
+      supabase.from("business_settings") as unknown as {
+        insert: (v: {
+          user_id: string
+          business_name: string
+          owner_name: string
+          email: string | null
+          phone: string | null
+          payment_terms: string
+          bank_account: string
+          reminder_message: string
+        }) => Promise<{ error: { code?: string; message?: string } | null }>
+      }
+    ).insert({
       user_id: user.id,
       business_name: businessName,
       owner_name: fullName,
@@ -89,11 +100,15 @@ export async function ensureUserProfile(
       bank_account: "",
       reminder_message:
         "안녕하세요. 이전에 전달드린 청구 건의 입금 일정을 확인 부탁드립니다.",
-    },
-    {
-      onConflict: "user_id",
+    })
+
+    if (insertSettingsError) {
+      const code = insertSettingsError.code
+      if (code !== "23505") {
+        throw insertSettingsError
+      }
     }
-  )
+  }
 
   return {
     fullName,
