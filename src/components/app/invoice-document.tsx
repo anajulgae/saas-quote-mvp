@@ -1,4 +1,6 @@
+import { OpsStatusChip } from "@/components/app/ops-status-chip"
 import { formatCurrency, formatDate } from "@/lib/format"
+import { paymentStatusDocumentLine } from "@/lib/ops-status-meta"
 import { customerPrimaryLabel } from "@/lib/quote-utils"
 import { cn } from "@/lib/utils"
 import type { Customer, InvoiceType, PaymentStatus } from "@/types/domain"
@@ -27,23 +29,6 @@ function invoiceTypeLabel(t: InvoiceType): string {
   return "청구(최종)"
 }
 
-function paymentStatusForCustomer(status: PaymentStatus): string {
-  switch (status) {
-    case "pending":
-      return "입금 대기"
-    case "deposit_paid":
-      return "선금 입금 확인"
-    case "partially_paid":
-      return "일부 입금"
-    case "paid":
-      return "입금 완료"
-    case "overdue":
-      return "입금 기한 경과 · 확인 필요"
-    default:
-      return "상태 확인 중"
-  }
-}
-
 export function InvoiceDocument({
   invoice,
   customer,
@@ -60,7 +45,7 @@ export function InvoiceDocument({
   const primary = customerPrimaryLabel(customer)
   const showSeal = Boolean(issuer.sealEnabled && issuer.sealImageUrl?.trim())
   const regNo = issuer.businessRegistrationNumber?.trim()
-  const statusLine = paymentStatusForCustomer(invoice.paymentStatus)
+  const statusLine = paymentStatusDocumentLine(invoice.paymentStatus)
 
   return (
     <article
@@ -127,13 +112,25 @@ export function InvoiceDocument({
           </div>
           <div className="border-b border-neutral-200 px-3 py-2.5 sm:border-r print:border-neutral-300">
             <dt className="text-[10px] font-medium uppercase tracking-wide text-neutral-500">입금 기한</dt>
-            <dd className="mt-0.5 font-semibold tabular-nums text-neutral-900">
+            <dd
+              className={cn(
+                "mt-0.5 font-semibold tabular-nums text-neutral-900",
+                invoice.paymentStatus === "overdue" && "text-red-800 print:text-red-900"
+              )}
+            >
               {formatDate(invoice.dueDate)}
             </dd>
           </div>
           <div className="border-b border-neutral-200 px-3 py-2.5 sm:border-r lg:border-b-0 print:border-neutral-300">
             <dt className="text-[10px] font-medium uppercase tracking-wide text-neutral-500">입금 상태</dt>
-            <dd className="mt-0.5 font-semibold text-neutral-900">{statusLine}</dd>
+            <dd className="mt-0.5 space-y-1.5">
+              <OpsStatusChip
+                domain="payment"
+                status={invoice.paymentStatus}
+                className="print:border-neutral-400 print:bg-neutral-100"
+              />
+              <p className="text-xs font-medium leading-snug text-neutral-700">{statusLine}</p>
+            </dd>
           </div>
           <div className="px-3 py-2.5">
             <dt className="text-[10px] font-medium uppercase tracking-wide text-neutral-500">청구 금액</dt>

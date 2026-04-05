@@ -33,6 +33,7 @@ import { EmptyState } from "@/components/app/empty-state"
 import { PageHeader } from "@/components/app/page-header"
 import { QuoteDraftAssistantForm } from "@/components/app/quote-draft-assistant"
 import { QuoteSendDialog } from "@/components/app/quote-send-dialog"
+import { OpsTimeHintChip, OpsToolbarFilterButton } from "@/components/app/ops-status-chip"
 import { PaymentStatusBadge, QuoteStatusBadge } from "@/components/app/status-badge"
 import { resolveActivityHeadline } from "@/lib/activity-presentation"
 import { OpsDetailSheet } from "@/components/operations/ops-detail-sheet"
@@ -46,7 +47,6 @@ import {
   opsTableHeadRowClass,
   opsTableRowClass,
 } from "@/components/operations/ops-table-styles"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent } from "@/components/ui/card"
@@ -1446,26 +1446,20 @@ function QuotesBoardPanel({
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <p className="text-xs font-medium text-muted-foreground">상태</p>
             <div className="flex flex-wrap gap-1.5">
-              <Button
-                type="button"
-                size="sm"
-                variant={statusFilter === "all" ? "default" : "outline"}
-                className="h-8"
+              <OpsToolbarFilterButton
+                selected={statusFilter === "all"}
                 onClick={() => setStatusFilter("all")}
               >
                 전체
-              </Button>
+              </OpsToolbarFilterButton>
               {quoteStatusOptions.map((option) => (
-                <Button
+                <OpsToolbarFilterButton
                   key={option.value}
-                  type="button"
-                  size="sm"
-                  className="h-8"
-                  variant={statusFilter === option.value ? "default" : "outline"}
+                  selected={statusFilter === option.value}
                   onClick={() => setStatusFilter(option.value)}
                 >
                   {option.label}
-                </Button>
+                </OpsToolbarFilterButton>
               ))}
             </div>
           </div>
@@ -1746,14 +1740,10 @@ function QuotesBoardPanel({
                         <span className="line-clamp-2 break-words font-medium">{quote.title}</span>
                         <div className="mt-1 flex flex-wrap gap-1">
                           {validityHint === "past_due" ? (
-                            <Badge variant="destructive" className="text-[9px] px-1 py-0">
-                              기한경과
-                            </Badge>
+                            <OpsTimeHintChip kind="quote_past_due" size="sm" />
                           ) : null}
                           {validityHint === "due_soon" ? (
-                            <Badge className="border-amber-500/40 bg-amber-500/12 text-[9px] px-1 py-0 text-amber-950 dark:text-amber-50">
-                              임박
-                            </Badge>
+                            <OpsTimeHintChip kind="quote_due_soon" size="sm" />
                           ) : null}
                         </div>
                       </td>
@@ -1761,28 +1751,31 @@ function QuotesBoardPanel({
                         {customerPrimaryLabel(customer)}
                       </td>
                       <td className={opsTableCellClass} onClick={(e) => e.stopPropagation()}>
-                        <Select
-                          value={quote.status}
-                          items={quoteStatusSelectItems}
-                          onValueChange={(value) => {
-                            const next = (value as QuoteStatus | null) ?? quote.status
-                            if (next === quote.status) {
-                              return
-                            }
-                            setStatusConfirm({ quote, next })
-                          }}
-                        >
-                          <SelectTrigger className="h-8 w-full min-w-0 max-w-[8rem] text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {quoteStatusOptions.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex max-w-[8.5rem] flex-col gap-1.5">
+                          <QuoteStatusBadge status={quote.status} className="w-fit" />
+                          <Select
+                            value={quote.status}
+                            items={quoteStatusSelectItems}
+                            onValueChange={(value) => {
+                              const next = (value as QuoteStatus | null) ?? quote.status
+                              if (next === quote.status) {
+                                return
+                              }
+                              setStatusConfirm({ quote, next })
+                            }}
+                          >
+                            <SelectTrigger className="h-8 w-full min-w-0 max-w-[8rem] text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {quoteStatusOptions.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </td>
                       <td className={cn(opsTableCellClass, "text-right text-sm font-semibold tabular-nums")}>
                         {formatCurrency(quote.total)}
@@ -1861,6 +1854,14 @@ function QuotesBoardPanel({
                       <p className="font-mono text-[11px] text-muted-foreground">{quote.quoteNumber}</p>
                       <p className="mt-0.5 font-medium leading-snug">{quote.title}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">{customerPrimaryLabel(customer)}</p>
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {validityHint === "past_due" ? (
+                          <OpsTimeHintChip kind="quote_past_due" size="sm" />
+                        ) : null}
+                        {validityHint === "due_soon" ? (
+                          <OpsTimeHintChip kind="quote_due_soon" size="sm" />
+                        ) : null}
+                      </div>
                     </div>
                     <QuoteStatusBadge status={quote.status} />
                   </div>
@@ -1944,20 +1945,16 @@ function QuotesBoardPanel({
         {drawerQuote ? (
           <div className="space-y-4 text-sm">
             <div className="flex flex-wrap items-center gap-2">
-              <QuoteStatusBadge status={drawerQuote.status} />
               {getQuoteValidityHint(drawerQuote.validUntil, drawerQuote.status) === "past_due" ? (
-                <Badge variant="destructive" className="text-[10px]">
-                  유효기한 경과
-                </Badge>
+                <OpsTimeHintChip kind="quote_past_due" />
               ) : null}
               {getQuoteValidityHint(drawerQuote.validUntil, drawerQuote.status) === "due_soon" ? (
-                <Badge className="border-amber-500/50 bg-amber-500/15 text-[10px] text-amber-950 dark:text-amber-50">
-                  유효기한 임박
-                </Badge>
+                <OpsTimeHintChip kind="quote_due_soon" />
               ) : null}
             </div>
-            <div className="space-y-1 rounded-lg border border-border/50 bg-muted/10 p-3">
-              <p className="text-xs font-semibold text-muted-foreground">상태 변경</p>
+            <div className="space-y-2 rounded-lg border border-border/50 bg-muted/10 p-3">
+              <p className="text-xs font-semibold text-muted-foreground">견적 상태</p>
+              <QuoteStatusBadge status={drawerQuote.status} className="w-fit" />
               <Select
                 value={drawerQuote.status}
                 items={quoteStatusSelectItems}

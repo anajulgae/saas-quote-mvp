@@ -57,3 +57,10 @@ export function resolveActivityKind(action: string): ActivityKind {
 export function resolveActivityHeadline(action: string): string {
   return headlineByAction[action] ?? "활동"
 }
+
+/** 타임라인·메타데이터에서 상태 raw 값을 한글로 쓸 때 `get*Meta().label` 과 동일 */
+export {
+  getInquiryStageMeta,
+  getPaymentStatusMeta,
+  getQuoteStatusMeta,
+} from "@/lib/ops-status-meta"

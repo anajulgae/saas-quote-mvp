@@ -34,6 +34,7 @@ import {
 import { EmptyState } from "@/components/app/empty-state"
 import { InvoiceSendDialog } from "@/components/app/invoice-send-dialog"
 import { PageHeader } from "@/components/app/page-header"
+import { OpsTimeHintChip, OpsToolbarFilterButton } from "@/components/app/ops-status-chip"
 import { PaymentStatusBadge } from "@/components/app/status-badge"
 import { OpsCollapsibleFilters } from "@/components/operations/ops-collapsible-filters"
 import { OpsDetailSheet } from "@/components/operations/ops-detail-sheet"
@@ -47,7 +48,6 @@ import {
   opsTableHeadRowClass,
   opsTableRowClass,
 } from "@/components/operations/ops-table-styles"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent } from "@/components/ui/card"
@@ -1521,25 +1521,23 @@ function InvoicesBoardPanel({
             <div className="flex flex-wrap gap-1.5">
               {(
                 [
-                  { key: "all" as const, label: "전체" },
-                  { key: "unpaid" as const, label: "미수금" },
-                  { key: "overdue" as const, label: "연체" },
-                  { key: "paid" as const, label: "입금완료" },
+                  { key: "all" as const, label: "전체", accent: "default" as const },
+                  { key: "unpaid" as const, label: "미수금", accent: "default" as const },
+                  { key: "overdue" as const, label: "연체", accent: "danger" as const },
+                  { key: "paid" as const, label: "입금완료", accent: "default" as const },
                 ] as const
-              ).map(({ key, label }) => (
-                <Button
+              ).map(({ key, label, accent }) => (
+                <OpsToolbarFilterButton
                   key={key}
-                  type="button"
-                  size="sm"
-                  className="h-8"
-                  variant={paymentQuickFilter === key ? "default" : "outline"}
+                  selected={paymentQuickFilter === key}
+                  accent={accent}
                   onClick={() => {
                     setPaymentQuickFilter(key)
                     setPaymentStatusFilter("all")
                   }}
                 >
                   {label}
-                </Button>
+                </OpsToolbarFilterButton>
               ))}
             </div>
             <Select
@@ -1793,8 +1791,8 @@ function InvoicesBoardPanel({
                       className={cn(
                         opsTableRowClass,
                         "cursor-pointer",
-                        recvHint === "overdue" && "bg-destructive/[0.05]",
-                        recvHint === "due_soon" && "bg-amber-500/[0.06]"
+                        recvHint === "overdue" && "bg-destructive/[0.08]",
+                        recvHint === "due_soon" && "bg-amber-500/[0.07]"
                       )}
                       data-state={drawerInvoiceId === invoice.id ? "selected" : undefined}
                       onClick={() => setDrawerInvoiceId(invoice.id)}
@@ -1803,14 +1801,10 @@ function InvoicesBoardPanel({
                         <span className="flex flex-col gap-0.5">
                           {invoice.invoiceNumber}
                           {recvHint === "overdue" ? (
-                            <Badge variant="destructive" className="w-fit px-1 py-0 text-[9px]">
-                              연체·기한초과
-                            </Badge>
+                            <OpsTimeHintChip kind="invoice_overdue" size="sm" />
                           ) : null}
                           {recvHint === "due_soon" ? (
-                            <Badge className="w-fit border-amber-500/40 bg-amber-500/12 px-1 py-0 text-[9px] text-amber-950 dark:text-amber-50">
-                              기한 임박
-                            </Badge>
+                            <OpsTimeHintChip kind="invoice_due_soon" size="sm" />
                           ) : null}
                         </span>
                       </td>
@@ -1829,20 +1823,22 @@ function InvoicesBoardPanel({
                         className={cn(opsTableCellClass, "w-[148px] min-w-[140px] max-w-[160px]")}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <Select
-                          value={invoice.paymentStatus}
-                          items={paymentStatusSelectItemsRecord}
-                          onValueChange={(value) =>
-                            updatePaymentStatus(
-                              invoice.id,
-                              (value as PaymentStatus | null) ?? invoice.paymentStatus,
-                              invoice.customerId
-                            )
-                          }
-                        >
-                          <SelectTrigger className="h-8 w-full max-w-[148px] text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
+                        <div className="flex max-w-[148px] flex-col gap-1.5">
+                          <PaymentStatusBadge status={invoice.paymentStatus} className="w-fit" />
+                          <Select
+                            value={invoice.paymentStatus}
+                            items={paymentStatusSelectItemsRecord}
+                            onValueChange={(value) =>
+                              updatePaymentStatus(
+                                invoice.id,
+                                (value as PaymentStatus | null) ?? invoice.paymentStatus,
+                                invoice.customerId
+                              )
+                            }
+                          >
+                            <SelectTrigger className="h-8 w-full max-w-[148px] text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
                             <SelectContent>
                               {paymentStatusOptions.map((option) => (
                                 <SelectItem key={option.value} value={option.value}>
@@ -1851,6 +1847,7 @@ function InvoicesBoardPanel({
                               ))}
                             </SelectContent>
                           </Select>
+                        </div>
                       </td>
                       <td className={cn(opsTableCellClass, "text-right text-sm font-semibold tabular-nums")}>
                         {formatCurrency(invoice.amount)}
@@ -1858,7 +1855,15 @@ function InvoicesBoardPanel({
                       <td className={cn(opsTableCellClass, "whitespace-nowrap text-xs text-muted-foreground")}>
                         {formatDate(invoice.requestedAt)}
                       </td>
-                      <td className={cn(opsTableCellClass, "whitespace-nowrap text-xs text-muted-foreground")}>
+                      <td
+                        className={cn(
+                          opsTableCellClass,
+                          "whitespace-nowrap text-xs",
+                          recvHint === "overdue" && "font-semibold text-destructive",
+                          recvHint === "due_soon" && "font-medium text-amber-900 dark:text-amber-100",
+                          !recvHint && "text-muted-foreground"
+                        )}
+                      >
                         {formatDate(invoice.dueDate)}
                       </td>
                       <td className={cn(opsTableCellClass, "whitespace-nowrap text-xs text-muted-foreground")}>
@@ -1925,6 +1930,14 @@ function InvoicesBoardPanel({
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="font-mono text-[11px] text-muted-foreground">{invoice.invoiceNumber}</p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {recvHint === "overdue" ? (
+                          <OpsTimeHintChip kind="invoice_overdue" size="sm" />
+                        ) : null}
+                        {recvHint === "due_soon" ? (
+                          <OpsTimeHintChip kind="invoice_due_soon" size="sm" />
+                        ) : null}
+                      </div>
                       <p className="mt-0.5 font-medium leading-snug">
                         {customer?.companyName?.trim() || customer?.name || "—"}
                       </p>
@@ -2009,20 +2022,16 @@ function InvoicesBoardPanel({
         {drawerInvoice ? (
           <div className="space-y-4 text-sm">
             <div className="flex flex-wrap items-center gap-2">
-              <PaymentStatusBadge status={drawerInvoice.paymentStatus} />
               {invoiceRowReceivableHint(drawerInvoice) === "overdue" ? (
-                <Badge variant="destructive" className="text-[10px]">
-                  연체 또는 기한 경과
-                </Badge>
+                <OpsTimeHintChip kind="invoice_overdue" />
               ) : null}
               {invoiceRowReceivableHint(drawerInvoice) === "due_soon" ? (
-                <Badge className="border-amber-500/50 bg-amber-500/15 text-[10px] text-amber-950 dark:text-amber-50">
-                  입금 기한 임박
-                </Badge>
+                <OpsTimeHintChip kind="invoice_due_soon" />
               ) : null}
             </div>
-            <div className="space-y-1">
+            <div className="space-y-2">
               <p className="text-xs font-semibold text-muted-foreground">결제 상태 변경</p>
+              <PaymentStatusBadge status={drawerInvoice.paymentStatus} className="w-fit" />
               <Select
                 value={drawerInvoice.paymentStatus}
                 items={paymentStatusSelectItemsRecord}
@@ -2063,7 +2072,17 @@ function InvoicesBoardPanel({
               </div>
               <div className="rounded-lg border border-border/50 p-2">
                 <p className="text-muted-foreground">입금 기한</p>
-                <p className="mt-0.5 tabular-nums">{formatDate(drawerInvoice.dueDate)}</p>
+                <p
+                  className={cn(
+                    "mt-0.5 tabular-nums",
+                    invoiceRowReceivableHint(drawerInvoice) === "overdue" &&
+                      "font-semibold text-destructive",
+                    invoiceRowReceivableHint(drawerInvoice) === "due_soon" &&
+                      "font-medium text-amber-900 dark:text-amber-100"
+                  )}
+                >
+                  {formatDate(drawerInvoice.dueDate)}
+                </p>
               </div>
               <div className="rounded-lg border border-border/50 p-2">
                 <p className="text-muted-foreground">입금일</p>

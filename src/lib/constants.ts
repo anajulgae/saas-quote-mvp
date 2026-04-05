@@ -1,26 +1,35 @@
-export const inquiryStageOptions = [
-  { value: "new", label: "신규 문의" },
-  { value: "qualified", label: "검토 중" },
-  { value: "quoted", label: "견적 발송" },
-  { value: "won", label: "수주 완료" },
-  { value: "lost", label: "보류/실패" },
-] as const
+import {
+  INQUIRY_STAGE_VALUES,
+  PAYMENT_STATUS_VALUES,
+  QUOTE_STATUS_VALUES,
+  getInquiryStageMeta,
+  getPaymentStatusMeta,
+  getQuoteStatusMeta,
+} from "@/lib/ops-status-meta"
 
-export const paymentStatusOptions = [
-  { value: "pending", label: "입금 대기" },
-  { value: "deposit_paid", label: "선금 입금" },
-  { value: "partially_paid", label: "부분 입금" },
-  { value: "paid", label: "입금 완료" },
-  { value: "overdue", label: "연체" },
-] as const
+export const inquiryStageOptions = INQUIRY_STAGE_VALUES.map((value) => ({
+  value,
+  label: getInquiryStageMeta(value).label,
+})) as {
+  value: (typeof INQUIRY_STAGE_VALUES)[number]
+  label: string
+}[]
 
-export const quoteStatusOptions = [
-  { value: "draft", label: "초안" },
-  { value: "sent", label: "발송됨" },
-  { value: "approved", label: "승인" },
-  { value: "rejected", label: "거절" },
-  { value: "expired", label: "만료" },
-] as const
+export const paymentStatusOptions = PAYMENT_STATUS_VALUES.map((value) => ({
+  value,
+  label: getPaymentStatusMeta(value).label,
+})) as {
+  value: (typeof PAYMENT_STATUS_VALUES)[number]
+  label: string
+}[]
+
+export const quoteStatusOptions = QUOTE_STATUS_VALUES.map((value) => ({
+  value,
+  label: getQuoteStatusMeta(value).label,
+})) as {
+  value: (typeof QUOTE_STATUS_VALUES)[number]
+  label: string
+}[]
 
 export const invoiceTypeOptions = [
   { value: "deposit", label: "선금" },

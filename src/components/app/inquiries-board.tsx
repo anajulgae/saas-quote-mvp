@@ -19,6 +19,7 @@ import { toast } from "sonner"
 import { createInquiryAction, updateInquiryAction } from "@/app/actions"
 import { EmptyState } from "@/components/app/empty-state"
 import { PageHeader } from "@/components/app/page-header"
+import { OpsToolbarFilterButton } from "@/components/app/ops-status-chip"
 import { InquiryStageBadge } from "@/components/app/status-badge"
 import { OpsCollapsibleFilters } from "@/components/operations/ops-collapsible-filters"
 import { OpsDetailSheet } from "@/components/operations/ops-detail-sheet"
@@ -98,11 +99,6 @@ const flowSteps = [
 const inquiryStageSelectItems = Object.fromEntries(
   inquiryStageOptions.map((o) => [o.value, o.label])
 ) as Record<string, string>
-
-const inquiryStageFilterSelectItems: Record<string, string> = {
-  all: "전체 단계",
-  ...inquiryStageSelectItems,
-}
 
 const followupFilterSelectItems: Record<string, string> = {
   all: "팔로업 전체",
@@ -834,23 +830,26 @@ export function InquiriesBoard({
             onChange={setSearchQuery}
             placeholder="제목, 내용, 고객명, 채널…"
           />
-          <Select
-            value={stageFilter}
-            items={inquiryStageFilterSelectItems}
-            onValueChange={(v) => setStageFilter((v as InquiryStage | "all") ?? "all")}
-          >
-            <SelectTrigger className="h-9 w-full sm:w-[150px]">
-              <SelectValue placeholder="단계" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체 단계</SelectItem>
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <p className="text-xs font-medium text-muted-foreground">단계</p>
+            <div className="flex flex-wrap gap-1.5">
+              <OpsToolbarFilterButton
+                selected={stageFilter === "all"}
+                onClick={() => setStageFilter("all")}
+              >
+                전체
+              </OpsToolbarFilterButton>
               {inquiryStageOptions.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
+                <OpsToolbarFilterButton
+                  key={o.value}
+                  selected={stageFilter === o.value}
+                  onClick={() => setStageFilter(o.value)}
+                >
                   {o.label}
-                </SelectItem>
+                </OpsToolbarFilterButton>
               ))}
-            </SelectContent>
-          </Select>
+            </div>
+          </div>
           <Select
             value={followupFilter}
             items={followupFilterSelectItems}
@@ -1132,7 +1131,8 @@ export function InquiriesBoard({
               </p>
             </div>
             <div className="space-y-2 rounded-lg border border-border/50 bg-muted/10 p-3">
-              <p className="text-xs font-semibold text-muted-foreground">단계 변경</p>
+              <p className="text-xs font-semibold text-muted-foreground">문의 단계</p>
+              <InquiryStageBadge stage={drawerInquiry.stage} className="w-fit" />
               <Select
                 value={drawerInquiry.stage}
                 items={inquiryStageSelectItems}

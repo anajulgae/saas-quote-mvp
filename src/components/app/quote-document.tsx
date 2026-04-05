@@ -1,3 +1,4 @@
+import { OpsStatusChip } from "@/components/app/ops-status-chip"
 import { formatCurrency, formatDate } from "@/lib/format"
 import { customerPrimaryLabel } from "@/lib/quote-utils"
 import { cn } from "@/lib/utils"
@@ -162,11 +163,18 @@ export function QuoteDocument({
             </dd>
           </div>
         </dl>
-        {statusLine ? (
-          <p className="mt-2 text-xs text-neutral-600">
-            문서 참고: <span className="font-medium text-neutral-800">{statusLine}</span>
-          </p>
-        ) : null}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <OpsStatusChip
+            domain="quote"
+            status={quote.status}
+            className="print:border-neutral-400 print:bg-neutral-100"
+          />
+          {statusLine ? (
+            <p className="text-xs text-neutral-600">
+              문서 참고: <span className="font-medium text-neutral-800">{statusLine}</span>
+            </p>
+          ) : null}
+        </div>
       </section>
 
       {quote.summary?.trim() ? (
