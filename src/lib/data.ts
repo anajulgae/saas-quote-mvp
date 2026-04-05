@@ -1531,29 +1531,54 @@ export async function saveBusinessSettingsRecord(input: {
     return { mode: "demo" as const }
   }
 
-  const { data, error } = await context.supabase
-    .from("business_settings")
-    .upsert(
-      {
-        user_id: context.userId,
-        business_name: input.businessName,
-        owner_name: input.ownerName,
-        business_registration_number: input.businessRegistrationNumber.trim() || null,
-        email: input.email,
-        phone: input.phone,
-        payment_terms: input.paymentTerms,
-        bank_account: input.bankAccount,
-        reminder_message: input.reminderMessage,
-      },
-      {
-        onConflict: "user_id",
-      }
-    )
-    .select("*")
-    .single()
+  // 사업자등록번호 컬럼(0005 마이그레이션)이 없으면 이 필드만으로 upsert 전체가 실패할 수 있어 분리한다.
+  const { error } = await context.supabase.from("business_settings").upsert(
+    {
+      user_id: context.userId,
+      business_name: input.businessName,
+      owner_name: input.ownerName,
+      email: input.email,
+      phone: input.phone,
+      payment_terms: input.paymentTerms,
+      bank_account: input.bankAccount,
+      reminder_message: input.reminderMessage,
+    },
+    {
+      onConflict: "user_id",
+    }
+  )
 
   if (error) {
     throw error
+  }
+
+  const brn = input.businessRegistrationNumber.trim()
+  const { error: brnError } = await context.supabase
+    .from("business_settings")
+    .update({ business_registration_number: brn || null })
+    .eq("user_id", context.userId)
+
+  if (brnError) {
+    const msg = String((brnError as { message?: string }).message ?? "")
+    const code = (brnError as { code?: string }).code
+    const missingColumn =
+      msg.includes("business_registration_number") ||
+      msg.includes("schema cache") ||
+      code === "PGRST204" ||
+      code === "42703"
+    if (!missingColumn) {
+      throw brnError
+    }
+  }
+
+  const { data: row, error: rowError } = await context.supabase
+    .from("business_settings")
+    .select("*")
+    .eq("user_id", context.userId)
+    .single()
+
+  if (rowError || !row) {
+    throw rowError ?? new Error("business_settings 조회에 실패했습니다.")
   }
 
   await createActivityLog({
@@ -1566,7 +1591,7 @@ export async function saveBusinessSettingsRecord(input: {
 
   return {
     mode: "supabase" as const,
-    settings: mapBusinessSettings(data as BusinessSettingsRow),
+    settings: mapBusinessSettings(row as BusinessSettingsRow),
   }
 }
 

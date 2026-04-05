@@ -122,6 +122,8 @@ Supabase **SQL Editor**에서 저장소의 파일을 **아래 순서 그대로**
 5. `supabase/migrations/0004_user_plan.sql` — `public.users.plan` (`free` / `pro`). **미적용 시** 앱은 `free`로 완화 동작하지만 설정 화면에 **플랜 컬럼 미적용** 안내가 뜹니다.  
 6. `supabase/migrations/0005_business_registration_number.sql` — `business_settings.business_registration_number` 및 공개 견적 RPC `get_quote_share_payload` 갱신.
 
+**설정 화면 저장**: `business_settings` 테이블은 **1번**에서 생성됩니다. **6번(0005)** 을 아직 안 돌렸더라도 앱은 기본 필드 upsert로 저장을 시도하고, 사업자등록번호만 DB에 컬럼이 있을 때 반영됩니다. 그래도 **견적서·공유 링크에 사업자번호**를 쓰려면 **0005** 를 반드시 적용하세요.
+
 `0003_rls` 미적용 시 RLS가 `user_id`만 검사해 **타인의 `customer_id` 등을 조합하는** 위험이 남습니다. 오픈 전 **위 순서 전부** 적용했는지 확인하세요.
 
 ---
