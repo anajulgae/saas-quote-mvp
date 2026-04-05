@@ -80,44 +80,58 @@ function resolveQuickSecondaryHref(customer: CustomerSummary): { href: string; l
   return { href: `/inquiries?customer=${customer.id}&new=1`, label: "문의" }
 }
 
-function CustomerSignalBadges({ customer }: { customer: CustomerSummary }) {
-  const items: { key: string; label: string; className: string }[] = []
+/** 목록·카드: 우선순위 하나만 (연체 → 미수 → 견적진행 → 최근문의) */
+function resolvePrimaryCustomerSignal(customer: CustomerSummary): {
+  key: string
+  label: string
+  className: string
+} | null {
   if (customer.hasOverdueInvoice) {
-    items.push({
+    return {
       key: "overdue",
       label: "연체",
       className: "border-destructive/25 bg-destructive/10 text-destructive",
-    })
-  } else if (customer.hasOpenReceivable && customer.invoiceCount > 0) {
-    items.push({
+    }
+  }
+  if (customer.hasOpenReceivable && customer.invoiceCount > 0) {
+    return {
       key: "recv",
       label: "미수",
       className: "border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-100",
-    })
+    }
   }
-  if (customer.hasActiveQuote && items.length < 2) {
-    items.push({ key: "quote", label: "견적진행", className: "border-border bg-muted/50 text-muted-foreground" })
+  if (customer.hasActiveQuote) {
+    return {
+      key: "quote",
+      label: "견적진행",
+      className: "border-border bg-muted/50 text-muted-foreground",
+    }
   }
-  if (customer.hasRecentInquiry && items.length < 2) {
-    items.push({ key: "recent", label: "최근문의", className: "border-primary/25 bg-primary/10 text-primary" })
+  if (customer.hasRecentInquiry) {
+    return {
+      key: "recent",
+      label: "최근문의",
+      className: "border-primary/25 bg-primary/10 text-primary",
+    }
   }
-  if (!items.length) {
+  return null
+}
+
+function CustomerPrimarySignalBadge({ customer }: { customer: CustomerSummary }) {
+  const signal = resolvePrimaryCustomerSignal(customer)
+  if (!signal) {
     return <span className="text-[11px] text-muted-foreground">—</span>
   }
   return (
-    <div className="flex flex-wrap gap-1">
-      {items.map((item) => (
-        <span
-          key={item.key}
-          className={cn(
-            "rounded border px-1.5 py-px text-[10px] font-medium leading-none whitespace-nowrap",
-            item.className
-          )}
-        >
-          {item.label}
-        </span>
-      ))}
-    </div>
+    <span
+      className={cn(
+        "inline-block max-w-full truncate rounded border px-1.5 py-0.5 text-[10px] font-medium leading-none",
+        signal.className
+      )}
+      title={signal.label}
+    >
+      {signal.label}
+    </span>
   )
 }
 
@@ -418,8 +432,12 @@ export function CustomersBoard({
                 <th className={cn(opsTableHeadCellClass, "text-center tabular-nums")}>문의</th>
                 <th className={cn(opsTableHeadCellClass, "text-center tabular-nums")}>견적</th>
                 <th className={cn(opsTableHeadCellClass, "text-center tabular-nums")}>청구</th>
-                <th className={opsTableHeadCellClass}>최근 활동</th>
-                <th className={opsTableHeadCellClass}>상태</th>
+                <th className={cn(opsTableHeadCellClass, "w-[10.5rem] min-w-[9.5rem] max-w-[11rem]")}>
+                  최근 활동
+                </th>
+                <th className={cn(opsTableHeadCellClass, "w-[5.5rem] min-w-[5rem] max-w-[6rem] text-left")}>
+                  상태
+                </th>
                 <th className={cn(opsTableHeadCellClass, "w-12 text-right")} aria-label="작업" />
               </tr>
             </thead>
@@ -477,11 +495,25 @@ export function CustomersBoard({
                       <td className={cn(opsTableCellClass, "text-center tabular-nums")}>
                         {customer.invoiceCount}
                       </td>
-                      <td className={cn(opsTableCellClass, "whitespace-nowrap text-xs text-muted-foreground")}>
+                      <td
+                        className={cn(
+                          opsTableCellClass,
+                          "w-[10.5rem] min-w-[9.5rem] max-w-[11rem] overflow-hidden text-ellipsis whitespace-nowrap text-xs text-muted-foreground"
+                        )}
+                        title={formatDateTime(customer.lastActivityAt)}
+                      >
                         {formatDateTime(customer.lastActivityAt)}
                       </td>
-                      <td className={opsTableCellClass} onClick={(e) => e.stopPropagation()}>
-                        <CustomerSignalBadges customer={customer} />
+                      <td
+                        className={cn(
+                          opsTableCellClass,
+                          "w-[5.5rem] min-w-[5rem] max-w-[6rem] overflow-hidden"
+                        )}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex justify-start">
+                          <CustomerPrimarySignalBadge customer={customer} />
+                        </div>
                       </td>
                       <td className={cn(opsTableCellClass, "text-right")} onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
@@ -567,7 +599,7 @@ export function CustomersBoard({
                       {customer.phone ? ` · ${customer.phone}` : ""}
                     </p>
                   </div>
-                  <CustomerSignalBadges customer={customer} />
+                  <CustomerPrimarySignalBadge customer={customer} />
                 </div>
                 <div className="flex gap-3 text-xs tabular-nums text-muted-foreground">
                   <span>문의 {customer.inquiryCount}</span>
@@ -629,7 +661,7 @@ export function CustomersBoard({
         {drawerCustomer ? (
           <div className="space-y-5 text-sm">
             <div className="flex flex-wrap gap-2">
-              <CustomerSignalBadges customer={drawerCustomer} />
+              <CustomerPrimarySignalBadge customer={drawerCustomer} />
             </div>
             <div className="grid gap-2 text-xs">
               <div className="flex justify-between gap-2 border-b border-border/40 py-1">

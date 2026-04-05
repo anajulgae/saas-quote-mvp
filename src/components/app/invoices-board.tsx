@@ -1775,7 +1775,7 @@ function InvoicesBoardPanel({
                   <th className={opsTableHeadCellClass}>고객</th>
                   <th className={cn(opsTableHeadCellClass, "max-w-[200px]")}>연결 견적</th>
                   <th className={opsTableHeadCellClass}>유형</th>
-                  <th className={opsTableHeadCellClass}>결제 상태</th>
+                  <th className={cn(opsTableHeadCellClass, "w-[148px] min-w-[140px]")}>결제 상태</th>
                   <th className={cn(opsTableHeadCellClass, "text-right")}>금액</th>
                   <th className={opsTableHeadCellClass}>청구일</th>
                   <th className={opsTableHeadCellClass}>입금 기한</th>
@@ -1825,23 +1825,24 @@ function InvoicesBoardPanel({
                       <td className={cn(opsTableCellClass, "text-xs")}>
                         {invoiceTypeTableLabel(invoice.invoiceType)}
                       </td>
-                      <td className={opsTableCellClass} onClick={(e) => e.stopPropagation()}>
-                        <div className="flex flex-col gap-1">
-                          <PaymentStatusBadge status={invoice.paymentStatus} />
-                          <Select
-                            value={invoice.paymentStatus}
-                            items={paymentStatusSelectItemsRecord}
-                            onValueChange={(value) =>
-                              updatePaymentStatus(
-                                invoice.id,
-                                (value as PaymentStatus | null) ?? invoice.paymentStatus,
-                                invoice.customerId
-                              )
-                            }
-                          >
-                            <SelectTrigger className="h-8 w-[128px] text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
+                      <td
+                        className={cn(opsTableCellClass, "w-[148px] min-w-[140px] max-w-[160px]")}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Select
+                          value={invoice.paymentStatus}
+                          items={paymentStatusSelectItemsRecord}
+                          onValueChange={(value) =>
+                            updatePaymentStatus(
+                              invoice.id,
+                              (value as PaymentStatus | null) ?? invoice.paymentStatus,
+                              invoice.customerId
+                            )
+                          }
+                        >
+                          <SelectTrigger className="h-8 w-full max-w-[148px] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
                             <SelectContent>
                               {paymentStatusOptions.map((option) => (
                                 <SelectItem key={option.value} value={option.value}>
@@ -1850,7 +1851,6 @@ function InvoicesBoardPanel({
                               ))}
                             </SelectContent>
                           </Select>
-                        </div>
                       </td>
                       <td className={cn(opsTableCellClass, "text-right text-sm font-semibold tabular-nums")}>
                         {formatCurrency(invoice.amount)}
