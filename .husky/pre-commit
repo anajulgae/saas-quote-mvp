@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+# 빠른 커밋·자동 푸시 흐름용 (필요 시 npm run lint 추가)
+true

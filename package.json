@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed:test-customers": "node scripts/seed-test-customers.mjs"
+    "seed:test-customers": "node scripts/seed-test-customers.mjs",
+    "prepare": "husky"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
@@ -35,6 +36,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
+    "husky": "^9.1.7",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

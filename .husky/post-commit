@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+# 커밋 직후 원격 반영 → GitHub 연동 Vercel이면 자동 배포
+branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || exit 0
+if [ "$branch" = "HEAD" ]; then
+  echo "husky(post-commit): detached HEAD — push 생략"
+  exit 0
+fi
+# 이 저장소 관행: 로컬 master → origin/main
+if [ "$branch" = "master" ]; then
+  git push origin HEAD:main
+else
+  git push -u origin "$branch"
+fi
