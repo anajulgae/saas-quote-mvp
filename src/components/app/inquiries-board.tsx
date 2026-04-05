@@ -147,6 +147,12 @@ export function InquiriesBoard({
   const [structureBusy, setStructureBusy] = useState(false)
   const deepLinkAppliedRef = useRef(false)
 
+  useEffect(() => {
+    if (!initialCreateOpen && !initialCustomerId?.trim()) {
+      deepLinkAppliedRef.current = false
+    }
+  }, [initialCreateOpen, initialCustomerId])
+
   const [form, setForm] = useState({
     title: "",
     customerId: customers[0]?.id ?? "",
@@ -223,6 +229,9 @@ export function InquiriesBoard({
     }
     const id = initialCustomerId.trim()
     if (!customers.some((c) => c.id === id)) {
+      deepLinkAppliedRef.current = true
+      toast.error("연결할 고객을 찾을 수 없습니다.")
+      router.replace("/inquiries")
       return
     }
     deepLinkAppliedRef.current = true
@@ -230,7 +239,8 @@ export function InquiriesBoard({
     setErrorMessage("")
     setEditingId(null)
     setIsCreateOpen(true)
-  }, [initialCreateOpen, initialCustomerId, customers])
+    router.replace("/inquiries")
+  }, [initialCreateOpen, initialCustomerId, customers, router])
 
   const filteredInquiries = useMemo(() => {
     let list = [...inquiries]
@@ -425,7 +435,9 @@ export function InquiriesBoard({
             .filter(Boolean)
             .join("\n\n"),
         }))
-        toast.success("AI가 제목·채널·범위·요약을 채웠습니다.")
+        toast.success("AI가 제목·채널·범위·요약을 채웠습니다.", {
+          description: "내용을 검토한 뒤 저장해 주세요.",
+        })
       } catch {
         toast.error("네트워크 오류로 구조화에 실패했습니다.")
       } finally {

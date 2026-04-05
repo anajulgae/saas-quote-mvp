@@ -19,14 +19,14 @@ export function EmptyState({
   return (
     <Card
       className={cn(
-        "border-2 border-dashed border-primary/15 bg-gradient-to-b from-muted/35 via-card to-card shadow-none ring-0",
+        "border border-dashed border-border/70 bg-muted/15 shadow-none ring-0",
         className
       )}
     >
       <CardHeader className="pb-2">
         <div className="flex items-start gap-3">
           <div
-            className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15"
+            className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"
             aria-hidden
           >
             <Inbox className="size-5" strokeWidth={1.75} />

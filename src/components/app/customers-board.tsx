@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useTransition } from "react"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
@@ -129,8 +129,19 @@ const customerSortSelectItems = [
   { value: "company_asc" as const, label: "회사·표시명순" },
 ]
 
-export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) {
+export function CustomersBoard({
+  customers,
+  initialCustomerId,
+  initialRegisterOpen = false,
+}: {
+  customers: CustomerSummary[]
+  /** `/customers?customer=uuid` — 목록에서 해당 고객 drawer 오픈 */
+  initialCustomerId?: string
+  /** `/customers?new=1` — 새 고객 등록 다이얼로그 오픈 */
+  initialRegisterOpen?: boolean
+}) {
   const router = useRouter()
+  const customerDeepLinkRef = useRef(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [tagFilter, setTagFilter] = useState<string>("all")
   const [sortKey, setSortKey] = useState<SortKey>("activity_desc")
@@ -139,6 +150,35 @@ export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) 
   const [regForm, setRegForm] = useState(emptyRegisterForm)
   const [regError, setRegError] = useState("")
   const [isPending, startTransition] = useTransition()
+
+  useEffect(() => {
+    if (!initialCustomerId?.trim() && !initialRegisterOpen) {
+      customerDeepLinkRef.current = false
+    }
+  }, [initialCustomerId, initialRegisterOpen])
+
+  useEffect(() => {
+    if (customerDeepLinkRef.current) {
+      return
+    }
+    const cid = initialCustomerId?.trim()
+    if (cid) {
+      customerDeepLinkRef.current = true
+      if (!customers.some((c) => c.id === cid)) {
+        toast.error("해당 고객을 찾을 수 없습니다.")
+        router.replace("/customers")
+        return
+      }
+      setDrawerCustomerId(cid)
+      router.replace("/customers")
+      return
+    }
+    if (initialRegisterOpen && !cid) {
+      customerDeepLinkRef.current = true
+      setRegisterOpen(true)
+      router.replace("/customers")
+    }
+  }, [initialCustomerId, initialRegisterOpen, customers, router])
 
   const allTags = useMemo(() => {
     const set = new Set<string>()
@@ -478,6 +518,15 @@ export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) 
                               <FileText className="size-4" />
                               견적 만들기
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="gap-2"
+                              onClick={() =>
+                                router.push(`/invoices?customer=${encodeURIComponent(customer.id)}`)
+                              }
+                            >
+                              <Receipt className="size-4" />
+                              청구 보기
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="gap-2"
@@ -567,11 +616,11 @@ export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) 
                 견적 만들기
               </Link>
               <Link
-                href="/invoices"
+                href={`/invoices?customer=${encodeURIComponent(drawerCustomer.id)}`}
                 className={cn(buttonVariants({ size: "sm", variant: "outline" }), "inline-flex gap-1")}
               >
                 <Receipt className="size-3.5" />
-                청구 관리
+                청구 보기
               </Link>
             </div>
           ) : null

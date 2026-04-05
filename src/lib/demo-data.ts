@@ -202,6 +202,7 @@ export const demoInvoices: Invoice[] = [
     paidAt: "2026-04-02T09:20:00+09:00",
     requestedAt: "2026-04-01T12:10:00+09:00",
     notes: "계약 확정 후 바로 입금 완료",
+    publicShareToken: "demoInvoiceShareToken02",
   },
   {
     id: "invoice-2",
@@ -215,6 +216,8 @@ export const demoInvoices: Invoice[] = [
     dueDate: "2026-04-10",
     requestedAt: "2026-04-01T12:15:00+09:00",
     notes: "납품 전 잔금 예정",
+    publicShareToken: "demoInvoiceShareToken01",
+    createdAt: "2026-04-01T12:15:00+09:00",
   },
   {
     id: "invoice-3",
@@ -228,6 +231,7 @@ export const demoInvoices: Invoice[] = [
     dueDate: "2026-04-01",
     requestedAt: "2026-03-30T10:00:00+09:00",
     notes: "리마인드 2회 발송",
+    publicShareToken: "demoInvoiceShareToken03",
   },
 ]
 

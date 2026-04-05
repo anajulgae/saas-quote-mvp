@@ -7,7 +7,7 @@ import { fetchUserPlanRow } from "@/lib/user-plan"
 import { FLOWBILL_DEMO_SESSION_COOKIE } from "@/lib/demo-session"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 
-export { isSupabaseConfigured } from "@/lib/supabase/server"
+export { isSupabaseConfigured } from "@/lib/supabase/public-config"
 
 export function getDemoCredentials() {
   return {

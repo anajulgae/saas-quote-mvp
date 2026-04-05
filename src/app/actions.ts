@@ -27,8 +27,10 @@ import {
   createReminderRecord,
   deleteQuoteRecord,
   duplicateQuoteRecord,
+  ensureInvoiceShareTokenForInvoice,
   ensureQuoteShareTokenForQuote,
   getBusinessFromIdentity,
+  getInvoiceOutboundSnapshot,
   getQuoteOutboundSnapshot,
   saveBusinessSettingsRecord,
   saveTemplatesRecord,
@@ -1199,6 +1201,147 @@ export async function sendQuoteEmailAction(input: z.infer<typeof sendQuoteEmailI
     }
 
     revalidatePath("/quotes")
+    return { ok: true as const }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { ok: false as const, error: error.issues[0]?.message ?? "입력값을 확인해 주세요." }
+    }
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "이메일을 보내지 못했습니다."),
+    }
+  }
+}
+
+export async function ensureInvoiceShareLinkAction(invoiceId: string) {
+  try {
+    const id = z.string().trim().min(1).parse(invoiceId)
+    const { token } = await ensureInvoiceShareTokenForInvoice(id)
+    const url = `${getSiteOrigin()}/invoice-view/${encodeURIComponent(token)}`
+    revalidatePath("/invoices")
+    return { ok: true as const, url, token }
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "공유 링크를 만들지 못했습니다."),
+    }
+  }
+}
+
+export async function logInvoiceShareLinkCopiedAction(invoiceId: string) {
+  try {
+    const id = z.string().trim().min(1).parse(invoiceId)
+    const snap = await getInvoiceOutboundSnapshot(id)
+    if (!snap) {
+      return { ok: false as const, error: "청구를 찾을 수 없습니다." }
+    }
+    await createActivityLog({
+      action: "invoice.share_link_copied",
+      description: `「${snap.invoiceNumber}」 청구 고객 공유 링크를 복사했습니다.`,
+      invoiceId: id,
+      customerId: snap.customerId,
+    })
+    return { ok: true as const }
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "활동 기록에 실패했습니다."),
+    }
+  }
+}
+
+export async function logInvoiceKakaoTemplateCopiedAction(invoiceId: string) {
+  try {
+    const id = z.string().trim().min(1).parse(invoiceId)
+    const snap = await getInvoiceOutboundSnapshot(id)
+    if (!snap) {
+      return { ok: false as const, error: "청구를 찾을 수 없습니다." }
+    }
+    await createActivityLog({
+      action: "invoice.kakao_share_prepared",
+      description: `「${snap.invoiceNumber}」 카카오톡용 청구 안내 문구를 복사했습니다.`,
+      invoiceId: id,
+      customerId: snap.customerId,
+    })
+    return { ok: true as const }
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "활동 기록에 실패했습니다."),
+    }
+  }
+}
+
+const sendInvoiceEmailInputSchema = z.object({
+  invoiceId: z.string().trim().min(1),
+  to: z.string().trim().email("받는 사람 이메일을 확인해 주세요."),
+  subject: z.string().trim().min(1, "제목을 입력해 주세요."),
+  body: z.string().trim().min(1, "본문을 입력해 주세요."),
+  includePublicLink: z.boolean(),
+})
+
+export async function sendInvoiceEmailAction(input: z.infer<typeof sendInvoiceEmailInputSchema>) {
+  try {
+    const parsed = sendInvoiceEmailInputSchema.parse(input)
+    const snap = await getInvoiceOutboundSnapshot(parsed.invoiceId)
+    if (!snap) {
+      return { ok: false as const, error: "청구를 찾을 수 없습니다." }
+    }
+
+    const { token } = await ensureInvoiceShareTokenForInvoice(parsed.invoiceId)
+    const shareUrl = `${getSiteOrigin()}/invoice-view/${encodeURIComponent(token)}`
+
+    let bodyText = parsed.body
+    if (parsed.includePublicLink) {
+      bodyText += `\n\n청구서 보기 (링크):\n${shareUrl}`
+    }
+
+    const session = await getAppSession()
+    if (session?.mode === "demo") {
+      revalidatePath("/invoices")
+      return { ok: true as const, demo: true as const }
+    }
+    if (!session) {
+      return { ok: false as const, error: "로그인이 필요합니다." }
+    }
+
+    if (!isResendConfigured()) {
+      return {
+        ok: false as const,
+        error:
+          "메일 발송 API(Resend)가 설정되지 않았습니다. 배포 환경에 RESEND_API_KEY를 넣고, 가능하면 RESEND_FROM(인증된 발신 주소)도 설정해 주세요.",
+      }
+    }
+
+    const sender = await getBusinessFromIdentity()
+    const senderLine =
+      sender.email.trim().length > 0
+        ? `발신: ${escapeHtmlForEmail(sender.displayName)} · ${escapeHtmlForEmail(sender.email)}`
+        : `발신: ${escapeHtmlForEmail(sender.displayName)} (설정에서 이메일을 등록해 주세요)`
+
+    const bodyHtml = escapeHtmlForEmail(bodyText).replace(/\n/g, "<br/>")
+    const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.6;color:#111"><p style="margin:0 0 14px;color:#555;font-size:13px;border-bottom:1px solid #eee;padding-bottom:10px">${senderLine}</p>${bodyHtml}</div>`
+
+    await sendHtmlEmailViaResend({
+      to: parsed.to,
+      subject: parsed.subject,
+      html,
+      fromDisplayName: sender.displayName,
+      fromEmail: sender.email || undefined,
+      replyTo: sender.email || undefined,
+    })
+
+    await createActivityLog({
+      action: "invoice.email_sent",
+      description: `「${snap.invoiceNumber}」 청구서를 이메일로 보냈습니다. (${parsed.to})`,
+      invoiceId: parsed.invoiceId,
+      customerId: snap.customerId,
+      metadata: {
+        include_public_link: parsed.includePublicLink ? "yes" : "no",
+      },
+    })
+
+    revalidatePath("/invoices")
     return { ok: true as const }
   } catch (error) {
     if (error instanceof z.ZodError) {

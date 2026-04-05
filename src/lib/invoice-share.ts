@@ -1,15 +1,17 @@
 import { createClient } from "@supabase/supabase-js"
 
-import type { QuoteDocumentIssuer, QuoteDocumentQuote } from "@/components/app/quote-document"
-import { demoBusinessSettings, demoCustomers, demoQuoteItems, demoQuotes } from "@/lib/demo-data"
+import type { QuoteDocumentIssuer } from "@/components/app/quote-document"
+import type { InvoiceDocumentInvoice } from "@/components/app/invoice-document"
+import { demoBusinessSettings, demoCustomers, demoInvoices, demoQuotes } from "@/lib/demo-data"
 import { isSupabaseConfigured } from "@/lib/supabase/public-config"
-import type { Customer, QuoteItem, QuoteStatus } from "@/types/domain"
+import type { Customer, InvoiceType, PaymentStatus } from "@/types/domain"
 import type { Database, Json } from "@/types/supabase"
 
-export type ParsedQuoteSharePayload = {
-  quote: QuoteDocumentQuote & { id: string; status: QuoteStatus }
+export type ParsedInvoiceSharePayload = {
+  invoice: InvoiceDocumentInvoice & { id: string }
   customer?: Customer
   issuer: QuoteDocumentIssuer
+  linkedQuote?: { quoteNumber: string; title: string }
 }
 
 function asRecord(v: Json): Record<string, Json> | null {
@@ -19,32 +21,16 @@ function asRecord(v: Json): Record<string, Json> | null {
   return null
 }
 
-export function parseQuoteSharePayload(raw: Json | null): ParsedQuoteSharePayload | null {
+export function parseInvoiceSharePayload(raw: Json | null): ParsedInvoiceSharePayload | null {
   if (!raw || typeof raw !== "object") {
     return null
   }
   const root = raw as Record<string, Json>
-  const q = asRecord(root.quote)
+  const inv = asRecord(root.invoice)
   const issuerJson = asRecord(root.issuer)
-  if (!q || !issuerJson) {
+  if (!inv || !issuerJson) {
     return null
   }
-
-  const itemsRaw = root.items
-  const items: QuoteItem[] = Array.isArray(itemsRaw)
-    ? itemsRaw.map((row, i) => {
-        const r = asRecord(row) ?? {}
-        return {
-          id: String(r.id ?? `item-${i}`),
-          quoteId: String(q.id ?? ""),
-          name: String(r.name ?? ""),
-          description: r.description ? String(r.description) : undefined,
-          quantity: Number(r.quantity ?? 0),
-          unitPrice: Number(r.unit_price ?? 0),
-          lineTotal: Number(r.line_total ?? 0),
-        }
-      })
-    : []
 
   const cust = asRecord(root.customer)
   const customer: Customer | undefined = cust?.id
@@ -60,6 +46,12 @@ export function parseQuoteSharePayload(raw: Json | null): ParsedQuoteSharePayloa
       }
     : undefined
 
+  const lq = asRecord(root.linked_quote)
+  const linkedQuote =
+    lq && lq.quote_number
+      ? { quoteNumber: String(lq.quote_number), title: String(lq.title ?? "") }
+      : undefined
+
   const issuer: QuoteDocumentIssuer = {
     businessName: String(issuerJson.business_name ?? ""),
     ownerName: String(issuerJson.owner_name ?? ""),
@@ -74,36 +66,33 @@ export function parseQuoteSharePayload(raw: Json | null): ParsedQuoteSharePayloa
     sealEnabled: Boolean(issuerJson.seal_enabled),
   }
 
-  const quote: QuoteDocumentQuote & { id: string; status: QuoteStatus } = {
-    id: String(q.id ?? ""),
-    quoteNumber: String(q.quote_number ?? ""),
-    title: String(q.title ?? ""),
-    summary: String(q.summary ?? ""),
-    status: (String(q.status ?? "draft")) as QuoteStatus,
-    subtotal: Number(q.subtotal ?? 0),
-    tax: Number(q.tax ?? 0),
-    total: Number(q.total ?? 0),
-    validUntil: q.valid_until ? String(q.valid_until) : undefined,
-    sentAt: q.sent_at ? String(q.sent_at) : undefined,
-    createdAt: String(q.created_at ?? ""),
-    items,
+  const invoice: InvoiceDocumentInvoice & { id: string } = {
+    id: String(inv.id ?? ""),
+    invoiceNumber: String(inv.invoice_number ?? ""),
+    invoiceType: String(inv.invoice_type ?? "final") as InvoiceType,
+    amount: Number(inv.amount ?? 0),
+    paymentStatus: String(inv.payment_status ?? "pending") as PaymentStatus,
+    dueDate: inv.due_date ? String(inv.due_date) : undefined,
+    requestedAt: inv.requested_at ? String(inv.requested_at) : undefined,
+    paidAt: inv.paid_at ? String(inv.paid_at) : undefined,
+    notes: String(inv.notes ?? ""),
+    createdAt: String(inv.created_at ?? ""),
   }
 
-  return { quote, customer, issuer }
+  return { invoice, customer, issuer, linkedQuote }
 }
 
-/** 데모·로컬 미구성 환경: 공유 토큰으로 견적 페이로드 구성 */
-export function parseDemoQuoteSharePayload(token: string): ParsedQuoteSharePayload | null {
+export function parseDemoInvoiceSharePayload(token: string): ParsedInvoiceSharePayload | null {
   const trimmed = token.trim()
   if (!trimmed) {
     return null
   }
-  const quote = demoQuotes.find((q) => q.publicShareToken === trimmed)
-  if (!quote) {
+  const inv = demoInvoices.find((i) => i.publicShareToken === trimmed)
+  if (!inv) {
     return null
   }
-  const customer = demoCustomers.find((c) => c.id === quote.customerId)
-  const items = demoQuoteItems.filter((i) => i.quoteId === quote.id)
+  const customer = demoCustomers.find((c) => c.id === inv.customerId)
+  const quote = inv.quoteId ? demoQuotes.find((q) => q.id === inv.quoteId) : undefined
   const issuer: QuoteDocumentIssuer = {
     businessName: demoBusinessSettings.businessName,
     ownerName: demoBusinessSettings.ownerName,
@@ -115,24 +104,23 @@ export function parseDemoQuoteSharePayload(token: string): ParsedQuoteSharePaylo
     sealImageUrl: demoBusinessSettings.sealImageUrl,
     sealEnabled: demoBusinessSettings.sealEnabled,
   }
-  const docQuote: QuoteDocumentQuote & { id: string; status: QuoteStatus } = {
-    id: quote.id,
-    quoteNumber: quote.quoteNumber,
-    title: quote.title,
-    summary: quote.summary,
-    status: quote.status,
-    subtotal: quote.subtotal,
-    tax: quote.tax,
-    total: quote.total,
-    validUntil: quote.validUntil,
-    sentAt: quote.sentAt,
-    createdAt: quote.createdAt,
-    items,
+  const invoice: InvoiceDocumentInvoice & { id: string } = {
+    id: inv.id,
+    invoiceNumber: inv.invoiceNumber,
+    invoiceType: inv.invoiceType,
+    amount: inv.amount,
+    paymentStatus: inv.paymentStatus,
+    dueDate: inv.dueDate,
+    requestedAt: inv.requestedAt,
+    paidAt: inv.paidAt,
+    notes: inv.notes ?? "",
+    createdAt: inv.createdAt ?? "",
   }
-  return { quote: docQuote, customer, issuer }
+  const linkedQuote = quote ? { quoteNumber: quote.quoteNumber, title: quote.title } : undefined
+  return { invoice, customer, issuer, linkedQuote }
 }
 
-export async function fetchQuoteSharePayloadByToken(token: string): Promise<ParsedQuoteSharePayload | null> {
+export async function fetchInvoiceSharePayloadByToken(token: string): Promise<ParsedInvoiceSharePayload | null> {
   const trimmed = token.trim()
   if (!trimmed) {
     return null
@@ -143,23 +131,21 @@ export async function fetchQuoteSharePayloadByToken(token: string): Promise<Pars
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
-
     const { data, error } = await (
       supabase as unknown as {
         rpc(
-          name: "get_quote_share_payload",
+          name: "get_invoice_share_payload",
           args: { p_token: string }
         ): Promise<{ data: Json | null; error: { message: string } | null }>
       }
-    ).rpc("get_quote_share_payload", { p_token: trimmed })
-
+    ).rpc("get_invoice_share_payload", { p_token: trimmed })
     if (!error && data != null) {
-      const parsed = parseQuoteSharePayload(data as Json)
+      const parsed = parseInvoiceSharePayload(data as Json)
       if (parsed) {
         return parsed
       }
     }
   }
 
-  return parseDemoQuoteSharePayload(trimmed)
+  return parseDemoInvoiceSharePayload(trimmed)
 }

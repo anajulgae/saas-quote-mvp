@@ -4,7 +4,7 @@ import { ResetPasswordFlow } from "@/components/app/reset-password-flow"
 import { AuthScreenShell } from "@/components/app/auth-screen-shell"
 import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { isSupabaseConfigured } from "@/lib/supabase/server"
+import { isSupabaseConfigured } from "@/lib/supabase/public-config"
 import { cn } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"

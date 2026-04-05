@@ -88,6 +88,8 @@ export interface Quote {
   updatedAt?: string
   /** 고객 공유 링크용 비밀 토큰(등록 시) */
   publicShareToken?: string
+  shareOpenCount?: number
+  shareLastOpenedAt?: string
 }
 
 export interface Invoice {
@@ -105,6 +107,10 @@ export interface Invoice {
   notes?: string
   createdAt?: string
   updatedAt?: string
+  /** 고객 공개 청구서 링크 토큰 */
+  publicShareToken?: string
+  shareOpenCount?: number
+  shareLastOpenedAt?: string
 }
 
 export interface Reminder {

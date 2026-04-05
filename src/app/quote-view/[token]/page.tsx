@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 
 import { QuoteDocument } from "@/components/app/quote-document"
+import { PublicQuoteShareOpenTracker } from "@/components/app/public-share-open-tracker"
 import { fetchQuoteSharePayloadByToken } from "@/lib/quote-share"
 
 export async function generateMetadata({
@@ -37,6 +38,7 @@ export default async function PublicQuoteViewPage({
 
   return (
     <div className="min-h-screen bg-neutral-100 py-8 text-neutral-900 print:bg-white print:py-0">
+      <PublicQuoteShareOpenTracker token={token} />
       <div className="mx-auto max-w-[210mm] px-4 print:max-w-none print:px-[12mm] print:py-[10mm]">
         <QuoteDocument quote={docQuote} customer={customer} issuer={issuer} variant="customer" />
       </div>

@@ -1,7 +1,12 @@
 import { InvoicesWorkspace } from "@/components/app/invoices-board"
 import { getInvoicesPageData } from "@/lib/data"
 
-export default async function InvoicesPage() {
+export default async function InvoicesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ quote?: string; new?: string; customer?: string }>
+}) {
+  const sp = await searchParams
   const {
     invoices,
     customers,
@@ -13,6 +18,9 @@ export default async function InvoicesPage() {
     paymentTerms,
   } = await getInvoicesPageData()
 
+  const deepLinkOpenCreate = sp.new === "1" || sp.new === "true"
+  const quoteDeepLink = Boolean(sp.quote?.trim() && deepLinkOpenCreate)
+
   return (
     <InvoicesWorkspace
       invoices={invoices}
@@ -23,6 +31,9 @@ export default async function InvoicesPage() {
       businessName={businessName}
       bankAccount={bankAccount}
       paymentTerms={paymentTerms}
+      deepLinkQuoteId={sp.quote}
+      deepLinkOpenCreate={deepLinkOpenCreate}
+      initialCustomerFilterId={quoteDeepLink ? undefined : sp.customer}
     />
   )
 }

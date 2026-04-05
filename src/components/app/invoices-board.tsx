@@ -12,8 +12,10 @@ import {
 import {
   ArrowRight,
   BellRing,
+  ExternalLink,
   ListOrdered,
   Loader2,
+  Mail,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -30,6 +32,7 @@ import {
   updateInvoicePaymentStatusAction,
 } from "@/app/actions"
 import { EmptyState } from "@/components/app/empty-state"
+import { InvoiceSendDialog } from "@/components/app/invoice-send-dialog"
 import { PageHeader } from "@/components/app/page-header"
 import { PaymentStatusBadge } from "@/components/app/status-badge"
 import { OpsCollapsibleFilters } from "@/components/operations/ops-collapsible-filters"
@@ -296,6 +299,35 @@ function suggestedAmountForQuote(
   return Math.max(0, quote.total - invoicedSum)
 }
 
+/** 연결 청구 유무에 따라 선금 → 잔금 순으로 제안 */
+function nextInvoiceSuggestionForQuote(
+  quote: Quote,
+  allInvoices: InvoiceWithReminders[],
+  excludeInvoiceId: string | null
+): { invoiceType: InvoiceFormInput["invoiceType"]; amount: number } {
+  const sum = sumInvoiceAmountsForQuote(allInvoices, quote.id, excludeInvoiceId)
+  const linked = allInvoices.filter(
+    (i) => i.quoteId === quote.id && (!excludeInvoiceId || i.id !== excludeInvoiceId)
+  )
+
+  if (linked.length === 0) {
+    return {
+      invoiceType: "deposit",
+      amount: suggestedAmountForQuote(quote, "deposit", sum),
+    }
+  }
+
+  const balanceAmt = suggestedAmountForQuote(quote, "balance", sum)
+  if (balanceAmt > 0) {
+    return { invoiceType: "balance", amount: balanceAmt }
+  }
+
+  return {
+    invoiceType: "final",
+    amount: suggestedAmountForQuote(quote, "final", sum),
+  }
+}
+
 const invoiceFormDialogClass = cn(
   "!flex !h-auto !max-h-[100dvh] !w-full !max-w-full !translate-x-0 !translate-y-0 !flex-col !gap-0 !overflow-hidden !rounded-none !p-0 sm:!left-1/2 sm:!top-1/2 sm:!h-auto sm:!max-h-[min(92vh,920px)] sm:!w-full sm:!max-w-[min(56rem,calc(100vw-1.5rem))] sm:!-translate-x-1/2 sm:!-translate-y-1/2 sm:!rounded-xl",
   "max-sm:!inset-x-2 max-sm:!top-3 max-sm:!bottom-auto max-sm:!max-h-[calc(100dvh-1.5rem)]"
@@ -319,6 +351,9 @@ function InvoicesBoardPanel({
   isCreateOpen,
   onOpenChange,
   createOpenSourceRef,
+  deepLinkQuoteId,
+  deepLinkOpenCreate,
+  initialCustomerFilterId,
 }: {
   invoices: InvoiceWithReminders[]
   customers: Customer[]
@@ -331,9 +366,53 @@ function InvoicesBoardPanel({
   isCreateOpen: boolean
   onOpenChange: (open: boolean) => void
   createOpenSourceRef: MutableRefObject<"header" | null>
+  deepLinkQuoteId?: string
+  deepLinkOpenCreate?: boolean
+  /** `/invoices?customer=uuid` — 고객별 청구만 표시 (`quote`+`new` 딥링크와 동시 사용 안 함) */
+  initialCustomerFilterId?: string
 }) {
   const router = useRouter()
+  const deepLinkConsumedRef = useRef(false)
+  const customerFilterDeepLinkRef = useRef(false)
   const flowRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!deepLinkQuoteId?.trim() && !deepLinkOpenCreate) {
+      deepLinkConsumedRef.current = false
+    }
+  }, [deepLinkQuoteId, deepLinkOpenCreate])
+
+  useEffect(() => {
+    if (!initialCustomerFilterId?.trim()) {
+      customerFilterDeepLinkRef.current = false
+    }
+  }, [initialCustomerFilterId])
+
+  useEffect(() => {
+    const quoteDeep = Boolean(deepLinkQuoteId?.trim() && deepLinkOpenCreate)
+    if (quoteDeep || customerFilterDeepLinkRef.current) {
+      return
+    }
+    const cid = initialCustomerFilterId?.trim()
+    if (!cid) {
+      return
+    }
+    customerFilterDeepLinkRef.current = true
+    if (!customers.some((c) => c.id === cid)) {
+      toast.error("필터할 고객을 찾을 수 없습니다.")
+      router.replace("/invoices")
+      return
+    }
+    setCustomerFilterId(cid)
+    toast.message("고객별 청구만 표시합니다.", { duration: 2400 })
+    router.replace("/invoices")
+  }, [
+    initialCustomerFilterId,
+    customers,
+    router,
+    deepLinkQuoteId,
+    deepLinkOpenCreate,
+  ])
   const [isPending, startTransition] = useTransition()
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null)
   const [reminderInvoiceId, setReminderInvoiceId] = useState<string | null>(null)
@@ -349,6 +428,7 @@ function InvoicesBoardPanel({
   const [customerFilterId, setCustomerFilterId] = useState<string | "all">("all")
   const [extraInvoiceFiltersOpen, setExtraInvoiceFiltersOpen] = useState(false)
   const [drawerInvoiceId, setDrawerInvoiceId] = useState<string | null>(null)
+  const [sendInvoiceTarget, setSendInvoiceTarget] = useState<InvoiceWithReminders | null>(null)
   const [quickQuoteId, setQuickQuoteId] = useState(quotes[0]?.id ?? "")
   const [form, setForm] = useState<InvoiceFormState>(() => createEmptyInvoiceForm(customers))
   /** true면 견적·청구 타입 변경 시 금액 제안을 자동 반영, false면 사용자가 금액을 직접 조정한 상태 */
@@ -398,6 +478,47 @@ function InvoicesBoardPanel({
       return quotes[0]?.id ?? ""
     })
   }, [quotes])
+
+  useEffect(() => {
+    if (!deepLinkOpenCreate || !deepLinkQuoteId?.trim() || deepLinkConsumedRef.current) {
+      return
+    }
+    const qid = deepLinkQuoteId.trim()
+    const q = quotes.find((item) => item.id === qid)
+    deepLinkConsumedRef.current = true
+    if (!q) {
+      toast.error("연결할 견적을 찾을 수 없습니다. 견적이 삭제되었거나 권한이 없을 수 있습니다.")
+      router.replace("/invoices")
+      return
+    }
+    setAmountFollowsSuggestion(true)
+    setEditingInvoiceId(null)
+    setErrorMessage("")
+    const { invoiceType, amount } = nextInvoiceSuggestionForQuote(q, invoices, null)
+    setForm({
+      ...createEmptyInvoiceForm(customers),
+      customerId: q.customerId,
+      quoteId: q.id,
+      invoiceType,
+      amount: String(amount),
+    })
+    createOpenSourceRef.current = null
+    onOpenChange(true)
+    toast.success("견적을 반영해 청구 작성 화면을 열었습니다.", {
+      description: "청구 유형·금액은 저장 전에 확인해 주세요.",
+      duration: 3200,
+    })
+    router.replace("/invoices")
+  }, [
+    deepLinkOpenCreate,
+    deepLinkQuoteId,
+    quotes,
+    invoices,
+    customers,
+    router,
+    onOpenChange,
+    createOpenSourceRef,
+  ])
 
   useEffect(() => {
     if (!isCreateOpen) {
@@ -615,11 +736,13 @@ function InvoicesBoardPanel({
     setAmountFollowsSuggestion(true)
     setEditingInvoiceId(null)
     setErrorMessage("")
+    const { invoiceType, amount } = nextInvoiceSuggestionForQuote(q, invoices, null)
     setForm({
       ...createEmptyInvoiceForm(customers),
       customerId: q.customerId,
       quoteId: q.id,
-      amount: String(Math.round(q.total * 0.5)),
+      invoiceType,
+      amount: String(amount),
     })
     onOpenChange(true)
   }
@@ -1757,6 +1880,23 @@ function InvoicesBoardPanel({
                               <BellRing className="size-4" />
                               리마인드
                             </DropdownMenuItem>
+                            <DropdownMenuItem className="gap-2" onClick={() => setSendInvoiceTarget(invoice)}>
+                              <Mail className="size-4" />
+                              발송
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="gap-2"
+                              onClick={() =>
+                                window.open(
+                                  `/invoices/${invoice.id}/print`,
+                                  "_blank",
+                                  "noopener,noreferrer"
+                                )
+                              }
+                            >
+                              <ExternalLink className="size-4" />
+                              인쇄·PDF
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </td>
@@ -1829,12 +1969,29 @@ function InvoicesBoardPanel({
         footer={
           drawerInvoice ? (
             <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setSendInvoiceTarget(drawerInvoice)}
+              >
+                <Mail className="size-3.5" />
+                발송
+              </Button>
               <Button size="sm" variant="outline" onClick={() => openEdit(drawerInvoice)}>
                 수정
               </Button>
               <Button size="sm" variant="outline" onClick={() => openReminderFor(drawerInvoice)}>
                 리마인드
               </Button>
+              <Link
+                href={`/invoices/${drawerInvoice.id}/print`}
+                target="_blank"
+                rel="noreferrer"
+                className={cn(buttonVariants({ size: "sm", variant: "outline" }), "inline-flex gap-1.5")}
+              >
+                <ExternalLink className="size-3.5" />
+                인쇄·PDF
+              </Link>
               {drawerInvoice.quoteId ? (
                 <Link
                   href={`/quotes/${drawerInvoice.quoteId}/print`}
@@ -2146,6 +2303,20 @@ function InvoicesBoardPanel({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <InvoiceSendDialog
+        invoice={sendInvoiceTarget}
+        open={sendInvoiceTarget !== null}
+        onOpenChange={(next) => {
+          if (!next) {
+            setSendInvoiceTarget(null)
+          }
+        }}
+        paymentTerms={paymentTerms}
+        bankAccount={bankAccount}
+        businessName={businessName}
+        onAfterSend={() => router.refresh()}
+      />
     </div>
   )
 }
@@ -2159,6 +2330,9 @@ export function InvoicesWorkspace({
   businessName,
   bankAccount,
   paymentTerms,
+  deepLinkQuoteId,
+  deepLinkOpenCreate,
+  initialCustomerFilterId,
 }: {
   invoices: InvoiceWithReminders[]
   customers: Customer[]
@@ -2168,6 +2342,9 @@ export function InvoicesWorkspace({
   businessName: string
   bankAccount: string
   paymentTerms: string
+  deepLinkQuoteId?: string
+  deepLinkOpenCreate?: boolean
+  initialCustomerFilterId?: string
 }) {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const createOpenSourceRef = useRef<"header" | null>(null)
@@ -2261,6 +2438,9 @@ export function InvoicesWorkspace({
         isCreateOpen={isCreateOpen}
         onOpenChange={setIsCreateOpen}
         createOpenSourceRef={createOpenSourceRef}
+        deepLinkQuoteId={deepLinkQuoteId}
+        deepLinkOpenCreate={deepLinkOpenCreate}
+        initialCustomerFilterId={initialCustomerFilterId}
       />
     </div>
   )

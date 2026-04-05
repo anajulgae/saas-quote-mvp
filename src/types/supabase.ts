@@ -195,6 +195,8 @@ export interface Database {
           sent_at: string | null
           valid_until: string | null
           public_share_token: string | null
+          share_open_count: number
+          share_last_opened_at: string | null
           created_at: string
           updated_at: string
         }
@@ -213,6 +215,8 @@ export interface Database {
           sent_at?: string | null
           valid_until?: string | null
           public_share_token?: string | null
+          share_open_count?: number
+          share_last_opened_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -231,6 +235,8 @@ export interface Database {
           sent_at?: string | null
           valid_until?: string | null
           public_share_token?: string | null
+          share_open_count?: number
+          share_last_opened_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -284,6 +290,9 @@ export interface Database {
           paid_at: string | null
           requested_at: string | null
           notes: string | null
+          public_share_token: string | null
+          share_open_count: number
+          share_last_opened_at: string | null
           created_at: string
           updated_at: string
         }
@@ -300,6 +309,9 @@ export interface Database {
           paid_at?: string | null
           requested_at?: string | null
           notes?: string | null
+          public_share_token?: string | null
+          share_open_count?: number
+          share_last_opened_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -316,6 +328,9 @@ export interface Database {
           paid_at?: string | null
           requested_at?: string | null
           notes?: string | null
+          public_share_token?: string | null
+          share_open_count?: number
+          share_last_opened_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -425,6 +440,18 @@ export interface Database {
       get_quote_share_payload: {
         Args: { p_token: string }
         Returns: Json
+      }
+      get_invoice_share_payload: {
+        Args: { p_token: string }
+        Returns: Json
+      }
+      bump_quote_share_open: {
+        Args: { p_token: string }
+        Returns: undefined
+      }
+      bump_invoice_share_open: {
+        Args: { p_token: string }
+        Returns: undefined
       }
     }
     Enums: {

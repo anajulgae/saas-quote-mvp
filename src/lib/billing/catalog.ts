@@ -21,6 +21,10 @@ export const FEATURE_GATES_AFTER_PAYMENT: Record<PlanFeature, BillingPlan[]> = {
   ai_assist: ["pro"],
   /** 제안: Pro 전용 — 월 N건 초과 시 업셀 */
   unlimited_quotes: ["pro"],
+  /** 제안: Pro 전용 — Resend 견적·청구 메일 */
+  email_outbound: ["pro"],
+  /** 제안: Pro 전용 — 공개 링크 열람 로그·추적 */
+  public_share_tracking: ["pro"],
 }
 
 export const BILLING_UPGRADE_CONTACT_COPY =

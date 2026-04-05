@@ -36,3 +36,37 @@ export function buildKakaoQuoteShareWebPayload(input: KakaoQuoteShareInput) {
     buttonTitle: "견적서 보기",
   }
 }
+
+export type KakaoInvoiceShareInput = {
+  invoiceNumber: string
+  amountLabel: string
+  publicUrl: string
+  businessName?: string
+}
+
+export function buildKakaoInvoiceShareText(input: KakaoInvoiceShareInput): string {
+  const who = input.businessName?.trim()
+  const header = who ? `[${who}] 청구·입금 안내` : `[Bill-IO] 청구·입금 안내`
+  return [
+    header,
+    `청구번호 ${input.invoiceNumber}`,
+    `금액 ${input.amountLabel}`,
+    "",
+    "아래 링크에서 청구서를 확인해 주세요.",
+    input.publicUrl,
+    "",
+    "감사합니다.",
+  ].join("\n")
+}
+
+export function buildKakaoInvoiceShareWebPayload(input: KakaoInvoiceShareInput) {
+  return {
+    objectType: "text" as const,
+    text: `${input.invoiceNumber} · ${input.amountLabel}`,
+    link: {
+      webUrl: input.publicUrl,
+      mobileWebUrl: input.publicUrl,
+    },
+    buttonTitle: "청구서 보기",
+  }
+}

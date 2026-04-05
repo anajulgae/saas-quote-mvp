@@ -115,9 +115,10 @@ npm run build
 3. `0003_rls_tenant_fk_enforcement.sql` — 테넌트 FK RLS 보강  
 4. `0003_quote_seal_share_document.sql` — 견적 공유·직인·RPC  
 5. `0004_user_plan.sql` — `users.plan` (`free` / `pro`)  
-6. `0005_business_registration_number.sql` — 사업자등록번호 컬럼·공유 견적 RPC
+6. `0005_business_registration_number.sql` — 사업자등록번호 컬럼·공유 견적 RPC  
+7. `0006_invoice_public_share_and_link_opens.sql` — 공개 청구 토큰·열람 카운트·`get_invoice_share_payload`·열람 시 활동 로그
 
-`0003_rls` 미적용 시 보안 공격면이 남습니다. `0004` 미적용 시 앱은 동작하지만 설정에 **플랜 마이그레이션 안내**가 표시됩니다.
+`0003_rls` 미적용 시 보안 공격면이 남습니다. `0004` 미적용 시 앱은 동작하지만 설정에 **플랜 마이그레이션 안내**가 표시됩니다. **공개 청구 링크·열람 추적**은 **0006** 이 필요합니다.
 
 ---
 
@@ -196,7 +197,7 @@ npm run build
 
 ## 현재 제품 범위 요약
 
-**포함**: 회원가입·이메일 인증, 고객·문의·견적·청구, 견적 공유 링크·인쇄/PDF, **Resend 견적 메일**, **OpenAI 보조**(초안·문의 구조화·문구), 리마인드, 설정·직인, 플랜 컬럼(`free`/`pro`), **`/billing` 결제 진입점(문서·UI)**.
+**포함**: 회원가입·이메일 인증, 고객·문의·견적·청구, 견적·청구 공개 링크·인쇄/PDF, **Resend 견적·청구 메일**, **OpenAI 보조**(초안·문의 구조화·문구), 리마인드, 설정·직인, 플랜 컬럼(`free`/`pro`), **`/billing` 결제 진입점(문서·UI)**, **승인 견적 → `/invoices?quote={id}&new=1` 청구 초안**(선금·잔금 자동 제안), **운영 딥링크** (`/customers?customer=…`·`?new=1`, `/invoices?customer=…` 고객 필터 등).
 
 **미포함**: 실제 PG(카드) 결제, 자동 청구서 발행, 회계·팀 좌석 본격 지원 등 — 플랜 게이트는 `src/lib/plan-features.ts` / `src/lib/billing/catalog.ts` 에서 확장합니다.
 

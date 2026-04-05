@@ -136,6 +136,8 @@ function mapQuote(row: QuoteRow): Quote {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     publicShareToken: row.public_share_token ?? undefined,
+    shareOpenCount: row.share_open_count ?? undefined,
+    shareLastOpenedAt: row.share_last_opened_at ?? undefined,
   }
 }
 
@@ -168,6 +170,9 @@ function mapInvoice(row: InvoiceRow): Invoice {
     notes: row.notes ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    publicShareToken: row.public_share_token ?? undefined,
+    shareOpenCount: row.share_open_count ?? undefined,
+    shareLastOpenedAt: row.share_last_opened_at ?? undefined,
   }
 }
 
@@ -1047,6 +1052,112 @@ export async function getQuotePrintPageData(quoteId: string): Promise<{
   }
 }
 
+export async function getInvoicePrintPageData(invoiceId: string): Promise<{
+  invoice: Invoice
+  customer?: Customer
+  linkedQuote?: { quoteNumber: string; title: string }
+  issuer: {
+    businessName: string
+    ownerName: string
+    businessRegistrationNumber: string
+    email: string
+    phone: string
+    paymentTerms: string
+    bankAccount: string
+    sealImageUrl?: string
+    sealEnabled: boolean
+  }
+} | null> {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    const invoice = demoInvoices.find((i) => i.id === invoiceId)
+    if (!invoice) {
+      return null
+    }
+    const customer = demoCustomers.find((c) => c.id === invoice.customerId)
+    const quote = invoice.quoteId ? demoQuotes.find((q) => q.id === invoice.quoteId) : undefined
+    return {
+      invoice,
+      customer,
+      linkedQuote: quote ? { quoteNumber: quote.quoteNumber, title: quote.title } : undefined,
+      issuer: {
+        businessName: demoBusinessSettings.businessName,
+        ownerName: demoBusinessSettings.ownerName,
+        businessRegistrationNumber: demoBusinessSettings.businessRegistrationNumber,
+        email: demoBusinessSettings.email,
+        phone: demoBusinessSettings.phone,
+        paymentTerms: demoBusinessSettings.paymentTerms,
+        bankAccount: demoBusinessSettings.bankAccount,
+        sealImageUrl: demoBusinessSettings.sealImageUrl,
+        sealEnabled: demoBusinessSettings.sealEnabled,
+      },
+    }
+  }
+
+  const [{ data: invRowRaw, error: invError }, { data: settingsRow, error: settingsError }] =
+    await Promise.all([
+      context.supabase.from("invoices").select("*").eq("id", invoiceId).maybeSingle(),
+      context.supabase.from("business_settings").select("*").eq("user_id", context.userId).maybeSingle(),
+    ])
+
+  if (invError || settingsError) {
+    throw invError ?? settingsError
+  }
+
+  const invRow = invRowRaw as InvoiceRow | null
+  if (!invRow || invRow.user_id !== context.userId) {
+    return null
+  }
+
+  const { data: customerRow, error: customerError } = await context.supabase
+    .from("customers")
+    .select("*")
+    .eq("id", invRow.customer_id)
+    .maybeSingle()
+
+  if (customerError) {
+    throw customerError
+  }
+
+  let linkedQuote: { quoteNumber: string; title: string } | undefined
+  if (invRow.quote_id) {
+    const { data: qRow, error: qErr } = await context.supabase
+      .from("quotes")
+      .select("quote_number, title")
+      .eq("id", invRow.quote_id)
+      .maybeSingle()
+    if (qErr) {
+      throw qErr
+    }
+    const q = qRow as { quote_number: string; title: string } | null
+    if (q) {
+      linkedQuote = { quoteNumber: q.quote_number, title: q.title }
+    }
+  }
+
+  const settings = settingsRow
+    ? mapBusinessSettings(settingsRow as BusinessSettingsRow)
+    : null
+
+  return {
+    invoice: mapInvoice(invRow),
+    customer: customerRow ? mapCustomer(customerRow as CustomerRow) : undefined,
+    linkedQuote,
+    issuer: {
+      businessName: settings?.businessName ?? "",
+      ownerName: settings?.ownerName ?? "",
+      businessRegistrationNumber: settings?.businessRegistrationNumber ?? "",
+      email: settings?.email ?? "",
+      phone: settings?.phone ?? "",
+      paymentTerms: settings?.paymentTerms ?? "",
+      bankAccount: settings?.bankAccount ?? "",
+      sealImageUrl: settings?.sealImageUrl,
+      sealEnabled: settings?.sealEnabled ?? false,
+    },
+  }
+}
+
 /** 견적 소유자 기준 공유 토큰 보장 (없으면 발급) */
 export async function ensureQuoteShareTokenForQuote(quoteId: string): Promise<{ token: string }> {
   const context = await getDataContext()
@@ -1106,6 +1217,73 @@ export async function ensureQuoteShareTokenForQuote(quoteId: string): Promise<{ 
 
   throw new Error(
     "공유 링크를 DB에 저장하지 못했습니다. Supabase 마이그레이션(quotes.public_share_token)·RLS·견적 소유자 여부를 확인해 주세요."
+  )
+}
+
+/** 청구 소유자 기준 공개 링크 토큰 보장 (없으면 발급) */
+export async function ensureInvoiceShareTokenForInvoice(invoiceId: string): Promise<{ token: string }> {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    const inv = demoInvoices.find((i) => i.id === invoiceId)
+    if (!inv?.publicShareToken) {
+      throw new Error("데모 청구에 공유 토큰이 없습니다.")
+    }
+    return { token: inv.publicShareToken }
+  }
+
+  const { data: row, error } = await context.supabase
+    .from("invoices")
+    .select("public_share_token, user_id, customer_id")
+    .eq("id", invoiceId)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  const invRow = row as {
+    public_share_token: string | null
+    user_id: string
+    customer_id: string
+  } | null
+  if (!invRow || invRow.user_id !== context.userId) {
+    throw new Error("INVOICE_NOT_FOUND")
+  }
+
+  if (invRow.public_share_token) {
+    return { token: invRow.public_share_token }
+  }
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const token = randomBytes(18).toString("base64url")
+    const { data: updatedRows, error: upError } = await context.supabase
+      .from("invoices")
+      .update({ public_share_token: token })
+      .eq("id", invoiceId)
+      .eq("user_id", context.userId)
+      .select("id")
+
+    if (upError) {
+      if ((upError as { code?: string }).code === "23505") {
+        continue
+      }
+      throw upError
+    }
+
+    if (Array.isArray(updatedRows) && updatedRows.length > 0) {
+      await createActivityLog({
+        action: "invoice.share_token_issued",
+        description: "고객용 청구 공개 링크가 발급되었습니다.",
+        customerId: invRow.customer_id,
+        invoiceId,
+      })
+      return { token }
+    }
+  }
+
+  throw new Error(
+    "공유 링크를 DB에 저장하지 못했습니다. Supabase 마이그레이션(invoices.public_share_token)·RLS·청구 소유자 여부를 확인해 주세요."
   )
 }
 
@@ -1218,6 +1396,77 @@ export async function getQuoteOutboundSnapshot(quoteId: string): Promise<{
     title: q.title,
     customerId: q.customer_id,
     customerEmail: email,
+  }
+}
+
+/** 청구 이메일·로그용 스냅샷 */
+export async function getInvoiceOutboundSnapshot(invoiceId: string): Promise<{
+  invoiceNumber: string
+  customerId: string
+  customerEmail: string
+  amount: number
+  paymentStatus: PaymentStatus
+} | null> {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    const inv = demoInvoices.find((i) => i.id === invoiceId)
+    if (!inv) {
+      return null
+    }
+    const customer = demoCustomers.find((c) => c.id === inv.customerId)
+    return {
+      invoiceNumber: inv.invoiceNumber,
+      customerId: inv.customerId,
+      customerEmail: customer?.email?.trim() ?? "",
+      amount: inv.amount,
+      paymentStatus: inv.paymentStatus,
+    }
+  }
+
+  const { data: invRow, error: invErr } = await context.supabase
+    .from("invoices")
+    .select("id, user_id, invoice_number, customer_id, amount, payment_status")
+    .eq("id", invoiceId)
+    .maybeSingle()
+
+  if (invErr) {
+    throw invErr
+  }
+
+  const inv = invRow as
+    | {
+        id: string
+        user_id: string
+        invoice_number: string
+        customer_id: string
+        amount: number
+        payment_status: PaymentStatus
+      }
+    | null
+
+  if (!inv || inv.user_id !== context.userId) {
+    return null
+  }
+
+  const { data: custRow, error: cErr } = await context.supabase
+    .from("customers")
+    .select("email")
+    .eq("id", inv.customer_id)
+    .maybeSingle()
+
+  if (cErr) {
+    throw cErr
+  }
+
+  const email = (custRow as { email: string | null } | null)?.email?.trim() ?? ""
+
+  return {
+    invoiceNumber: inv.invoice_number,
+    customerId: inv.customer_id,
+    customerEmail: email,
+    amount: inv.amount,
+    paymentStatus: inv.payment_status,
   }
 }
 

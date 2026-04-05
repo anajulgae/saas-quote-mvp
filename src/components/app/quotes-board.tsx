@@ -1923,11 +1923,19 @@ function QuotesBoardPanel({
               <Button size="sm" onClick={() => setSendQuoteTarget(drawerQuote)}>
                 보내기
               </Button>
+              {drawerQuote.status === "approved" ? (
+                <Link
+                  href={`/invoices?quote=${encodeURIComponent(drawerQuote.id)}&new=1`}
+                  className={cn(buttonVariants({ size: "sm" }), "inline-flex gap-1.5 font-semibold")}
+                >
+                  청구 만들기
+                </Link>
+              ) : null}
               <Link
                 href="/invoices"
                 className={cn(buttonVariants({ size: "sm", variant: "outline" }), "inline-flex")}
               >
-                청구 관리
+                청구 목록
               </Link>
             </div>
           ) : null
@@ -2005,6 +2013,12 @@ function QuotesBoardPanel({
             </div>
             <div>
               <p className="mb-2 text-xs font-semibold text-muted-foreground">연결 청구</p>
+              {drawerQuote.status === "approved" && !drawerQuoteInvoices.length ? (
+                <p className="mb-2 rounded-md border border-primary/25 bg-primary/5 px-2.5 py-2 text-[11px] leading-snug text-foreground">
+                  승인된 견적입니다. 하단 <span className="font-semibold">「청구 만들기」</span>로 선금·잔금
+                  청구를 바로 시작할 수 있습니다.
+                </p>
+              ) : null}
               {drawerQuoteInvoices.length ? (
                 <ul className="space-y-2 text-xs">
                   {drawerQuoteInvoices.map((inv) => (
@@ -2022,7 +2036,9 @@ function QuotesBoardPanel({
                 <p className="text-xs text-muted-foreground">이 견적에 연결된 청구가 없습니다.</p>
               )}
               <p className="mt-2 text-[11px] text-muted-foreground">
-                청구를 추가하려면 청구 관리에서 동일 견적을 연결해 저장하세요.
+                {drawerQuote.status === "approved"
+                  ? "「청구 만들기」로 이동하거나, 청구 목록에서 직접 만들 수 있습니다."
+                  : "승인 후 「청구 만들기」가 표시됩니다. 청구 목록에서도 동일 견적을 연결해 저장할 수 있습니다."}
               </p>
             </div>
             <div>
