@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { Bell, LayoutDashboard, Menu, Receipt, Settings, Users, FileText, MessagesSquare } from "lucide-react"
 
 import { logoutAction } from "@/app/actions"
+import { AuthLegalLinks } from "@/components/app/auth-legal-links"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
@@ -88,7 +89,12 @@ function SidebarContent({
       <div className="flex-1 px-3 py-3">
         <NavLinks />
       </div>
-      <div className="border-t border-border/70 p-3">
+      <div className="space-y-3 border-t border-border/70 p-3">
+        <AuthLegalLinks
+          showBilling
+          navLabel="약관·요금 안내"
+          className="flex flex-wrap gap-x-1.5 gap-y-1 text-[11px] leading-relaxed text-muted-foreground"
+        />
         <form action={logoutAction}>
           <Button type="submit" variant="outline" className="w-full">
             로그아웃

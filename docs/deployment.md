@@ -74,6 +74,7 @@ Vercel 프로젝트 **Settings → Environment Variables**에서 설정합니다
 - **견적 초안**: 항목·결제·고객 안내까지 한 번에 써야 해 **품질 여유가 더 큰 모델(`gpt-5.4-mini` 권장)**을 씁니다.
 - **코드에 모델명 없음** — 반드시 `OPENAI_MODEL_*` 환경 변수만 사용합니다. 교체 시 Vercel 변수 수정 → Redeploy.
 - **호출 추적**: 서버 표준 출력에 `[bill-io-ai]` JSON 로그(`feature`, `model`, `maxOutputTokens`, `phase`)가 남아 이후 비용 분석에 쓸 수 있습니다.
+- **앱 오류(구조화 로그)**: `src/lib/observability.ts`의 `reportServerError` 등은 `kind: "bill_io_server_error"` 같은 필드로 **JSON 한 줄**을 stderr에 남깁니다. Vercel 로그 드레인·외부 APM 파서에 그대로 넣기 좋습니다. Sentry 등은 해당 파일에서 한 곳만 연결하면 됩니다.
 - **초안만 선택적 fallback**: `OPENAI_QUOTE_DRAFT_FALLBACK=true` + `OPENAI_MODEL_FALLBACK` 시 mini 실패(HTTP·빈 응답·JSON·파싱·타임아웃)에 한해 nano로 **1회** 재시도합니다. 기본은 꺼져 있어 이중 과금을 피합니다.
 
 구현 위치: `src/lib/server/openai-config.ts`(모델·토큰 상한 env), `src/lib/server/openai-chat.ts`(공통 호출·로깅).

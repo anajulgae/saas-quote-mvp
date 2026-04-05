@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { AuthLegalLinks } from "@/components/app/auth-legal-links"
 import { authCardClass, authFooterLinkClass, authIconBoxClass } from "@/lib/auth-ui"
 import { cn } from "@/lib/utils"
 
@@ -183,6 +184,7 @@ function ForgotPasswordFormInner({ onTryAnother }: { onTryAnother: () => void })
             로그인 화면으로 돌아가기
           </Link>
         </p>
+        <AuthLegalLinks className="pt-3 text-center text-[11px] leading-relaxed text-muted-foreground" />
       </CardContent>
     </Card>
   )

@@ -8,6 +8,7 @@ import { loginAction } from "@/app/actions"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { AuthLegalLinks } from "@/components/app/auth-legal-links"
 import { authCardClass, authIconBoxClass } from "@/lib/auth-ui"
 
 export function LoginForm({
@@ -152,6 +153,9 @@ export function LoginForm({
             </p>
           </div>
         ) : null}
+        <div className="border-t border-border/50 pt-4">
+          <AuthLegalLinks />
+        </div>
       </CardContent>
     </Card>
   )
