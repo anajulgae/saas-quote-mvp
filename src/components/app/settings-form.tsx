@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { formatBusinessRegNoInput } from "@/lib/format"
 import { computeTemplatesSyncKey } from "@/lib/settings-form-key"
 import { cn } from "@/lib/utils"
 import type { BillingPlan, BusinessSettings, Template } from "@/types/domain"
@@ -282,12 +283,13 @@ export function SettingsForm({
                   onChange={(event) =>
                     setSettings((current) => ({
                       ...current,
-                      businessRegistrationNumber: event.target.value,
+                      businessRegistrationNumber: formatBusinessRegNoInput(event.target.value),
                     }))
                   }
                   placeholder="예: 123-45-67890"
                   inputMode="numeric"
                   autoComplete="off"
+                  maxLength={12}
                 />
               </div>
               <div className="space-y-1.5">

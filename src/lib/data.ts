@@ -22,6 +22,7 @@ import {
   defaultQuoteSummaryFromTemplates,
   defaultReminderMessageFromTemplates,
 } from "@/lib/template-defaults"
+import { formatBusinessRegNoInput } from "@/lib/format"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { fetchUserPlanRow } from "@/lib/user-plan"
 import type {
@@ -187,7 +188,7 @@ function mapBusinessSettings(row: BusinessSettingsRow): BusinessSettings {
     userId: row.user_id,
     businessName: row.business_name,
     ownerName: row.owner_name,
-    businessRegistrationNumber: row.business_registration_number ?? "",
+    businessRegistrationNumber: formatBusinessRegNoInput(row.business_registration_number ?? ""),
     email: row.email ?? "",
     phone: row.phone ?? "",
     paymentTerms: row.payment_terms ?? "",

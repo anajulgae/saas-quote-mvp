@@ -49,3 +49,15 @@ export function formatDateTime(value?: string) {
     minute: "2-digit",
   }).format(new Date(value))
 }
+
+/** 한국 사업자등록번호 10자리 — 입력 시 `XXX-XX-XXXXX` 형태로 하이픈 삽입 */
+export function formatBusinessRegNoInput(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 10)
+  if (digits.length <= 3) {
+    return digits
+  }
+  if (digits.length <= 5) {
+    return `${digits.slice(0, 3)}-${digits.slice(3)}`
+  }
+  return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`
+}
