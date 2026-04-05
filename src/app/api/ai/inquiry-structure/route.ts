@@ -4,6 +4,7 @@ import { planAllowsFeature } from "@/lib/plan-features"
 import { reportServerError } from "@/lib/observability"
 import { getAuthenticatedUserForApi } from "@/lib/server/api-auth"
 import { completeJsonChat, OpenAiError } from "@/lib/server/openai-chat"
+import { openAiErrorUserPayload } from "@/lib/server/openai-user-errors"
 
 function parseStructure(obj: unknown): {
   suggestedTitle: string
@@ -70,20 +71,19 @@ estimatedScope(업종·서비스 범위 한 줄), followupMemo(내부 팔로업 
     return NextResponse.json({ ok: true as const, structured })
   } catch (e) {
     if (e instanceof OpenAiError) {
-      if (e.code === "NOT_CONFIGURED") {
-        return NextResponse.json(
-          { error: "AI 기능이 설정되지 않았습니다. OPENAI_API_KEY 를 확인해 주세요." },
-          { status: 503 }
-        )
+      if (e.code !== "NOT_CONFIGURED") {
+        reportServerError(e.message, {
+          route: "inquiry-structure",
+          code: e.code,
+          httpStatus: e.httpStatus,
+        })
       }
-      if (e.code === "TIMEOUT") {
-        return NextResponse.json(
-          { error: "AI 응답이 너무 오래 걸렸습니다. 잠시 후 다시 시도해 주세요." },
-          { status: 504 }
-        )
-      }
-      reportServerError(e.message, { route: "inquiry-structure", code: e.code })
-      return NextResponse.json({ error: "구조화에 실패했습니다. 잠시 후 다시 시도해 주세요." }, { status: 502 })
+      const { error, status } = openAiErrorUserPayload(e)
+      const msg =
+        e.code === "EMPTY" || e.code === "JSON" || e.code === "PARSE"
+          ? "구조화에 실패했습니다. 잠시 후 다시 시도하거나 내용을 직접 입력해 주세요."
+          : error
+      return NextResponse.json({ error: msg }, { status })
     }
     reportServerError(e instanceof Error ? e.message : "unknown", { route: "inquiry-structure" })
     return NextResponse.json({ error: "구조화에 실패했습니다." }, { status: 502 })

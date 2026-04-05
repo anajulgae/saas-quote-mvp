@@ -5,7 +5,9 @@ export type ChatMessage = { role: ChatRole; content: string }
 export class OpenAiError extends Error {
   constructor(
     message: string,
-    readonly code: "NOT_CONFIGURED" | "HTTP" | "EMPTY" | "JSON" | "PARSE" | "TIMEOUT"
+    readonly code: "NOT_CONFIGURED" | "HTTP" | "EMPTY" | "JSON" | "PARSE" | "TIMEOUT",
+    /** set when code === "HTTP" — used for user-facing hints */
+    readonly httpStatus?: number
   ) {
     super(message)
     this.name = "OpenAiError"
@@ -46,7 +48,7 @@ export async function completeJsonChat<T>(messages: ChatMessage[], parse: (obj: 
   }
 
   if (!res.ok) {
-    throw new OpenAiError(`OpenAI 요청 실패 (${res.status})`, "HTTP")
+    throw new OpenAiError(`OpenAI 요청 실패 (${res.status})`, "HTTP", res.status)
   }
 
   const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> }
