@@ -105,6 +105,7 @@ export function SettingsForm({
         initialSettings.updatedAt ?? "",
         initialSettings.businessName,
         initialSettings.ownerName,
+        initialSettings.businessRegistrationNumber,
         initialSettings.email,
         initialSettings.phone,
         initialSettings.paymentTerms,
@@ -124,15 +125,18 @@ export function SettingsForm({
     [templates]
   )
 
+  // 서버에서 내려온 스냅샷이 실제로 바뀐 경우에만 동기화 (initialSettings 참조만 바뀌면 입력이 초기화되던 문제 방지)
   useEffect(() => {
     setSettings(initialSettings)
     setSealUrl(initialSettings.sealImageUrl ?? null)
     setSealEnabled(initialSettings.sealEnabled)
-  }, [businessServerKey, initialSettings])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- businessServerKey에 필드 요약이 포함됨
+  }, [businessServerKey])
 
   useEffect(() => {
     setTemplateState(templates.length ? templates : defaultTemplates(initialSettings.userId))
-  }, [templatesServerKey, initialSettings.userId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- templatesServerKey에 템플릿 요약이 포함됨
+  }, [templatesServerKey])
 
   const saveBusiness = () => {
     setErrorBusiness("")
@@ -141,6 +145,7 @@ export function SettingsForm({
       const result = await saveBusinessSettingsOnlyAction({
         businessName: settings.businessName,
         ownerName: settings.ownerName,
+        businessRegistrationNumber: settings.businessRegistrationNumber,
         email: settings.email,
         phone: settings.phone,
         paymentTerms: settings.paymentTerms,
@@ -294,6 +299,23 @@ export function SettingsForm({
                   onChange={(event) =>
                     setSettings((current) => ({ ...current, ownerName: event.target.value }))
                   }
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-xs font-medium">사업자 등록번호</label>
+                <FieldHint>견적서 발신 정보에 표시됩니다. 없으면 비워 두어도 됩니다.</FieldHint>
+                <Input
+                  className="h-9 max-w-md tabular-nums"
+                  value={settings.businessRegistrationNumber}
+                  onChange={(event) =>
+                    setSettings((current) => ({
+                      ...current,
+                      businessRegistrationNumber: event.target.value,
+                    }))
+                  }
+                  placeholder="예: 123-45-67890"
+                  inputMode="numeric"
+                  autoComplete="off"
                 />
               </div>
               <div className="space-y-1.5">

@@ -26,6 +26,7 @@ export const demoBusinessSettings: BusinessSettings = {
   userId: demoUser.id,
   businessName: "민준 스튜디오",
   ownerName: "김민준",
+  businessRegistrationNumber: "123-45-67890",
   email: "hello@minjunstudio.kr",
   phone: "010-2841-5532",
   paymentTerms: "선금 50%, 납품 전 잔금 50%",

@@ -44,6 +44,7 @@ export interface Database {
           user_id: string
           business_name: string
           owner_name: string
+          business_registration_number: string | null
           email: string | null
           phone: string | null
           default_currency: string
@@ -60,6 +61,7 @@ export interface Database {
           user_id: string
           business_name: string
           owner_name: string
+          business_registration_number?: string | null
           email?: string | null
           phone?: string | null
           default_currency?: string
@@ -76,6 +78,7 @@ export interface Database {
           user_id?: string
           business_name?: string
           owner_name?: string
+          business_registration_number?: string | null
           email?: string | null
           phone?: string | null
           default_currency?: string

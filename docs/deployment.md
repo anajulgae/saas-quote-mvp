@@ -119,7 +119,8 @@ Supabase **SQL Editor**에서 저장소의 파일을 **아래 순서 그대로**
 2. `supabase/migrations/0002_phase2_foundation.sql` — `updated_at` 트리거, `auth.users` 가입 시 `public.users` / `business_settings` 시드 트리거 등  
 3. `supabase/migrations/0003_rls_tenant_fk_enforcement.sql` — 문의/견적/청구 등 **FK 테넌트 정합** RLS 보강  
 4. `supabase/migrations/0003_quote_seal_share_document.sql` — 견적 공유·직인·문서 RPC 등  
-5. `supabase/migrations/0004_user_plan.sql` — `public.users.plan` (`free` / `pro`). **미적용 시** 앱은 `free`로 완화 동작하지만 설정 화면에 **플랜 컬럼 미적용** 안내가 뜹니다.
+5. `supabase/migrations/0004_user_plan.sql` — `public.users.plan` (`free` / `pro`). **미적용 시** 앱은 `free`로 완화 동작하지만 설정 화면에 **플랜 컬럼 미적용** 안내가 뜹니다.  
+6. `supabase/migrations/0005_business_registration_number.sql` — `business_settings.business_registration_number` 및 공개 견적 RPC `get_quote_share_payload` 갱신.
 
 `0003_rls` 미적용 시 RLS가 `user_id`만 검사해 **타인의 `customer_id` 등을 조합하는** 위험이 남습니다. 오픈 전 **위 순서 전부** 적용했는지 확인하세요.
 

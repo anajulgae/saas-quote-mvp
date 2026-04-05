@@ -144,6 +144,11 @@ const reminderFormSchema = z.object({
 const settingsSchema = z.object({
   businessName: z.string().trim().min(1, "사업장명을 입력해 주세요."),
   ownerName: z.string().trim().min(1, "대표자명을 입력해 주세요."),
+  businessRegistrationNumber: z
+    .string()
+    .trim()
+    .max(30, "사업자등록번호는 30자 이내로 입력해 주세요.")
+    .default(""),
   email: z.string().trim().email("올바른 이메일을 입력해 주세요.").or(z.literal("")),
   phone: z.string().trim().default(""),
   paymentTerms: z.string().trim().default(""),
@@ -919,6 +924,7 @@ export async function createReminderAction(input: {
 export async function saveBusinessSettingsOnlyAction(input: {
   businessName: string
   ownerName: string
+  businessRegistrationNumber: string
   email: string
   phone: string
   paymentTerms: string
@@ -974,6 +980,7 @@ export async function saveTemplatesSettingsAction(input: {
 export async function saveSettingsAction(input: {
   businessName: string
   ownerName: string
+  businessRegistrationNumber: string
   email: string
   phone: string
   paymentTerms: string
@@ -990,6 +997,7 @@ export async function saveSettingsAction(input: {
   const biz = await saveBusinessSettingsOnlyAction({
     businessName: input.businessName,
     ownerName: input.ownerName,
+    businessRegistrationNumber: input.businessRegistrationNumber,
     email: input.email,
     phone: input.phone,
     paymentTerms: input.paymentTerms,

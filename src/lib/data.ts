@@ -187,6 +187,7 @@ function mapBusinessSettings(row: BusinessSettingsRow): BusinessSettings {
     userId: row.user_id,
     businessName: row.business_name,
     ownerName: row.owner_name,
+    businessRegistrationNumber: row.business_registration_number ?? "",
     email: row.email ?? "",
     phone: row.phone ?? "",
     paymentTerms: row.payment_terms ?? "",
@@ -946,6 +947,7 @@ export async function getQuotePrintPageData(quoteId: string): Promise<{
   issuer: {
     businessName: string
     ownerName: string
+    businessRegistrationNumber: string
     email: string
     phone: string
     paymentTerms: string
@@ -972,6 +974,7 @@ export async function getQuotePrintPageData(quoteId: string): Promise<{
       issuer: {
         businessName: demoBusinessSettings.businessName,
         ownerName: demoBusinessSettings.ownerName,
+        businessRegistrationNumber: demoBusinessSettings.businessRegistrationNumber,
         email: demoBusinessSettings.email,
         phone: demoBusinessSettings.phone,
         paymentTerms: demoBusinessSettings.paymentTerms,
@@ -1032,6 +1035,7 @@ export async function getQuotePrintPageData(quoteId: string): Promise<{
     issuer: {
       businessName: settings?.businessName ?? "",
       ownerName: settings?.ownerName ?? "",
+      businessRegistrationNumber: settings?.businessRegistrationNumber ?? "",
       email: settings?.email ?? "",
       phone: settings?.phone ?? "",
       paymentTerms: settings?.paymentTerms ?? "",
@@ -1508,6 +1512,7 @@ export async function createReminderRecord(input: ReminderFormInput) {
 export async function saveBusinessSettingsRecord(input: {
   businessName: string
   ownerName: string
+  businessRegistrationNumber: string
   email: string
   phone: string
   paymentTerms: string
@@ -1533,6 +1538,7 @@ export async function saveBusinessSettingsRecord(input: {
         user_id: context.userId,
         business_name: input.businessName,
         owner_name: input.ownerName,
+        business_registration_number: input.businessRegistrationNumber.trim() || null,
         email: input.email,
         phone: input.phone,
         payment_terms: input.paymentTerms,
@@ -2398,12 +2404,14 @@ export async function getSettingsPageData(): Promise<{
         userId: context.userId,
         businessName: "",
         ownerName: "",
+        businessRegistrationNumber: "",
         email: "",
         phone: "",
         paymentTerms: "",
         bankAccount: "",
         reminderMessage: "",
         sealEnabled: false,
+        sealImageUrl: undefined,
         updatedAt: undefined,
       }
 

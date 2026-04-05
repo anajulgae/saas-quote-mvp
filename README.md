@@ -114,7 +114,8 @@ npm run build
 2. `0002_phase2_foundation.sql`  
 3. `0003_rls_tenant_fk_enforcement.sql` — 테넌트 FK RLS 보강  
 4. `0003_quote_seal_share_document.sql` — 견적 공유·직인·RPC  
-5. `0004_user_plan.sql` — `users.plan` (`free` / `pro`)
+5. `0004_user_plan.sql` — `users.plan` (`free` / `pro`)  
+6. `0005_business_registration_number.sql` — 사업자등록번호 컬럼·공유 견적 RPC
 
 `0003_rls` 미적용 시 보안 공격면이 남습니다. `0004` 미적용 시 앱은 동작하지만 설정에 **플랜 마이그레이션 안내**가 표시됩니다.
 

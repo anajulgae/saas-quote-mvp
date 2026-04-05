@@ -143,6 +143,8 @@ export interface BusinessSettings {
   userId: string
   businessName: string
   ownerName: string
+  /** 사업자 등록번호 (견적서 발신 정보) */
+  businessRegistrationNumber: string
   email: string
   phone: string
   paymentTerms: string

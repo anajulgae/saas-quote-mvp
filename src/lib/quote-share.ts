@@ -63,6 +63,9 @@ export function parseQuoteSharePayload(raw: Json | null): ParsedQuoteSharePayloa
   const issuer: QuoteDocumentIssuer = {
     businessName: String(issuerJson.business_name ?? ""),
     ownerName: String(issuerJson.owner_name ?? ""),
+    businessRegistrationNumber: issuerJson.business_registration_number
+      ? String(issuerJson.business_registration_number)
+      : undefined,
     email: issuerJson.email ? String(issuerJson.email) : "",
     phone: issuerJson.phone ? String(issuerJson.phone) : "",
     paymentTerms: issuerJson.payment_terms ? String(issuerJson.payment_terms) : "",
@@ -104,6 +107,7 @@ export function parseDemoQuoteSharePayload(token: string): ParsedQuoteSharePaylo
   const issuer: QuoteDocumentIssuer = {
     businessName: demoBusinessSettings.businessName,
     ownerName: demoBusinessSettings.ownerName,
+    businessRegistrationNumber: demoBusinessSettings.businessRegistrationNumber || undefined,
     email: demoBusinessSettings.email,
     phone: demoBusinessSettings.phone,
     paymentTerms: demoBusinessSettings.paymentTerms,

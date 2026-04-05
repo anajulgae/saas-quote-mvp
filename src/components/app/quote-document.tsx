@@ -6,6 +6,8 @@ import type { Customer, QuoteItem, QuoteStatus } from "@/types/domain"
 export type QuoteDocumentIssuer = {
   businessName: string
   ownerName: string
+  /** 비어 있으면 견적서에 줄 생략 */
+  businessRegistrationNumber?: string
   email: string
   phone: string
   paymentTerms: string
@@ -67,6 +69,7 @@ export function QuoteDocument({
   const showDraftBanner = variant === "internal" && quote.status === "draft"
   const statusLine = statusLineForDocument(quote.status, variant)
   const showSeal = Boolean(issuer.sealEnabled && issuer.sealImageUrl?.trim())
+  const regNo = issuer.businessRegistrationNumber?.trim()
 
   return (
     <article
@@ -104,6 +107,9 @@ export function QuoteDocument({
           <div className="shrink-0 text-right text-sm">
             <p className="text-base font-bold text-neutral-900">{issuer.businessName || "사업자명 미등록"}</p>
             {issuer.ownerName ? <p className="mt-0.5 text-neutral-700">대표 {issuer.ownerName}</p> : null}
+            {regNo ? (
+              <p className="mt-0.5 text-xs tabular-nums text-neutral-600">사업자등록번호 {regNo}</p>
+            ) : null}
           </div>
         </div>
       </header>
@@ -115,6 +121,7 @@ export function QuoteDocument({
           <div className="mt-2 space-y-1 text-neutral-800">
             <p className="font-semibold">{issuer.businessName || "—"}</p>
             {issuer.ownerName ? <p>담당자 {issuer.ownerName}</p> : null}
+            {regNo ? <p className="tabular-nums text-neutral-700">사업자등록번호 {regNo}</p> : null}
             {issuer.email ? <p>이메일 {issuer.email}</p> : null}
             {issuer.phone ? <p className="tabular-nums">연락처 {issuer.phone}</p> : null}
           </div>
