@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { computeTemplatesSyncKey } from "@/lib/settings-form-key"
 import { cn } from "@/lib/utils"
 import type { BillingPlan, BusinessSettings, Template } from "@/types/domain"
 
@@ -98,44 +99,12 @@ export function SettingsForm({
   const [errorTemplates, setErrorTemplates] = useState("")
   const [errorSeal, setErrorSeal] = useState("")
 
-  const businessServerKey = useMemo(
-    () =>
-      [
-        initialSettings.id,
-        initialSettings.updatedAt ?? "",
-        initialSettings.businessName,
-        initialSettings.ownerName,
-        initialSettings.businessRegistrationNumber,
-        initialSettings.email,
-        initialSettings.phone,
-        initialSettings.paymentTerms,
-        initialSettings.bankAccount,
-        initialSettings.reminderMessage,
-        initialSettings.sealImageUrl ?? "",
-        initialSettings.sealEnabled ? "1" : "0",
-      ].join("\u001f"),
-    [initialSettings]
-  )
+  const templatesServerKey = useMemo(() => computeTemplatesSyncKey(templates), [templates])
 
-  const templatesServerKey = useMemo(
-    () =>
-      templates
-        .map((t) => `${t.id}:${t.updatedAt ?? ""}:${t.content.length}:${t.name}`)
-        .join("|"),
-    [templates]
-  )
-
-  // 서버에서 내려온 스냅샷이 실제로 바뀐 경우에만 동기화 (initialSettings 참조만 바뀌면 입력이 초기화되던 문제 방지)
-  useEffect(() => {
-    setSettings(initialSettings)
-    setSealUrl(initialSettings.sealImageUrl ?? null)
-    setSealEnabled(initialSettings.sealEnabled)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- businessServerKey에 필드 요약이 포함됨
-  }, [businessServerKey])
-
+  // 사업자 카드는 페이지 `key`로 리마운트. 템플릿만 서버와 동기화.
   useEffect(() => {
     setTemplateState(templates.length ? templates : defaultTemplates(initialSettings.userId))
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- templatesServerKey에 템플릿 요약이 포함됨
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- templatesServerKey에 요약 포함
   }, [templatesServerKey])
 
   const saveBusiness = () => {
@@ -159,6 +128,9 @@ export function SettingsForm({
         return
       }
 
+      setSettings(result.settings)
+      setSealUrl(result.settings.sealImageUrl ?? null)
+      setSealEnabled(result.settings.sealEnabled)
       toast.success("사업자·결제·리마인드 기본 문구가 저장되었습니다.")
       router.refresh()
     })

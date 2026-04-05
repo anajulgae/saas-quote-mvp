@@ -41,6 +41,7 @@ import {
 } from "@/lib/data"
 import { isResendConfigured, sendHtmlEmailViaResend } from "@/lib/send-resend"
 import type {
+  BusinessSettings,
   InquiryStage,
   InvoiceFormInput,
   PaymentStatus,
@@ -930,13 +931,20 @@ export async function saveBusinessSettingsOnlyAction(input: {
   paymentTerms: string
   bankAccount: string
   reminderMessage: string
-}) {
+}): Promise<{ ok: true; settings: BusinessSettings } | { ok: false; error: string }> {
   try {
     const parsedSettings = settingsSchema.parse(input)
-    await saveBusinessSettingsRecord(parsedSettings)
+    const result = await saveBusinessSettingsRecord(parsedSettings)
+    if (result.mode === "demo") {
+      return {
+        ok: false as const,
+        error:
+          "데모 모드에서는 설정이 서버에 저장되지 않습니다. Supabase로 로그인했는지, 환경 변수(NEXT_PUBLIC_SUPABASE_*)가 배포에 있는지 확인해 주세요.",
+      }
+    }
     revalidatePath("/settings")
 
-    return { ok: true as const }
+    return { ok: true as const, settings: result.settings }
   } catch (error) {
     if (error instanceof z.ZodError) {
       return { ok: false as const, error: error.issues[0]?.message ?? "입력값을 확인해 주세요." }
@@ -1007,7 +1015,11 @@ export async function saveSettingsAction(input: {
   if (!biz.ok) {
     return biz
   }
-  return saveTemplatesSettingsAction({ templates: input.templates })
+  const tpl = await saveTemplatesSettingsAction({ templates: input.templates })
+  if (!tpl.ok) {
+    return tpl
+  }
+  return { ok: true as const, settings: biz.settings }
 }
 
 function escapeHtmlForEmail(text: string) {
