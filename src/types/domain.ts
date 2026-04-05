@@ -162,6 +162,31 @@ export interface TimelineEvent {
   kind?: ActivityKind
 }
 
+/** 고객 목록 drawer용 최근 1건 스냅샷 */
+export interface CustomerRecentSnapshot {
+  inquiry?: {
+    id: string
+    title: string
+    createdAt: string
+    stage: InquiryStage
+  }
+  quote?: {
+    id: string
+    quoteNumber: string
+    title: string
+    total: number
+    status: QuoteStatus
+    updatedAt: string
+  }
+  invoice?: {
+    id: string
+    invoiceNumber: string
+    amount: number
+    paymentStatus: PaymentStatus
+    updatedAt: string
+  }
+}
+
 export interface CustomerSummary extends Customer {
   inquiryCount: number
   quoteCount: number
@@ -176,6 +201,19 @@ export interface CustomerSummary extends Customer {
   hasOpenReceivable: boolean
   /** 연체 청구 존재 */
   hasOverdueInvoice: boolean
+  /** 고객별 최신 문의·견적·청구 1건(운영 drawer 요약) */
+  recentSnapshot?: CustomerRecentSnapshot
+  /** 최근 활동 로그 상위 N건(고객과 연결된 기록) */
+  recentActivity?: ActivityLog[]
+}
+
+/** 견적 상세에서 연결 청구 나열용 */
+export interface QuoteLinkedInvoiceStub {
+  id: string
+  quoteId: string
+  invoiceNumber: string
+  amount: number
+  paymentStatus: PaymentStatus
 }
 
 export interface InquiryWithCustomer extends Inquiry {

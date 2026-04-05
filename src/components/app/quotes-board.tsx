@@ -13,7 +13,6 @@ import {
   MoreHorizontal,
   Pencil,
   Plus,
-  Search,
   Send,
   Trash2,
 } from "lucide-react"
@@ -30,8 +29,12 @@ import {
 import { EmptyState } from "@/components/app/empty-state"
 import { PageHeader } from "@/components/app/page-header"
 import { QuoteDraftAssistant } from "@/components/app/quote-draft-assistant"
+import { PaymentStatusBadge, QuoteStatusBadge } from "@/components/app/status-badge"
+import { resolveActivityHeadline } from "@/lib/activity-presentation"
 import { OpsDetailSheet } from "@/components/operations/ops-detail-sheet"
+import { OpsSearchField } from "@/components/operations/ops-search-field"
 import { OpsTableShell } from "@/components/operations/ops-table-shell"
+import { OpsToolbar } from "@/components/operations/ops-toolbar"
 import {
   opsTableCellClass,
   opsTableClass,
@@ -40,7 +43,6 @@ import {
   opsTableRowClass,
 } from "@/components/operations/ops-table-styles"
 import { Badge } from "@/components/ui/badge"
-import { QuoteStatusBadge } from "@/components/app/status-badge"
 import { Button } from "@/components/ui/button"
 import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent } from "@/components/ui/card"
@@ -71,7 +73,7 @@ import {
   inquiryStageOptions,
   quoteStatusOptions,
 } from "@/lib/constants"
-import { formatCurrency, formatDate } from "@/lib/format"
+import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
 import {
   customerPrimaryLabel,
   formatKrwDigitsInput,
@@ -81,7 +83,14 @@ import {
   type QuoteListSort,
 } from "@/lib/quote-utils"
 import { cn } from "@/lib/utils"
-import type { Customer, InquiryWithCustomer, QuoteStatus, QuoteWithItems } from "@/types/domain"
+import type {
+  ActivityLog,
+  Customer,
+  InquiryWithCustomer,
+  QuoteLinkedInvoiceStub,
+  QuoteStatus,
+  QuoteWithItems,
+} from "@/types/domain"
 
 type QuoteItemForm = {
   name: string
@@ -214,6 +223,8 @@ function QuotesBoardPanel({
   deepLinkCustomerId,
   deepLinkOpenCreate,
   nextQuoteNumberPreview,
+  quoteActivityByQuoteId,
+  invoicesByQuoteId,
 }: {
   quotes: QuoteWithItems[]
   customers: Customer[]
@@ -226,6 +237,8 @@ function QuotesBoardPanel({
   deepLinkCustomerId?: string
   deepLinkOpenCreate?: boolean
   nextQuoteNumberPreview: string
+  quoteActivityByQuoteId: Record<string, ActivityLog[]>
+  invoicesByQuoteId: Record<string, QuoteLinkedInvoiceStub[]>
 }) {
   const router = useRouter()
   const flowRef = useRef<HTMLDivElement>(null)
@@ -478,6 +491,20 @@ function QuotesBoardPanel({
     }
     return quotes.find((q) => q.id === drawerQuoteId) ?? null
   }, [drawerQuoteId, quotes])
+
+  const drawerQuoteActivities = useMemo(() => {
+    if (!drawerQuoteId) {
+      return []
+    }
+    return quoteActivityByQuoteId[drawerQuoteId] ?? []
+  }, [drawerQuoteId, quoteActivityByQuoteId])
+
+  const drawerQuoteInvoices = useMemo(() => {
+    if (!drawerQuoteId) {
+      return []
+    }
+    return invoicesByQuoteId[drawerQuoteId] ?? []
+  }, [drawerQuoteId, invoicesByQuoteId])
 
   const openEdit = (quote: QuoteWithItems) => {
     setDrawerQuoteId(null)
@@ -1308,22 +1335,19 @@ function QuotesBoardPanel({
         <div className="min-w-0 space-y-3 md:space-y-4">
       {hasQuotes ? (
         <div className="rounded-lg border border-border/60 bg-muted/15 px-3 py-2.5 text-xs text-muted-foreground">
-          검색·필터로 견적을 빠르게 찾고, 카드 메뉴에서 수정·복제·견적서·발송 준비까지 이어갈 수 있습니다.
+          검색·필터로 견적을 빠르게 찾고, 행을 눌러 우측 상세에서 수정·복제·견적서·연결 청구·활동 기록을 확인할 수 있습니다.
         </div>
       ) : null}
 
       {hasQuotes ? (
-        <div className="space-y-3 rounded-xl border border-border/60 bg-card/40 p-3 shadow-sm sm:p-4">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="h-9 pl-9"
-              placeholder="제목, 견적 번호, 고객명으로 검색…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              aria-label="견적 검색"
-            />
-          </div>
+        <OpsToolbar className="space-y-3">
+          <OpsSearchField
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="제목, 견적 번호, 고객명으로 검색…"
+            aria-label="견적 검색"
+            className="min-w-[min(100%,14rem)] sm:max-w-md"
+          />
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <p className="text-xs font-medium text-muted-foreground">상태</p>
             <div className="flex flex-wrap gap-1.5">
@@ -1440,7 +1464,7 @@ function QuotesBoardPanel({
               </div>
             </div>
           ) : null}
-        </div>
+        </OpsToolbar>
       ) : null}
 
       {!quotes.length ? (
@@ -1616,6 +1640,7 @@ function QuotesBoardPanel({
                         validityHint === "past_due" && "bg-destructive/[0.04]",
                         validityHint === "due_soon" && "bg-amber-500/[0.06]"
                       )}
+                      data-state={drawerQuoteId === quote.id ? "selected" : undefined}
                       onClick={() => setDrawerQuoteId(quote.id)}
                     >
                       <td className={cn(opsTableCellClass, "font-mono text-xs tabular-nums text-muted-foreground")}>
@@ -1795,16 +1820,25 @@ function QuotesBoardPanel({
               >
                 견적서
               </Button>
+              <Button size="sm" variant="outline" onClick={() => copyQuotePrintLink(drawerQuote.id)}>
+                링크 복사
+              </Button>
               <Button size="sm" onClick={() => openSendPrep(drawerQuote.id)}>
                 발송 준비
               </Button>
+              <Link
+                href="/invoices"
+                className={cn(buttonVariants({ size: "sm", variant: "outline" }), "inline-flex")}
+              >
+                청구 관리
+              </Link>
             </div>
           ) : null
         }
       >
         {drawerQuote ? (
           <div className="space-y-4 text-sm">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <QuoteStatusBadge status={drawerQuote.status} />
               {getQuoteValidityHint(drawerQuote.validUntil, drawerQuote.status) === "past_due" ? (
                 <Badge variant="destructive" className="text-[10px]">
@@ -1816,6 +1850,30 @@ function QuotesBoardPanel({
                   유효기한 임박
                 </Badge>
               ) : null}
+            </div>
+            <div className="space-y-1 rounded-lg border border-border/50 bg-muted/10 p-3">
+              <p className="text-xs font-semibold text-muted-foreground">상태 변경</p>
+              <Select
+                value={drawerQuote.status}
+                onValueChange={(value) => {
+                  const next = (value as QuoteStatus | null) ?? drawerQuote.status
+                  if (next === drawerQuote.status) {
+                    return
+                  }
+                  setStatusConfirm({ quote: drawerQuote, next })
+                }}
+              >
+                <SelectTrigger className="h-9 w-full max-w-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {quoteStatusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <p className="text-xs font-semibold text-muted-foreground">요약</p>
@@ -1842,6 +1900,32 @@ function QuotesBoardPanel({
                 <p className="text-muted-foreground">유효기한</p>
                 <p className="mt-0.5 tabular-nums">{formatDate(drawerQuote.validUntil)}</p>
               </div>
+              <div className="rounded-lg border border-border/50 p-2">
+                <p className="text-muted-foreground">발송일</p>
+                <p className="mt-0.5 tabular-nums">{formatDate(drawerQuote.sentAt)}</p>
+              </div>
+            </div>
+            <div>
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">연결 청구</p>
+              {drawerQuoteInvoices.length ? (
+                <ul className="space-y-2 text-xs">
+                  {drawerQuoteInvoices.map((inv) => (
+                    <li
+                      key={inv.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/40 px-2 py-1.5"
+                    >
+                      <span className="font-mono tabular-nums">{inv.invoiceNumber}</span>
+                      <PaymentStatusBadge status={inv.paymentStatus} />
+                      <span className="font-medium tabular-nums">{formatCurrency(inv.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground">이 견적에 연결된 청구가 없습니다.</p>
+              )}
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                청구를 추가하려면 청구 관리에서 동일 견적을 연결해 저장하세요.
+              </p>
             </div>
             <div>
               <p className="mb-2 text-xs font-semibold text-muted-foreground">항목</p>
@@ -1861,6 +1945,24 @@ function QuotesBoardPanel({
                   </li>
                 ))}
               </ul>
+            </div>
+            <div>
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">활동 기록</p>
+              {drawerQuoteActivities.length ? (
+                <ul className="max-h-52 space-y-2 overflow-y-auto text-xs">
+                  {drawerQuoteActivities.map((log) => (
+                    <li key={log.id} className="rounded-md border border-border/40 px-2 py-1.5">
+                      <p className="font-medium text-foreground">{resolveActivityHeadline(log.action)}</p>
+                      <p className="mt-0.5 leading-snug text-muted-foreground">{log.description}</p>
+                      <p className="mt-1 tabular-nums text-[10px] text-muted-foreground">
+                        {formatDateTime(log.createdAt)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground">표시할 활동 기록이 없습니다.</p>
+              )}
             </div>
           </div>
         ) : null}
@@ -2037,6 +2139,8 @@ export function QuotesWorkspace({
   inquiries,
   defaultQuoteSummary,
   nextQuoteNumberPreview,
+  quoteActivityByQuoteId,
+  invoicesByQuoteId,
   deepLinkCustomerId,
   deepLinkOpenCreate = false,
 }: {
@@ -2045,6 +2149,8 @@ export function QuotesWorkspace({
   inquiries: InquiryWithCustomer[]
   defaultQuoteSummary: string
   nextQuoteNumberPreview: string
+  quoteActivityByQuoteId: Record<string, ActivityLog[]>
+  invoicesByQuoteId: Record<string, QuoteLinkedInvoiceStub[]>
   deepLinkCustomerId?: string
   deepLinkOpenCreate?: boolean
 }) {
@@ -2117,6 +2223,8 @@ export function QuotesWorkspace({
         deepLinkCustomerId={deepLinkCustomerId}
         deepLinkOpenCreate={deepLinkOpenCreate}
         nextQuoteNumberPreview={nextQuoteNumberPreview}
+        quoteActivityByQuoteId={quoteActivityByQuoteId}
+        invoicesByQuoteId={invoicesByQuoteId}
       />
     </div>
   )

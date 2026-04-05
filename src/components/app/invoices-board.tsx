@@ -31,6 +31,7 @@ import {
 import { EmptyState } from "@/components/app/empty-state"
 import { PageHeader } from "@/components/app/page-header"
 import { PaymentStatusBadge } from "@/components/app/status-badge"
+import { OpsCollapsibleFilters } from "@/components/operations/ops-collapsible-filters"
 import { OpsDetailSheet } from "@/components/operations/ops-detail-sheet"
 import { OpsSearchField } from "@/components/operations/ops-search-field"
 import { OpsTableShell } from "@/components/operations/ops-table-shell"
@@ -75,9 +76,11 @@ import {
   quoteStatusOptions,
   reminderChannelOptions,
 } from "@/lib/constants"
+import { resolveActivityHeadline } from "@/lib/activity-presentation"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import type {
+  ActivityLog,
   Customer,
   InvoiceFormInput,
   InvoiceType,
@@ -273,6 +276,7 @@ function InvoicesBoardPanel({
   customers,
   quotes,
   defaultReminderMessage,
+  invoiceActivityByInvoiceId,
   isCreateOpen,
   onOpenChange,
   createOpenSourceRef,
@@ -281,6 +285,7 @@ function InvoicesBoardPanel({
   customers: Customer[]
   quotes: Quote[]
   defaultReminderMessage: string
+  invoiceActivityByInvoiceId: Record<string, ActivityLog[]>
   isCreateOpen: boolean
   onOpenChange: (open: boolean) => void
   createOpenSourceRef: MutableRefObject<"header" | null>
@@ -299,6 +304,8 @@ function InvoicesBoardPanel({
   const [invoiceListSearch, setInvoiceListSearch] = useState("")
   const [invoiceTypeFilter, setInvoiceTypeFilter] = useState<InvoiceType | "all">("all")
   const [invoiceSort, setInvoiceSort] = useState<InvoiceListSort>("requested_desc")
+  const [customerFilterId, setCustomerFilterId] = useState<string | "all">("all")
+  const [extraInvoiceFiltersOpen, setExtraInvoiceFiltersOpen] = useState(false)
   const [drawerInvoiceId, setDrawerInvoiceId] = useState<string | null>(null)
   const [quickQuoteId, setQuickQuoteId] = useState(quotes[0]?.id ?? "")
   const [form, setForm] = useState<InvoiceFormState>(() => createEmptyInvoiceForm(customers))
@@ -413,6 +420,9 @@ function InvoicesBoardPanel({
   const filteredInvoices = useMemo(() => {
     const q = invoiceListSearch.trim().toLowerCase()
     return invoices.filter((inv) => {
+      if (customerFilterId !== "all" && inv.customerId !== customerFilterId) {
+        return false
+      }
       if (invoiceTypeFilter !== "all" && inv.invoiceType !== invoiceTypeFilter) {
         return false
       }
@@ -437,6 +447,7 @@ function InvoicesBoardPanel({
     invoices,
     invoiceListSearch,
     invoiceTypeFilter,
+    customerFilterId,
     paymentQuickFilter,
     paymentStatusFilter,
   ])
@@ -479,6 +490,13 @@ function InvoicesBoardPanel({
     () => invoices.find((i) => i.id === drawerInvoiceId) ?? null,
     [drawerInvoiceId, invoices]
   )
+
+  const drawerInvoiceActivities = useMemo(() => {
+    if (!drawerInvoiceId) {
+      return []
+    }
+    return invoiceActivityByInvoiceId[drawerInvoiceId] ?? []
+  }, [drawerInvoiceId, invoiceActivityByInvoiceId])
 
   const resetInvoiceForm = () => {
     setAmountFollowsSuggestion(true)
@@ -1287,6 +1305,31 @@ function InvoicesBoardPanel({
               </SelectContent>
             </Select>
           </div>
+          <OpsCollapsibleFilters
+            open={extraInvoiceFiltersOpen}
+            onOpenChange={setExtraInvoiceFiltersOpen}
+            label="고객 필터"
+          >
+            <div className="min-w-0 flex-1 space-y-1">
+              <label className="text-[11px] font-medium text-muted-foreground">고객으로 좁히기</label>
+              <Select
+                value={customerFilterId}
+                onValueChange={(v) => setCustomerFilterId((v as string | null) ?? "all")}
+              >
+                <SelectTrigger className="h-9 w-full sm:min-w-[14rem]">
+                  <SelectValue placeholder="전체" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">전체 고객</SelectItem>
+                  {customers.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.companyName?.trim() || c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </OpsCollapsibleFilters>
         </OpsToolbar>
       ) : null}
 
@@ -1493,6 +1536,7 @@ function InvoicesBoardPanel({
                         recvHint === "overdue" && "bg-destructive/[0.05]",
                         recvHint === "due_soon" && "bg-amber-500/[0.06]"
                       )}
+                      data-state={drawerInvoiceId === invoice.id ? "selected" : undefined}
                       onClick={() => setDrawerInvoiceId(invoice.id)}
                     >
                       <td className={cn(opsTableCellClass, "font-mono text-xs tabular-nums text-muted-foreground")}>
@@ -1729,6 +1773,24 @@ function InvoicesBoardPanel({
                   </div>
                 </div>
                 <div>
+                  <p className="mb-2 text-xs font-semibold text-muted-foreground">활동·상태 기록</p>
+                  {drawerInvoiceActivities.length ? (
+                    <ul className="max-h-44 space-y-2 overflow-y-auto text-xs">
+                      {drawerInvoiceActivities.map((log) => (
+                        <li key={log.id} className="rounded-md border border-border/40 px-2 py-1.5">
+                          <p className="font-medium text-foreground">{resolveActivityHeadline(log.action)}</p>
+                          <p className="mt-0.5 leading-snug text-muted-foreground">{log.description}</p>
+                          <p className="mt-1 tabular-nums text-[10px] text-muted-foreground">
+                            {formatDateTime(log.createdAt)}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">표시할 활동 기록이 없습니다.</p>
+                  )}
+                </div>
+                <div>
                   <p className="text-xs font-semibold text-muted-foreground">메모</p>
                   <p className="mt-1 leading-relaxed text-muted-foreground">
                     {drawerInvoice.notes?.trim() || "메모가 없습니다."}
@@ -1908,11 +1970,13 @@ export function InvoicesWorkspace({
   customers,
   quotes,
   defaultReminderMessage,
+  invoiceActivityByInvoiceId,
 }: {
   invoices: InvoiceWithReminders[]
   customers: Customer[]
   quotes: Quote[]
   defaultReminderMessage: string
+  invoiceActivityByInvoiceId: Record<string, ActivityLog[]>
 }) {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const createOpenSourceRef = useRef<"header" | null>(null)
@@ -1999,6 +2063,7 @@ export function InvoicesWorkspace({
         customers={customers}
         quotes={quotes}
         defaultReminderMessage={defaultReminderMessage}
+        invoiceActivityByInvoiceId={invoiceActivityByInvoiceId}
         isCreateOpen={isCreateOpen}
         onOpenChange={setIsCreateOpen}
         createOpenSourceRef={createOpenSourceRef}

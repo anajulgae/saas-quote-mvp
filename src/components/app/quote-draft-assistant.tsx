@@ -114,7 +114,7 @@ export function QuoteDraftAssistant({
             </p>
             <p className="text-[13px] font-semibold text-foreground">견적 초안 도우미</p>
             <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
-              범위·결제 문구·항목 줄골을 빠르게 채운 뒤 견적 작성으로 넘깁니다.
+              범위·결제 문구·항목 뼈대를 채운 뒤 「이 초안으로 견적 작성」으로 본 작성 화면에 넣습니다.
             </p>
           </div>
           <Button

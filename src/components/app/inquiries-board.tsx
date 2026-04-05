@@ -1,12 +1,11 @@
 "use client"
 
-import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   ArrowRight,
-  ChevronDown,
-  ChevronRight,
+  ExternalLink,
   ListOrdered,
   MoreHorizontal,
   Pencil,
@@ -20,6 +19,8 @@ import { createInquiryAction, updateInquiryAction } from "@/app/actions"
 import { EmptyState } from "@/components/app/empty-state"
 import { PageHeader } from "@/components/app/page-header"
 import { InquiryStageBadge } from "@/components/app/status-badge"
+import { OpsCollapsibleFilters } from "@/components/operations/ops-collapsible-filters"
+import { OpsDetailSheet } from "@/components/operations/ops-detail-sheet"
 import { OpsSearchField } from "@/components/operations/ops-search-field"
 import { OpsTableShell } from "@/components/operations/ops-table-shell"
 import {
@@ -117,7 +118,10 @@ export function InquiriesBoard({
   const [stageFilter, setStageFilter] = useState<InquiryStage | "all">("all")
   const [followupFilter, setFollowupFilter] = useState<FollowupFilter>("all")
   const [sortKey, setSortKey] = useState<InquirySort>("created_desc")
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [drawerInquiryId, setDrawerInquiryId] = useState<string | null>(null)
+  const [extraFiltersOpen, setExtraFiltersOpen] = useState(false)
+  const [channelFilter, setChannelFilter] = useState<string>("all")
+  const [customerFilterId, setCustomerFilterId] = useState<string | "all">("all")
   const deepLinkAppliedRef = useRef(false)
 
   const [form, setForm] = useState({
@@ -147,6 +151,21 @@ export function InquiriesBoard({
     () => inquiries.find((item) => item.id === editingId) ?? null,
     [editingId, inquiries]
   )
+
+  const drawerInquiry = useMemo(
+    () => inquiries.find((item) => item.id === drawerInquiryId) ?? null,
+    [drawerInquiryId, inquiries]
+  )
+
+  const channelOptions = useMemo(() => {
+    const set = new Set<string>()
+    for (const i of inquiries) {
+      if (i.channel?.trim()) {
+        set.add(i.channel.trim())
+      }
+    }
+    return [...set].sort((a, b) => a.localeCompare(b, "ko"))
+  }, [inquiries])
 
   useEffect(() => {
     if (deepLinkAppliedRef.current) {
@@ -189,6 +208,12 @@ export function InquiriesBoard({
     if (stageFilter !== "all") {
       list = list.filter((i) => i.stage === stageFilter)
     }
+    if (channelFilter !== "all") {
+      list = list.filter((i) => (i.channel ?? "").trim() === channelFilter)
+    }
+    if (customerFilterId !== "all") {
+      list = list.filter((i) => i.customerId === customerFilterId)
+    }
     const now = Date.now()
     const weekEnd = now + 7 * 86400000
     if (followupFilter === "overdue") {
@@ -219,7 +244,7 @@ export function InquiriesBoard({
       return bf - af
     })
     return list
-  }, [inquiries, searchQuery, stageFilter, followupFilter, sortKey])
+  }, [inquiries, searchQuery, stageFilter, channelFilter, customerFilterId, followupFilter, sortKey])
 
   const resetForm = () => {
     setForm({
@@ -279,6 +304,7 @@ export function InquiriesBoard({
   }
 
   const openEdit = (inquiry: InquiryWithCustomer) => {
+    setDrawerInquiryId(null)
     setIsCreateOpen(false)
     setEditingId(inquiry.id)
     setErrorMessage("")
@@ -718,6 +744,43 @@ export function InquiriesBoard({
               <SelectItem value="followup_desc">팔로업 늦은순</SelectItem>
             </SelectContent>
           </Select>
+          <OpsCollapsibleFilters open={extraFiltersOpen} onOpenChange={setExtraFiltersOpen}>
+            <div className="min-w-0 flex-1 space-y-1">
+              <label className="text-[11px] font-medium text-muted-foreground">채널</label>
+              <Select value={channelFilter} onValueChange={(v) => setChannelFilter(v ?? "all")}>
+                <SelectTrigger className="h-9 w-full sm:w-[160px]">
+                  <SelectValue placeholder="전체" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">전체 채널</SelectItem>
+                  {channelOptions.map((ch) => (
+                    <SelectItem key={ch} value={ch}>
+                      {ch}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="min-w-0 flex-1 space-y-1">
+              <label className="text-[11px] font-medium text-muted-foreground">고객</label>
+              <Select
+                value={customerFilterId}
+                onValueChange={(v) => setCustomerFilterId((v as string | null) ?? "all")}
+              >
+                <SelectTrigger className="h-9 w-full sm:min-w-[12rem]">
+                  <SelectValue placeholder="전체" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">전체 고객</SelectItem>
+                  {customers.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.companyName ?? c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </OpsCollapsibleFilters>
         </OpsToolbar>
       ) : null}
 
@@ -733,7 +796,6 @@ export function InquiriesBoard({
           <table className={cn(opsTableClass, "min-w-[900px]")}>
             <thead>
               <tr className={opsTableHeadRowClass}>
-                <th className={cn(opsTableHeadCellClass, "w-10")} aria-label="펼침" />
                 <th className={opsTableHeadCellClass}>제목</th>
                 <th className={opsTableHeadCellClass}>고객</th>
                 <th className={opsTableHeadCellClass}>채널</th>
@@ -747,19 +809,15 @@ export function InquiriesBoard({
             <tbody>
               {filteredInquiries.map((inquiry) => {
                 const customer = inquiry.customer
-                const open = expandedId === inquiry.id
                 const overdue =
                   inquiry.followUpAt && new Date(inquiry.followUpAt).getTime() < Date.now()
                 return (
-                  <Fragment key={inquiry.id}>
-                    <tr
-                      className={cn(opsTableRowClass, "cursor-pointer")}
-                      data-state={open ? "open" : undefined}
-                      onClick={() => setExpandedId((id) => (id === inquiry.id ? null : inquiry.id))}
-                    >
-                      <td className={cn(opsTableCellClass, "text-muted-foreground")}>
-                        {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
-                      </td>
+                  <tr
+                    key={inquiry.id}
+                    className={cn(opsTableRowClass, "cursor-pointer")}
+                    data-state={drawerInquiryId === inquiry.id ? "selected" : undefined}
+                    onClick={() => setDrawerInquiryId(inquiry.id)}
+                  >
                       <td className={cn(opsTableCellClass, "max-w-[220px] font-medium")}>
                         <span className="line-clamp-2">{inquiry.title}</span>
                         <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground line-clamp-1">
@@ -830,42 +888,6 @@ export function InquiriesBoard({
                         </DropdownMenu>
                       </td>
                     </tr>
-                    {open ? (
-                      <tr className="bg-muted/15">
-                        <td colSpan={9} className="border-b border-border/50 px-4 py-4">
-                          <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
-                            <div>
-                              <p className="text-xs font-semibold text-muted-foreground">문의 내용</p>
-                              <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">
-                                {inquiry.details?.trim() || "내용 없음"}
-                              </p>
-                              <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                                <span>고객과 연결된 문의입니다.</span>
-                                {inquiry.stage === "quoted" ? (
-                                  <span className="rounded border border-primary/30 bg-primary/10 px-1.5 py-px text-primary">
-                                    견적 단계 진행 중
-                                  </span>
-                                ) : null}
-                              </div>
-                            </div>
-                            <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
-                              <Button size="sm" variant="outline" onClick={() => openEdit(inquiry)}>
-                                수정
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() =>
-                                  router.push(`/quotes?customer=${inquiry.customerId}&new=1`)
-                                }
-                              >
-                                견적 작성
-                              </Button>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : null}
-                  </Fragment>
                 )
               })}
             </tbody>
@@ -878,9 +900,11 @@ export function InquiriesBoard({
           {filteredInquiries.map((inquiry) => {
             const customer = inquiry.customer
             return (
-              <div
+              <button
                 key={inquiry.id}
-                className="rounded-xl border border-border/60 bg-card p-3 shadow-sm"
+                type="button"
+                className="flex w-full flex-col gap-2 rounded-xl border border-border/60 bg-card p-3 text-left shadow-sm"
+                onClick={() => setDrawerInquiryId(inquiry.id)}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -890,25 +914,118 @@ export function InquiriesBoard({
                       {customer?.companyName ?? customer?.name} · {inquiry.channel}
                     </p>
                   </div>
-                  <Button size="sm" variant="outline" className="shrink-0" onClick={() => openEdit(inquiry)}>
-                    수정
-                  </Button>
                 </div>
-                <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">{inquiry.details}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    className="h-8"
-                    onClick={() => router.push(`/quotes?customer=${inquiry.customerId}&new=1`)}
-                  >
-                    견적
-                  </Button>
-                </div>
-              </div>
+                <p className="line-clamp-2 text-xs text-muted-foreground">{inquiry.details}</p>
+              </button>
             )
           })}
         </div>
       ) : null}
+
+      <OpsDetailSheet
+        open={drawerInquiry !== null}
+        onOpenChange={(o) => !o && setDrawerInquiryId(null)}
+        title={drawerInquiry?.title ?? ""}
+        description={
+          drawerInquiry ? (
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <InquiryStageBadge stage={drawerInquiry.stage} />
+              <span className="text-muted-foreground">
+                {drawerInquiry.customer?.companyName ?? drawerInquiry.customer?.name ?? "고객"} ·{" "}
+                {formatDate(drawerInquiry.createdAt)} 등록
+              </span>
+            </span>
+          ) : null
+        }
+        footer={
+          drawerInquiry ? (
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => openEdit(drawerInquiry)}>
+                수정
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => router.push(`/quotes?customer=${drawerInquiry.customerId}&new=1`)}
+              >
+                견적 작성
+              </Button>
+              <Link
+                href={`/customers/${drawerInquiry.customerId}`}
+                className={cn(buttonVariants({ size: "sm", variant: "outline" }), "inline-flex gap-1")}
+              >
+                <ExternalLink className="size-3.5" />
+                고객 상세
+              </Link>
+            </div>
+          ) : null
+        }
+      >
+        {drawerInquiry ? (
+          <div className="space-y-4 text-sm">
+            <div className="grid gap-2 text-xs">
+              <div className="flex justify-between gap-2 border-b border-border/40 py-1">
+                <span className="text-muted-foreground">채널</span>
+                <span>{drawerInquiry.channel || "—"}</span>
+              </div>
+              <div className="flex justify-between gap-2 border-b border-border/40 py-1">
+                <span className="text-muted-foreground">서비스</span>
+                <span className="text-right">{drawerInquiry.serviceCategory || "—"}</span>
+              </div>
+              <div className="flex justify-between gap-2 border-b border-border/40 py-1">
+                <span className="text-muted-foreground">예산</span>
+                <span className="tabular-nums">
+                  {formatCurrency(drawerInquiry.budgetMin ?? 0)}–
+                  {formatCurrency(drawerInquiry.budgetMax ?? 0)}
+                </span>
+              </div>
+              <div className="flex justify-between gap-2 border-b border-border/40 py-1">
+                <span className="text-muted-foreground">팔로업</span>
+                <span className="text-right tabular-nums">
+                  {drawerInquiry.followUpAt ? formatDateTime(drawerInquiry.followUpAt) : "—"}
+                </span>
+              </div>
+            </div>
+            <div>
+              <p className="mb-1 text-xs font-semibold text-muted-foreground">문의 내용</p>
+              <p className="whitespace-pre-wrap leading-relaxed text-foreground/90">
+                {drawerInquiry.details?.trim() || "내용 없음"}
+              </p>
+            </div>
+            <div className="space-y-2 rounded-lg border border-border/50 bg-muted/10 p-3">
+              <p className="text-xs font-semibold text-muted-foreground">단계 변경</p>
+              <Select
+                value={drawerInquiry.stage}
+                onValueChange={(value) => {
+                  const next = (value as InquiryStage | null) ?? drawerInquiry.stage
+                  if (next === drawerInquiry.stage) {
+                    return
+                  }
+                  quickUpdateStage(drawerInquiry, next)
+                }}
+              >
+                <SelectTrigger className="h-9 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {inquiryStageOptions.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground">견적 연결</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {drawerInquiry.stage === "quoted"
+                  ? "견적 단계로 옮겨진 문의입니다. 견적 목록에서 동일 고객 건을 확인하세요."
+                  : "아직 견적 단계가 아닙니다. 아래 「견적 작성」으로 이어갈 수 있습니다."}
+              </p>
+            </div>
+          </div>
+        ) : null}
+      </OpsDetailSheet>
     </div>
   )
 }

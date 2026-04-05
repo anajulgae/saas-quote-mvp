@@ -8,6 +8,6 @@ export const opsTableHeadRowClass =
 export const opsTableHeadCellClass = "whitespace-nowrap px-3 py-2.5 first:pl-4 last:pr-4"
 
 export const opsTableRowClass =
-  "border-b border-border/50 transition-colors hover:bg-muted/30 data-[state=open]:bg-muted/25"
+  "border-b border-border/50 transition-colors hover:bg-muted/30 data-[state=open]:bg-muted/25 data-[state=selected]:bg-primary/[0.06]"
 
 export const opsTableCellClass = "px-3 py-2.5 align-middle text-foreground/90 first:pl-4 last:pr-4"

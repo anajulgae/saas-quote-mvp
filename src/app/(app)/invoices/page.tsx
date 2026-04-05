@@ -2,7 +2,7 @@ import { InvoicesWorkspace } from "@/components/app/invoices-board"
 import { getInvoicesPageData } from "@/lib/data"
 
 export default async function InvoicesPage() {
-  const { invoices, customers, quotes, defaultReminderMessage } =
+  const { invoices, customers, quotes, defaultReminderMessage, invoiceActivityByInvoiceId } =
     await getInvoicesPageData()
 
   return (
@@ -11,6 +11,7 @@ export default async function InvoicesPage() {
       customers={customers}
       quotes={quotes}
       defaultReminderMessage={defaultReminderMessage}
+      invoiceActivityByInvoiceId={invoiceActivityByInvoiceId}
     />
   )
 }

@@ -1,22 +1,22 @@
 "use client"
 
-import { Fragment, useMemo, useState, useTransition } from "react"
+import { useMemo, useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   ArrowRight,
-  ChevronDown,
-  ChevronRight,
   ExternalLink,
   FileText,
   MessageSquare,
   MoreHorizontal,
   Plus,
+  Receipt,
   UserPlus,
 } from "lucide-react"
 import { toast } from "sonner"
 
 import { createCustomerAction } from "@/app/actions"
+import { resolveActivityHeadline } from "@/lib/activity-presentation"
 import { EmptyState } from "@/components/app/empty-state"
 import { PageHeader } from "@/components/app/page-header"
 import { OpsDetailSheet } from "@/components/operations/ops-detail-sheet"
@@ -56,7 +56,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { formatDateTime } from "@/lib/format"
+import { inquiryStageOptions } from "@/lib/constants"
+import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import type { CustomerSummary } from "@/types/domain"
 
@@ -127,8 +128,7 @@ export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) 
   const [searchQuery, setSearchQuery] = useState("")
   const [tagFilter, setTagFilter] = useState<string>("all")
   const [sortKey, setSortKey] = useState<SortKey>("activity_desc")
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [sheetCustomer, setSheetCustomer] = useState<CustomerSummary | null>(null)
+  const [drawerCustomerId, setDrawerCustomerId] = useState<string | null>(null)
   const [registerOpen, setRegisterOpen] = useState(false)
   const [regForm, setRegForm] = useState(emptyRegisterForm)
   const [regError, setRegError] = useState("")
@@ -179,6 +179,11 @@ export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) 
     })
     return list
   }, [customers, searchQuery, tagFilter, sortKey])
+
+  const drawerCustomer = useMemo(
+    () => customers.find((c) => c.id === drawerCustomerId) ?? null,
+    [customers, drawerCustomerId]
+  )
 
   const submitRegister = () => {
     setRegError("")
@@ -274,8 +279,6 @@ export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) 
     </Dialog>
   )
 
-  const openMobileDetail = (c: CustomerSummary) => setSheetCustomer(c)
-
   return (
     <div className="space-y-4 md:space-y-5">
       {registerDialog}
@@ -343,13 +346,11 @@ export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) 
         <EmptyState title="조건에 맞는 고객이 없습니다" description="검색·태그 필터를 조정해 보세요." />
       ) : null}
 
-      {/* 데스크톱: 테이블 + 인라인 확장 */}
       {customers.length > 0 && filtered.length > 0 ? (
         <OpsTableShell className="hidden md:block">
           <table className={opsTableClass}>
             <thead>
               <tr className={opsTableHeadRowClass}>
-                <th className={cn(opsTableHeadCellClass, "w-10")} aria-label="펼침" />
                 <th className={opsTableHeadCellClass}>고객 / 회사</th>
                 <th className={opsTableHeadCellClass}>담당자</th>
                 <th className={opsTableHeadCellClass}>연락처</th>
@@ -365,20 +366,16 @@ export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) 
             </thead>
             <tbody>
               {filtered.map((customer) => {
-                const open = expandedId === customer.id
                 const primary = customer.companyName?.trim() || customer.name
                 const secondary = customer.companyName?.trim() ? customer.name : null
                 const quick = resolveQuickSecondaryHref(customer)
                 return (
-                  <Fragment key={customer.id}>
-                    <tr
-                      className={cn(opsTableRowClass, "cursor-pointer")}
-                      data-state={open ? "open" : undefined}
-                      onClick={() => setExpandedId((id) => (id === customer.id ? null : customer.id))}
-                    >
-                      <td className={cn(opsTableCellClass, "text-muted-foreground")}>
-                        {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
-                      </td>
+                  <tr
+                    key={customer.id}
+                    className={cn(opsTableRowClass, "cursor-pointer")}
+                    data-state={drawerCustomerId === customer.id ? "selected" : undefined}
+                    onClick={() => setDrawerCustomerId(customer.id)}
+                  >
                       <td className={cn(opsTableCellClass, "max-w-[200px] font-medium")}>
                         <span className="line-clamp-2">{primary}</span>
                         {secondary ? (
@@ -474,47 +471,6 @@ export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) 
                         </DropdownMenu>
                       </td>
                     </tr>
-                    {open ? (
-                      <tr className="bg-muted/15">
-                        <td colSpan={12} className="border-b border-border/50 px-4 py-4">
-                          <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
-                            <div className="space-y-2 text-sm">
-                              <p className="text-xs font-semibold text-muted-foreground">메모</p>
-                              <p className="leading-relaxed text-foreground/90">
-                                {customer.notes?.trim() || "등록된 메모가 없습니다."}
-                              </p>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              <Link
-                                href={`/customers/${customer.id}`}
-                                className={cn(buttonVariants({ size: "sm", variant: "outline" }))}
-                              >
-                                상세 페이지
-                              </Link>
-                              <Link
-                                href={`/inquiries?customer=${customer.id}&new=1`}
-                                className={cn(buttonVariants({ size: "sm", variant: "outline" }))}
-                              >
-                                문의
-                              </Link>
-                              <Link
-                                href={`/quotes?customer=${customer.id}&new=1`}
-                                className={cn(buttonVariants({ size: "sm", variant: "outline" }))}
-                              >
-                                견적
-                              </Link>
-                              <Link
-                                href="/invoices"
-                                className={cn(buttonVariants({ size: "sm", variant: "outline" }))}
-                              >
-                                청구 목록
-                              </Link>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : null}
-                  </Fragment>
                 )
               })}
             </tbody>
@@ -533,7 +489,7 @@ export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) 
                 key={customer.id}
                 type="button"
                 className="flex w-full flex-col gap-2 rounded-xl border border-border/60 bg-card p-3 text-left shadow-sm"
-                onClick={() => openMobileDetail(customer)}
+                onClick={() => setDrawerCustomerId(customer.id)}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -558,62 +514,74 @@ export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) 
       ) : null}
 
       <OpsDetailSheet
-        open={sheetCustomer !== null}
-        onOpenChange={(o) => !o && setSheetCustomer(null)}
-        title={sheetCustomer ? sheetCustomer.companyName?.trim() || sheetCustomer.name : ""}
+        open={drawerCustomer !== null}
+        onOpenChange={(o) => !o && setDrawerCustomerId(null)}
+        title={drawerCustomer ? drawerCustomer.companyName?.trim() || drawerCustomer.name : ""}
         description={
-          sheetCustomer ? (
-            <span className="text-muted-foreground">
-              {sheetCustomer.name} · 최근 활동 {formatDateTime(sheetCustomer.lastActivityAt)}
+          drawerCustomer ? (
+            <span className="flex flex-col gap-1 text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2">
+              <span>담당 {drawerCustomer.name}</span>
+              <span className="hidden sm:inline">·</span>
+              <span>최근 활동 {formatDateTime(drawerCustomer.lastActivityAt)}</span>
             </span>
           ) : null
         }
         footer={
-          sheetCustomer ? (
+          drawerCustomer ? (
             <div className="flex flex-wrap gap-2">
               <Link
-                href={`/customers/${sheetCustomer.id}`}
+                href={`/customers/${drawerCustomer.id}`}
                 className={cn(buttonVariants({ size: "sm" }))}
               >
                 상세 페이지
               </Link>
               <Link
-                href={`/inquiries?customer=${sheetCustomer.id}&new=1`}
+                href={`/inquiries?customer=${drawerCustomer.id}&new=1`}
                 className={cn(buttonVariants({ size: "sm", variant: "outline" }))}
               >
-                문의
+                문의 만들기
               </Link>
               <Link
-                href={`/quotes?customer=${sheetCustomer.id}&new=1`}
+                href={`/quotes?customer=${drawerCustomer.id}&new=1`}
                 className={cn(buttonVariants({ size: "sm", variant: "outline" }))}
               >
-                견적
+                견적 만들기
+              </Link>
+              <Link
+                href="/invoices"
+                className={cn(buttonVariants({ size: "sm", variant: "outline" }), "inline-flex gap-1")}
+              >
+                <Receipt className="size-3.5" />
+                청구 관리
               </Link>
             </div>
           ) : null
         }
       >
-        {sheetCustomer ? (
-          <div className="space-y-4 text-sm">
+        {drawerCustomer ? (
+          <div className="space-y-5 text-sm">
+            <div className="flex flex-wrap gap-2">
+              <CustomerSignalBadges customer={drawerCustomer} />
+            </div>
             <div className="grid gap-2 text-xs">
               <div className="flex justify-between gap-2 border-b border-border/40 py-1">
                 <span className="text-muted-foreground">이메일</span>
-                <span className="text-right">{sheetCustomer.email || "—"}</span>
+                <span className="text-right">{drawerCustomer.email || "—"}</span>
               </div>
               <div className="flex justify-between gap-2 border-b border-border/40 py-1">
                 <span className="text-muted-foreground">전화</span>
-                <span className="text-right tabular-nums">{sheetCustomer.phone || "—"}</span>
+                <span className="text-right tabular-nums">{drawerCustomer.phone || "—"}</span>
               </div>
             </div>
             <div>
               <p className="mb-1 text-xs font-semibold text-muted-foreground">메모</p>
-              <p className="leading-relaxed">{sheetCustomer.notes?.trim() || "없음"}</p>
+              <p className="leading-relaxed">{drawerCustomer.notes?.trim() || "등록된 메모가 없습니다."}</p>
             </div>
             <div>
-              <p className="mb-1 text-xs font-semibold text-muted-foreground">태그</p>
+              <p className="mb-1 text-xs font-semibold text-muted-foreground">태그·분류</p>
               <div className="flex flex-wrap gap-1">
-                {(sheetCustomer.tags ?? []).length ? (
-                  sheetCustomer.tags.map((t) => (
+                {(drawerCustomer.tags ?? []).length ? (
+                  drawerCustomer.tags.map((t) => (
                     <span key={t} className="rounded-md border bg-muted/40 px-2 py-0.5 text-xs">
                       {t}
                     </span>
@@ -622,6 +590,68 @@ export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) 
                   <span className="text-muted-foreground">—</span>
                 )}
               </div>
+            </div>
+            <div className="space-y-3 rounded-lg border border-border/50 bg-muted/10 p-3">
+              <p className="text-xs font-semibold text-muted-foreground">최근 건 요약</p>
+              <div className="space-y-2 text-xs">
+                <div>
+                  <p className="font-medium text-foreground">문의</p>
+                  {drawerCustomer.recentSnapshot?.inquiry ? (
+                    <p className="mt-0.5 text-muted-foreground">
+                      {drawerCustomer.recentSnapshot.inquiry.title} ·{" "}
+                      {inquiryStageOptions.find(
+                        (o) => o.value === drawerCustomer.recentSnapshot.inquiry.stage
+                      )?.label ?? drawerCustomer.recentSnapshot.inquiry.stage}{" "}
+                      · {formatDate(drawerCustomer.recentSnapshot.inquiry.createdAt)}
+                    </p>
+                  ) : (
+                    <p className="mt-0.5 text-muted-foreground">최근 문의 없음</p>
+                  )}
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">견적</p>
+                  {drawerCustomer.recentSnapshot?.quote ? (
+                    <p className="mt-0.5 text-muted-foreground">
+                      {drawerCustomer.recentSnapshot.quote.quoteNumber} ·{" "}
+                      {drawerCustomer.recentSnapshot.quote.title} ·{" "}
+                      {formatCurrency(drawerCustomer.recentSnapshot.quote.total)} ·{" "}
+                      {formatDate(drawerCustomer.recentSnapshot.quote.updatedAt)}
+                    </p>
+                  ) : (
+                    <p className="mt-0.5 text-muted-foreground">최근 견적 없음</p>
+                  )}
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">청구</p>
+                  {drawerCustomer.recentSnapshot?.invoice ? (
+                    <p className="mt-0.5 text-muted-foreground">
+                      {drawerCustomer.recentSnapshot.invoice.invoiceNumber} ·{" "}
+                      {formatCurrency(drawerCustomer.recentSnapshot.invoice.amount)} ·{" "}
+                      {formatDate(drawerCustomer.recentSnapshot.invoice.updatedAt)}
+                    </p>
+                  ) : (
+                    <p className="mt-0.5 text-muted-foreground">최근 청구 없음</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div>
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">활동 기록</p>
+              {drawerCustomer.recentActivity && drawerCustomer.recentActivity.length > 0 ? (
+                <ul className="max-h-48 space-y-2 overflow-y-auto text-xs">
+                  {drawerCustomer.recentActivity.map((log) => (
+                    <li key={log.id} className="rounded-md border border-border/40 px-2 py-1.5">
+                      <p className="font-medium text-foreground">{resolveActivityHeadline(log.action)}</p>
+                      <p className="mt-0.5 leading-snug text-muted-foreground">{log.description}</p>
+                      <p className="mt-1 tabular-nums text-[10px] text-muted-foreground">
+                        {formatDateTime(log.createdAt)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground">표시할 활동 기록이 없습니다.</p>
+              )}
             </div>
           </div>
         ) : null}

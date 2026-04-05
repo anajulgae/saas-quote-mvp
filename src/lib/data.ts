@@ -25,13 +25,17 @@ import type {
   CustomerSummary,
   DashboardMetrics,
   Inquiry,
+  InquiryStage,
   InquiryWithCustomer,
   Invoice,
   InvoiceFormInput,
   InvoiceWithReminders,
+  PaymentStatus,
   Quote,
   QuoteFormInput,
   QuoteItem,
+  QuoteLinkedInvoiceStub,
+  QuoteStatus,
   QuoteWithItems,
   ReminderFormInput,
   Template,
@@ -218,6 +222,60 @@ function mapActivityToTimeline(log: ActivityLog): TimelineEvent {
     action: log.action,
     kind: resolveActivityKind(log.action),
   }
+}
+
+function bucketActivityByCustomerId(
+  logs: ActivityLog[],
+  maxPerCustomer: number
+): Record<string, ActivityLog[]> {
+  const m: Record<string, ActivityLog[]> = {}
+  for (const log of logs) {
+    const cid = log.customerId
+    if (!cid) {
+      continue
+    }
+    const arr = m[cid] ?? []
+    if (arr.length >= maxPerCustomer) {
+      continue
+    }
+    arr.push(log)
+    m[cid] = arr
+  }
+  return m
+}
+
+function bucketActivityByQuoteId(logs: ActivityLog[], maxPer: number): Record<string, ActivityLog[]> {
+  const m: Record<string, ActivityLog[]> = {}
+  for (const log of logs) {
+    const id = log.quoteId
+    if (!id) {
+      continue
+    }
+    const arr = m[id] ?? []
+    if (arr.length >= maxPer) {
+      continue
+    }
+    arr.push(log)
+    m[id] = arr
+  }
+  return m
+}
+
+function bucketActivityByInvoiceId(logs: ActivityLog[], maxPer: number): Record<string, ActivityLog[]> {
+  const m: Record<string, ActivityLog[]> = {}
+  for (const log of logs) {
+    const id = log.invoiceId
+    if (!id) {
+      continue
+    }
+    const arr = m[id] ?? []
+    if (arr.length >= maxPer) {
+      continue
+    }
+    arr.push(log)
+    m[id] = arr
+  }
+  return m
 }
 
 async function getDataContext(): Promise<AppDataContext> {
@@ -1389,14 +1447,30 @@ export async function getCustomersPageData(): Promise<{
     { data: inquiryRows, error: inquiryError },
     { data: quoteRows, error: quoteError },
     { data: invoiceRows, error: invoiceError },
+    { data: activityRows, error: activityError },
   ] = await Promise.all([
     context.supabase
       .from("customers")
       .select("*")
       .order("created_at", { ascending: false }),
-    context.supabase.from("inquiries").select("id, customer_id, created_at"),
-    context.supabase.from("quotes").select("id, customer_id, status, updated_at"),
-    context.supabase.from("invoices").select("id, customer_id, payment_status, updated_at"),
+    context.supabase
+      .from("inquiries")
+      .select("id, customer_id, created_at, title, stage")
+      .order("created_at", { ascending: false }),
+    context.supabase
+      .from("quotes")
+      .select("id, customer_id, status, updated_at, quote_number, title, total, created_at")
+      .order("updated_at", { ascending: false }),
+    context.supabase
+      .from("invoices")
+      .select("id, customer_id, payment_status, updated_at, invoice_number, amount")
+      .order("updated_at", { ascending: false }),
+    context.supabase
+      .from("activity_logs")
+      .select("*")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false })
+      .limit(800),
   ])
 
   if (customerError) {
@@ -1415,24 +1489,39 @@ export async function getCustomersPageData(): Promise<{
     throw invoiceError
   }
 
+  if (activityError) {
+    throw activityError
+  }
+
   const customerRowsSafe = (customerRows ?? []) as CustomerRow[]
   const inquiryRowsSafe = (inquiryRows ?? []) as Array<{
     id: string
     customer_id: string
     created_at: string
+    title: string
+    stage: string
   }>
   const quoteRowsSafe = (quoteRows ?? []) as Array<{
     id: string
     customer_id: string
     status: string
     updated_at: string
+    quote_number: string
+    title: string
+    total: number
+    created_at: string
   }>
   const invoiceRowsSafe = (invoiceRows ?? []) as Array<{
     id: string
     customer_id: string
     payment_status: string
     updated_at: string
+    invoice_number: string
+    amount: number
   }>
+
+  const activityLogsSafe = ((activityRows ?? []) as ActivityLogRow[]).map(mapActivityLog)
+  const activityByCustomer = bucketActivityByCustomerId(activityLogsSafe, 8)
 
   const recentCutoff = Date.now() - CUSTOMER_INQUIRY_RECENT_DAYS * 24 * 60 * 60 * 1000
 
@@ -1479,6 +1568,53 @@ export async function getCustomersPageData(): Promise<{
           ? new Date(Math.max(...activityTimes)).toISOString()
           : customer.updatedAt ?? customer.createdAt
 
+      const inqSorted = [...custInquiries].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+      const latestInq = inqSorted[0]
+      const quoteSorted = [...custQuotes].sort(
+        (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      )
+      const latestQuote = quoteSorted[0]
+      const invSorted = [...custInvoices].sort(
+        (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      )
+      const latestInv = invSorted[0]
+
+      const recentSnapshot = {
+        inquiry: latestInq
+          ? {
+              id: latestInq.id,
+              title: latestInq.title,
+              createdAt: latestInq.created_at,
+              stage: latestInq.stage as InquiryStage,
+            }
+          : undefined,
+        quote: latestQuote
+          ? {
+              id: latestQuote.id,
+              quoteNumber: latestQuote.quote_number,
+              title: latestQuote.title,
+              total: Number(latestQuote.total),
+              status: latestQuote.status as QuoteStatus,
+              updatedAt: latestQuote.updated_at,
+            }
+          : undefined,
+        invoice: latestInv
+          ? {
+              id: latestInv.id,
+              invoiceNumber: latestInv.invoice_number,
+              amount: Number(latestInv.amount),
+              paymentStatus: latestInv.payment_status as PaymentStatus,
+              updatedAt: latestInv.updated_at,
+            }
+          : undefined,
+      }
+      const hasRecentSnapshot =
+        Boolean(recentSnapshot.inquiry) ||
+        Boolean(recentSnapshot.quote) ||
+        Boolean(recentSnapshot.invoice)
+
       return {
         ...customer,
         inquiryCount: custInquiries.length,
@@ -1489,6 +1625,8 @@ export async function getCustomersPageData(): Promise<{
         hasActiveQuote,
         hasOpenReceivable,
         hasOverdueInvoice,
+        recentSnapshot: hasRecentSnapshot ? recentSnapshot : undefined,
+        recentActivity: activityByCustomer[customer.id] ?? [],
       }
     }),
   }
@@ -1586,6 +1724,8 @@ export async function getQuotesPageData(): Promise<{
   inquiries: InquiryWithCustomer[]
   defaultQuoteSummary: string
   nextQuoteNumberPreview: string
+  quoteActivityByQuoteId: Record<string, ActivityLog[]>
+  invoicesByQuoteId: Record<string, QuoteLinkedInvoiceStub[]>
 }> {
   const context = await getDataContext()
 
@@ -1595,6 +1735,26 @@ export async function getQuotesPageData(): Promise<{
       customer: demoCustomers.find((customer) => customer.id === quote.customerId),
       items: demoQuoteItems.filter((item) => item.quoteId === quote.id),
     }))
+    const quoteActivityByQuoteId = bucketActivityByQuoteId(
+      demoActivityLogs.filter((l) => Boolean(l.quoteId)),
+      12
+    )
+    const invoicesByQuoteId: Record<string, QuoteLinkedInvoiceStub[]> = {}
+    for (const inv of demoInvoices) {
+      if (!inv.quoteId) {
+        continue
+      }
+      const stub: QuoteLinkedInvoiceStub = {
+        id: inv.id,
+        quoteId: inv.quoteId,
+        invoiceNumber: inv.invoiceNumber,
+        amount: inv.amount,
+        paymentStatus: inv.paymentStatus,
+      }
+      const arr = invoicesByQuoteId[inv.quoteId] ?? []
+      arr.push(stub)
+      invoicesByQuoteId[inv.quoteId] = arr
+    }
     return {
       quotes,
       customers: demoCustomers,
@@ -1604,6 +1764,8 @@ export async function getQuotesPageData(): Promise<{
       })),
       defaultQuoteSummary: defaultQuoteSummaryFromTemplates(demoTemplates),
       nextQuoteNumberPreview: computeNextQuoteNumberPreview(quotes),
+      quoteActivityByQuoteId,
+      invoicesByQuoteId,
     }
   }
 
@@ -1613,6 +1775,8 @@ export async function getQuotesPageData(): Promise<{
     { data: itemRows, error: itemError },
     { data: inquiryRows, error: inquiryError },
     { data: templateRows, error: templateError },
+    { data: invoiceLinkRows, error: invoiceLinkError },
+    { data: quoteLogRows, error: quoteLogError },
   ] = await Promise.all([
     context.supabase.from("customers").select("*"),
     context.supabase
@@ -1633,6 +1797,15 @@ export async function getQuotesPageData(): Promise<{
       .eq("user_id", context.userId)
       .order("is_default", { ascending: false })
       .order("created_at", { ascending: true }),
+    context.supabase
+      .from("invoices")
+      .select("id, quote_id, invoice_number, amount, payment_status"),
+    context.supabase
+      .from("activity_logs")
+      .select("*")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false })
+      .limit(600),
   ])
 
   if (customerError) {
@@ -1653,6 +1826,14 @@ export async function getQuotesPageData(): Promise<{
 
   if (templateError) {
     throw templateError
+  }
+
+  if (invoiceLinkError) {
+    throw invoiceLinkError
+  }
+
+  if (quoteLogError) {
+    throw quoteLogError
   }
 
   const customerRowsSafe = (customerRows ?? []) as CustomerRow[]
@@ -1684,6 +1865,36 @@ export async function getQuotesPageData(): Promise<{
     }
   })
 
+  const quoteActivityByQuoteId = bucketActivityByQuoteId(
+    ((quoteLogRows ?? []) as ActivityLogRow[])
+      .map(mapActivityLog)
+      .filter((log) => Boolean(log.quoteId)),
+    12
+  )
+
+  const invoicesByQuoteId: Record<string, QuoteLinkedInvoiceStub[]> = {}
+  for (const row of (invoiceLinkRows ?? []) as Array<{
+    id: string
+    quote_id: string | null
+    invoice_number: string
+    amount: number
+    payment_status: string
+  }>) {
+    if (!row.quote_id) {
+      continue
+    }
+    const stub: QuoteLinkedInvoiceStub = {
+      id: row.id,
+      quoteId: row.quote_id,
+      invoiceNumber: row.invoice_number,
+      amount: Number(row.amount),
+      paymentStatus: row.payment_status as PaymentStatus,
+    }
+    const arr = invoicesByQuoteId[row.quote_id as string] ?? []
+    arr.push(stub)
+    invoicesByQuoteId[row.quote_id] = arr
+  }
+
   return {
     quotes,
     customers: customerRowsSafe.map(mapCustomer),
@@ -1696,6 +1907,8 @@ export async function getQuotesPageData(): Promise<{
     }),
     defaultQuoteSummary: defaultQuoteSummaryFromTemplates(mappedTemplates),
     nextQuoteNumberPreview: computeNextQuoteNumberPreview(quotes),
+    quoteActivityByQuoteId,
+    invoicesByQuoteId,
   }
 }
 
@@ -1704,6 +1917,7 @@ export async function getInvoicesPageData(): Promise<{
   customers: Customer[]
   quotes: Quote[]
   defaultReminderMessage: string
+  invoiceActivityByInvoiceId: Record<string, ActivityLog[]>
 }> {
   const context = await getDataContext()
 
@@ -1717,6 +1931,10 @@ export async function getInvoicesPageData(): Promise<{
       customers: demoCustomers,
       quotes: demoQuotes,
       defaultReminderMessage: defaultReminderMessageFromTemplates(demoTemplates),
+      invoiceActivityByInvoiceId: bucketActivityByInvoiceId(
+        demoActivityLogs.filter((l) => Boolean(l.invoiceId)),
+        12
+      ),
     }
   }
 
@@ -1726,6 +1944,7 @@ export async function getInvoicesPageData(): Promise<{
     { data: reminderRows, error: reminderError },
     { data: quoteRows, error: quoteError },
     { data: templateRows, error: templateError },
+    { data: invoiceLogRows, error: invoiceLogError },
   ] = await Promise.all([
     context.supabase.from("customers").select("*"),
     context.supabase
@@ -1746,6 +1965,12 @@ export async function getInvoicesPageData(): Promise<{
       .eq("user_id", context.userId)
       .order("is_default", { ascending: false })
       .order("created_at", { ascending: true }),
+    context.supabase
+      .from("activity_logs")
+      .select("*")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false })
+      .limit(600),
   ])
 
   if (customerError) {
@@ -1768,6 +1993,10 @@ export async function getInvoicesPageData(): Promise<{
     throw templateError
   }
 
+  if (invoiceLogError) {
+    throw invoiceLogError
+  }
+
   const customerRowsSafe = (customerRows ?? []) as CustomerRow[]
   const invoiceRowsSafe = (invoiceRows ?? []) as InvoiceRow[]
   const reminderRowsSafe = (reminderRows ?? []) as ReminderRow[]
@@ -1787,6 +2016,13 @@ export async function getInvoicesPageData(): Promise<{
 
   const mappedTemplates = templateRowsSafe.map(mapTemplate)
 
+  const invoiceActivityByInvoiceId = bucketActivityByInvoiceId(
+    ((invoiceLogRows ?? []) as ActivityLogRow[])
+      .map(mapActivityLog)
+      .filter((log) => Boolean(log.invoiceId)),
+    12
+  )
+
   return {
     invoices: invoiceRowsSafe.map((row) => {
       const invoice = mapInvoice(row)
@@ -1800,6 +2036,7 @@ export async function getInvoicesPageData(): Promise<{
     customers: customerRowsSafe.map(mapCustomer),
     quotes: quoteRowsSafe.map(mapQuote),
     defaultReminderMessage: defaultReminderMessageFromTemplates(mappedTemplates),
+    invoiceActivityByInvoiceId,
   }
 }
 
