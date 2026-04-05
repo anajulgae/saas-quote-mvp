@@ -149,6 +149,8 @@ export interface BusinessSettings {
   sealImageUrl?: string
   /** 견적서에 직인 표시 */
   sealEnabled: boolean
+  /** 서버 행 갱신 시각 — 클라이언트 폼과 서버 스냅샷 동기화용 */
+  updatedAt?: string
 }
 
 export type ActivityKind =

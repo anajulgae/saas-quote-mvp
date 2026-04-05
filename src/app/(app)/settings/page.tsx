@@ -2,6 +2,10 @@ import { PageHeader } from "@/components/app/page-header"
 import { SettingsForm } from "@/components/app/settings-form"
 import { getSettingsPageData } from "@/lib/data"
 
+/** 저장 직후에도 DB 최신값이 내려가도록 RSC 캐시 비활성화 */
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export default async function SettingsPage() {
   const { settings, templates } = await getSettingsPageData()
 

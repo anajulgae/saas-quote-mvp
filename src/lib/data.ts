@@ -189,6 +189,7 @@ function mapBusinessSettings(row: BusinessSettingsRow): BusinessSettings {
     reminderMessage: row.reminder_message ?? "",
     sealImageUrl: row.seal_image_url ?? undefined,
     sealEnabled: Boolean(row.seal_enabled),
+    updatedAt: row.updated_at,
   }
 }
 
@@ -1100,6 +1101,12 @@ export async function updateBusinessSealSettingsRecord(input: {
   const context = await getDataContext()
 
   if (context.mode === "demo") {
+    const session = await getAppSession()
+    if (session?.mode === "supabase") {
+      throw new Error(
+        "Supabase에 연결할 수 없습니다. NEXT_PUBLIC_SUPABASE_URL·KEY를 확인하거나 잠시 후 다시 시도해 주세요."
+      )
+    }
     return { mode: "demo" as const }
   }
 
@@ -1463,6 +1470,12 @@ export async function saveBusinessSettingsRecord(input: {
   const context = await getDataContext()
 
   if (context.mode === "demo") {
+    const session = await getAppSession()
+    if (session?.mode === "supabase") {
+      throw new Error(
+        "Supabase에 연결할 수 없습니다. NEXT_PUBLIC_SUPABASE_URL·KEY를 확인하거나 잠시 후 다시 시도해 주세요."
+      )
+    }
     return { mode: "demo" as const }
   }
 
@@ -1516,6 +1529,12 @@ export async function saveTemplatesRecord(
   const context = await getDataContext()
 
   if (context.mode === "demo") {
+    const session = await getAppSession()
+    if (session?.mode === "supabase") {
+      throw new Error(
+        "Supabase에 연결할 수 없습니다. NEXT_PUBLIC_SUPABASE_URL·KEY를 확인하거나 잠시 후 다시 시도해 주세요."
+      )
+    }
     return { mode: "demo" as const }
   }
 
@@ -2284,6 +2303,7 @@ export async function getSettingsPageData(): Promise<{
         bankAccount: "",
         reminderMessage: "",
         sealEnabled: false,
+        updatedAt: undefined,
       }
 
   const templates = ((templateRows ?? []) as TemplateRow[]).map(mapTemplate)

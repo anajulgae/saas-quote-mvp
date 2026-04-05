@@ -33,6 +33,7 @@ export const demoBusinessSettings: BusinessSettings = {
     "안녕하세요. 이전에 전달드린 청구 건의 입금 일정을 확인 부탁드립니다.",
   sealEnabled: false,
   sealImageUrl: undefined,
+  updatedAt: "2026-01-01T00:00:00.000Z",
 }
 
 export const demoCustomers: Customer[] = [

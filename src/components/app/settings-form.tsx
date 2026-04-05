@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useTransition } from "react"
+import { useEffect, useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, Save } from "lucide-react"
 import { toast } from "sonner"
@@ -94,10 +94,41 @@ export function SettingsForm({
   const [errorTemplates, setErrorTemplates] = useState("")
   const [errorSeal, setErrorSeal] = useState("")
 
+  const businessServerKey = useMemo(
+    () =>
+      [
+        initialSettings.id,
+        initialSettings.updatedAt ?? "",
+        initialSettings.businessName,
+        initialSettings.ownerName,
+        initialSettings.email,
+        initialSettings.phone,
+        initialSettings.paymentTerms,
+        initialSettings.bankAccount,
+        initialSettings.reminderMessage,
+        initialSettings.sealImageUrl ?? "",
+        initialSettings.sealEnabled ? "1" : "0",
+      ].join("\u001f"),
+    [initialSettings]
+  )
+
+  const templatesServerKey = useMemo(
+    () =>
+      templates
+        .map((t) => `${t.id}:${t.updatedAt ?? ""}:${t.content.length}:${t.name}`)
+        .join("|"),
+    [templates]
+  )
+
   useEffect(() => {
+    setSettings(initialSettings)
     setSealUrl(initialSettings.sealImageUrl ?? null)
     setSealEnabled(initialSettings.sealEnabled)
-  }, [initialSettings.sealImageUrl, initialSettings.sealEnabled])
+  }, [businessServerKey, initialSettings])
+
+  useEffect(() => {
+    setTemplateState(templates.length ? templates : defaultTemplates(initialSettings.userId))
+  }, [templatesServerKey, initialSettings.userId])
 
   const saveBusiness = () => {
     setErrorBusiness("")
