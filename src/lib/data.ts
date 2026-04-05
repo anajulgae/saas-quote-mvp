@@ -1070,13 +1070,21 @@ export async function ensureQuoteShareTokenForQuote(quoteId: string): Promise<{ 
 
   for (let attempt = 0; attempt < 5; attempt++) {
     const token = randomBytes(18).toString("base64url")
-    const { error: upError } = await context.supabase
+    const { data: updatedRows, error: upError } = await context.supabase
       .from("quotes")
       .update({ public_share_token: token })
       .eq("id", quoteId)
       .eq("user_id", context.userId)
+      .select("id")
 
-    if (!upError) {
+    if (upError) {
+      if ((upError as { code?: string }).code === "23505") {
+        continue
+      }
+      throw upError
+    }
+
+    if (Array.isArray(updatedRows) && updatedRows.length > 0) {
       await createActivityLog({
         action: "quote.share_token_issued",
         description: "고객용 견적 공유 링크가 발급되었습니다.",
@@ -1084,14 +1092,11 @@ export async function ensureQuoteShareTokenForQuote(quoteId: string): Promise<{ 
       })
       return { token }
     }
-
-    if ((upError as { code?: string }).code === "23505") {
-      continue
-    }
-    throw upError
   }
 
-  throw new Error("공유 링크를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.")
+  throw new Error(
+    "공유 링크를 DB에 저장하지 못했습니다. Supabase 마이그레이션(quotes.public_share_token)·RLS·견적 소유자 여부를 확인해 주세요."
+  )
 }
 
 export async function updateBusinessSealSettingsRecord(input: {
@@ -1225,6 +1230,43 @@ export async function getBusinessContactEmail(): Promise<string> {
   }
 
   return ((data as { email: string | null } | null)?.email ?? "").trim()
+}
+
+/** 견적 메일 From/Reply 표시용 (설정 사업자·이메일) */
+export async function getBusinessFromIdentity(): Promise<{
+  email: string
+  displayName: string
+}> {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return {
+      email: demoBusinessSettings.email?.trim() ?? "",
+      displayName: demoBusinessSettings.ownerName || demoBusinessSettings.businessName || "Bill-IO",
+    }
+  }
+
+  const { data, error } = await context.supabase
+    .from("business_settings")
+    .select("email, business_name, owner_name")
+    .eq("user_id", context.userId)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  const row = data as
+    | { email: string | null; business_name: string; owner_name: string }
+    | null
+
+  const email = (row?.email ?? "").trim()
+  const displayName =
+    (row?.owner_name ?? "").trim() ||
+    (row?.business_name ?? "").trim() ||
+    "Bill-IO"
+
+  return { email, displayName }
 }
 
 export async function createInvoiceRecord(input: InvoiceFormInput) {

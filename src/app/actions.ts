@@ -28,7 +28,7 @@ import {
   deleteQuoteRecord,
   duplicateQuoteRecord,
   ensureQuoteShareTokenForQuote,
-  getBusinessContactEmail,
+  getBusinessFromIdentity,
   getQuoteOutboundSnapshot,
   saveBusinessSettingsRecord,
   saveTemplatesRecord,
@@ -1129,8 +1129,6 @@ export async function sendQuoteEmailAction(input: z.infer<typeof sendQuoteEmailI
       bodyText += `\n\n견적서 보기 (링크):\n${shareUrl}`
     }
 
-    const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.6;color:#111">${escapeHtmlForEmail(bodyText).replace(/\n/g, "<br/>")}</div>`
-
     const session = await getAppSession()
     if (session?.mode === "demo") {
       revalidatePath("/quotes")
@@ -1140,13 +1138,22 @@ export async function sendQuoteEmailAction(input: z.infer<typeof sendQuoteEmailI
       return { ok: false as const, error: "로그인이 필요합니다." }
     }
 
-    const replyTo = await getBusinessContactEmail()
+    const sender = await getBusinessFromIdentity()
+    const senderLine =
+      sender.email.trim().length > 0
+        ? `발신: ${escapeHtmlForEmail(sender.displayName)} · ${escapeHtmlForEmail(sender.email)}`
+        : `발신: ${escapeHtmlForEmail(sender.displayName)} (설정에서 이메일을 등록해 주세요)`
+
+    const bodyHtml = escapeHtmlForEmail(bodyText).replace(/\n/g, "<br/>")
+    const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.6;color:#111"><p style="margin:0 0 14px;color:#555;font-size:13px;border-bottom:1px solid #eee;padding-bottom:10px">${senderLine}</p>${bodyHtml}</div>`
 
     await sendHtmlEmailViaResend({
       to: parsed.to,
       subject: parsed.subject,
       html,
-      replyTo: replyTo || undefined,
+      fromDisplayName: sender.displayName,
+      fromEmail: sender.email || undefined,
+      replyTo: sender.email || undefined,
     })
 
     await createActivityLog({

@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState, useTransition } from "react"
-import { ExternalLink, Link2, Loader2, Mail, MessageCircle } from "lucide-react"
+import { useEffect, useState } from "react"
+import { ExternalLink, Link2, Loader2, Mail, MessageCircle, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 
 import {
@@ -37,13 +37,18 @@ export function QuoteSendDialog({
   emailBodyTemplate: string
   onAfterSend?: () => void
 }) {
-  const [isPending, startTransition] = useTransition()
   const [shareUrl, setShareUrl] = useState("")
+  const [shareLoading, setShareLoading] = useState(false)
+  const [shareError, setShareError] = useState("")
+  const [actionBusy, setActionBusy] = useState(false)
+
   const [to, setTo] = useState("")
   const [subject, setSubject] = useState("")
   const [body, setBody] = useState("")
   const [includeLink, setIncludeLink] = useState(true)
   const [markAsSent, setMarkAsSent] = useState(true)
+
+  const quoteId = quote?.id
 
   useEffect(() => {
     if (!open || !quote) {
@@ -57,59 +62,128 @@ export function QuoteSendDialog({
     setTo(quote.customer?.email?.trim() ?? "")
     setIncludeLink(true)
     setMarkAsSent(quote.status === "draft")
-    setShareUrl("")
+  }, [open, quoteId, quote?.quoteNumber, quote?.status, quote?.customer?.email, emailBodyTemplate])
 
-    startTransition(async () => {
-      const res = await ensureQuoteShareLinkAction(quote.id)
-      if (res.ok) {
-        setShareUrl(res.url)
+  useEffect(() => {
+    if (!open || !quoteId) {
+      return
+    }
+    setShareUrl("")
+    setShareError("")
+    let cancelled = false
+
+    ;(async () => {
+      setShareLoading(true)
+      try {
+        const res = await ensureQuoteShareLinkAction(quoteId)
+        if (cancelled) {
+          return
+        }
+        if (res.ok) {
+          setShareUrl(res.url)
+          setShareError("")
+        } else {
+          setShareError(res.error)
+          toast.error(res.error)
+        }
+      } catch (e) {
+        if (!cancelled) {
+          const msg = e instanceof Error ? e.message : "공유 링크를 불러오지 못했습니다."
+          setShareError(msg)
+          toast.error(msg)
+        }
+      } finally {
+        if (!cancelled) {
+          setShareLoading(false)
+        }
       }
-    })
-  }, [open, quote, emailBodyTemplate])
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, quoteId])
+
+  const retryShareLink = () => {
+    if (!quoteId) {
+      return
+    }
+    setShareUrl("")
+    setShareError("")
+    setShareLoading(true)
+    void (async () => {
+      try {
+        const res = await ensureQuoteShareLinkAction(quoteId)
+        if (res.ok) {
+          setShareUrl(res.url)
+          setShareError("")
+          toast.success("공유 링크를 준비했습니다.")
+        } else {
+          setShareError(res.error)
+          toast.error(res.error)
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "공유 링크를 불러오지 못했습니다."
+        setShareError(msg)
+        toast.error(msg)
+      } finally {
+        setShareLoading(false)
+      }
+    })()
+  }
 
   const handleSendEmail = () => {
     if (!quote) {
       return
     }
-    startTransition(async () => {
-      const res = await sendQuoteEmailAction({
-        quoteId: quote.id,
-        to: to.trim(),
-        subject: subject.trim(),
-        body: body.trim(),
-        includePublicLink: includeLink,
-        markAsSent,
-      })
-      if (!res.ok) {
-        toast.error(res.error)
-        return
+    setActionBusy(true)
+    void (async () => {
+      try {
+        const res = await sendQuoteEmailAction({
+          quoteId: quote.id,
+          to: to.trim(),
+          subject: subject.trim(),
+          body: body.trim(),
+          includePublicLink: includeLink,
+          markAsSent,
+        })
+        if (!res.ok) {
+          toast.error(res.error)
+          return
+        }
+        if ("demo" in res && res.demo) {
+          toast.success("데모 모드에서는 실제 이메일이 발송되지 않습니다.")
+        } else {
+          toast.success("이메일을 보냈습니다.")
+        }
+        onAfterSend?.()
+        onOpenChange(false)
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "이메일 발송에 실패했습니다.")
+      } finally {
+        setActionBusy(false)
       }
-      if ("demo" in res && res.demo) {
-        toast.success("데모 모드에서는 실제 이메일이 발송되지 않습니다.")
-      } else {
-        toast.success("이메일을 보냈습니다.")
-      }
-      onAfterSend?.()
-      onOpenChange(false)
-    })
+    })()
   }
 
   const copyShareLink = () => {
     if (!quote) {
       return
     }
-    startTransition(async () => {
-      let url = shareUrl
-      if (!url) {
-        const res = await ensureQuoteShareLinkAction(quote.id)
-        if (!res.ok) {
-          toast.error(res.error)
-          return
-        }
-        url = res.url
-        setShareUrl(url)
-      }
+    setActionBusy(true)
+    void (async () => {
       try {
+        let url = shareUrl
+        if (!url) {
+          const res = await ensureQuoteShareLinkAction(quote.id)
+          if (!res.ok) {
+            toast.error(res.error)
+            setShareError(res.error)
+            return
+          }
+          url = res.url
+          setShareUrl(url)
+        }
         await navigator.clipboard.writeText(url)
         const logRes = await logQuoteShareLinkCopiedAction(quote.id)
         if (!logRes.ok) {
@@ -118,9 +192,11 @@ export function QuoteSendDialog({
         }
         toast.success("고객 공유 링크를 복사했습니다.")
       } catch {
-        toast.error("클립보드 복사에 실패했습니다.")
+        toast.error("클립보드 복사에 실패했습니다. 링크를 직접 선택해 복사해 주세요.")
+      } finally {
+        setActionBusy(false)
       }
-    })
+    })()
   }
 
   const openPdfPrint = () => {
@@ -134,19 +210,21 @@ export function QuoteSendDialog({
     if (!quote) {
       return
     }
-    startTransition(async () => {
-      let url = shareUrl
-      if (!url) {
-        const res = await ensureQuoteShareLinkAction(quote.id)
-        if (!res.ok) {
-          toast.error(res.error)
-          return
-        }
-        url = res.url
-        setShareUrl(url)
-      }
-      const text = `[Bill-IO] 견적 안내\n${quote.title}\n견적번호 ${quote.quoteNumber}\n\n아래 링크에서 견적서를 확인해 주세요.\n${url}\n\n감사합니다.`
+    setActionBusy(true)
+    void (async () => {
       try {
+        let url = shareUrl
+        if (!url) {
+          const res = await ensureQuoteShareLinkAction(quote.id)
+          if (!res.ok) {
+            toast.error(res.error)
+            setShareError(res.error)
+            return
+          }
+          url = res.url
+          setShareUrl(url)
+        }
+        const text = `[Bill-IO] 견적 안내\n${quote.title}\n견적번호 ${quote.quoteNumber}\n\n아래 링크에서 견적서를 확인해 주세요.\n${url}\n\n감사합니다.`
         await navigator.clipboard.writeText(text)
         const logRes = await logQuoteKakaoTemplateCopiedAction(quote.id)
         if (!logRes.ok) {
@@ -156,9 +234,13 @@ export function QuoteSendDialog({
         toast.success("카카오톡에 붙여넣기 좋은 문구를 복사했습니다.")
       } catch {
         toast.error("클립보드 복사에 실패했습니다.")
+      } finally {
+        setActionBusy(false)
       }
-    })
+    })()
   }
+
+  const busy = shareLoading || actionBusy
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -184,19 +266,13 @@ export function QuoteSendDialog({
                 size="sm"
                 variant="outline"
                 className="gap-1.5"
-                disabled={isPending}
+                disabled={busy}
                 onClick={copyShareLink}
               >
                 <Link2 className="size-3.5" />
                 공유 링크 복사
               </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="gap-1.5"
-                onClick={openPdfPrint}
-              >
+              <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={openPdfPrint}>
                 <ExternalLink className="size-3.5" />
                 인쇄·PDF
               </Button>
@@ -205,7 +281,7 @@ export function QuoteSendDialog({
                 size="sm"
                 variant="outline"
                 className="gap-1.5"
-                disabled={isPending}
+                disabled={busy}
                 onClick={copyKakaoMessage}
               >
                 <MessageCircle className="size-3.5" />
@@ -213,16 +289,32 @@ export function QuoteSendDialog({
               </Button>
             </div>
 
-            {shareUrl ? (
+            {shareLoading ? (
+              <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="size-3.5 animate-spin shrink-0" aria-hidden />
+                공유 링크를 준비하는 중…
+              </p>
+            ) : shareError ? (
+              <div className="space-y-2 rounded-md border border-destructive/25 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                <p className="font-medium">링크를 만들 수 없습니다</p>
+                <p className="whitespace-pre-wrap leading-relaxed">{shareError}</p>
+                <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5" onClick={retryShareLink}>
+                  <RefreshCw className="size-3.5" />
+                  다시 시도
+                </Button>
+              </div>
+            ) : shareUrl ? (
               <p className="break-all rounded border border-dashed border-border/70 bg-background px-2 py-1.5 font-mono text-[11px] text-muted-foreground">
                 {shareUrl}
               </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">공유 링크를 준비하는 중…</p>
-            )}
+            ) : null}
 
             <div className="space-y-2 border-t border-border/50 pt-3">
               <p className="text-xs font-semibold text-foreground">이메일 보내기</p>
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                발신 주소는 설정에 등록한 이메일을 사용합니다. 도메인 인증이 필요하면 Vercel에{" "}
+                <code className="rounded bg-muted px-1">RESEND_FROM</code>을 추가하세요.
+              </p>
               <div className="space-y-1.5">
                 <label className="text-[11px] font-medium text-muted-foreground">받는 사람</label>
                 <Input className="h-9" value={to} onChange={(e) => setTo(e.target.value)} type="email" />
@@ -265,10 +357,10 @@ export function QuoteSendDialog({
           <Button
             type="button"
             className="gap-1.5"
-            disabled={isPending || !quote || !to.trim()}
+            disabled={busy || !quote || !to.trim()}
             onClick={handleSendEmail}
           >
-            {isPending ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
+            {actionBusy ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
             이메일 발송
           </Button>
         </DialogFooter>
