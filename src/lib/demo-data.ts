@@ -31,6 +31,8 @@ export const demoBusinessSettings: BusinessSettings = {
   bankAccount: "국민은행 123456-78-901234 김민준",
   reminderMessage:
     "안녕하세요. 이전에 전달드린 청구 건의 입금 일정을 확인 부탁드립니다.",
+  sealEnabled: false,
+  sealImageUrl: undefined,
 }
 
 export const demoCustomers: Customer[] = [
@@ -133,6 +135,7 @@ export const demoQuotes: Quote[] = [
     sentAt: "2026-04-01T12:00:00+09:00",
     validUntil: "2026-04-08",
     createdAt: "2026-04-01T11:40:00+09:00",
+    publicShareToken: "shr_demo_quote_2026_01",
   },
   {
     id: "quote-2",
@@ -148,6 +151,7 @@ export const demoQuotes: Quote[] = [
     total: 550000,
     validUntil: "2026-04-10",
     createdAt: "2026-04-02T08:30:00+09:00",
+    publicShareToken: "shr_demo_quote_2026_02",
   },
 ]
 

@@ -83,6 +83,8 @@ export interface Quote {
   validUntil?: string
   createdAt: string
   updatedAt?: string
+  /** 고객 공유 링크용 비밀 토큰(등록 시) */
+  publicShareToken?: string
 }
 
 export interface Invoice {
@@ -143,6 +145,10 @@ export interface BusinessSettings {
   paymentTerms: string
   bankAccount: string
   reminderMessage: string
+  /** 직인 이미지(https 또는 PNG data URL) */
+  sealImageUrl?: string
+  /** 견적서에 직인 표시 */
+  sealEnabled: boolean
 }
 
 export type ActivityKind =

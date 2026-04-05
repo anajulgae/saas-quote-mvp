@@ -23,12 +23,15 @@ import {
   createQuoteAction,
   deleteQuoteAction,
   duplicateQuoteAction,
+  ensureQuoteShareLinkAction,
+  logQuoteShareLinkCopiedAction,
   updateQuoteAction,
   updateQuoteStatusAction,
 } from "@/app/actions"
 import { EmptyState } from "@/components/app/empty-state"
 import { PageHeader } from "@/components/app/page-header"
 import { QuoteDraftAssistant } from "@/components/app/quote-draft-assistant"
+import { QuoteSendDialog } from "@/components/app/quote-send-dialog"
 import { PaymentStatusBadge, QuoteStatusBadge } from "@/components/app/status-badge"
 import { resolveActivityHeadline } from "@/lib/activity-presentation"
 import { OpsDetailSheet } from "@/components/operations/ops-detail-sheet"
@@ -259,6 +262,7 @@ function QuotesBoardPanel({
   } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<QuoteWithItems | null>(null)
   const [drawerQuoteId, setDrawerQuoteId] = useState<string | null>(null)
+  const [sendQuoteTarget, setSendQuoteTarget] = useState<QuoteWithItems | null>(null)
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false)
   const [quickInquiryId, setQuickInquiryId] = useState(inquiries[0]?.id ?? "")
   const [form, setForm] = useState<QuoteFormState>(() =>
@@ -573,21 +577,25 @@ function QuotesBoardPanel({
     })
   }
 
-  const copyQuotePrintLink = async (quoteId: string) => {
-    const url = `${window.location.origin}/quotes/${quoteId}/print`
-    try {
-      await navigator.clipboard.writeText(url)
-      toast.success("견적서 링크를 복사했습니다. 로그인한 수신자에게 전달하세요.")
-    } catch {
-      toast.error("클립보드 복사에 실패했습니다.")
-    }
-  }
-
-  const openSendPrep = (quoteId: string) => {
-    toast.message("발송 준비", {
-      description: "견적서를 PDF로 저장한 뒤 이메일·메신저 등으로 보내 보세요.",
+  const copyCustomerShareLink = (quoteId: string) => {
+    startTransition(async () => {
+      const res = await ensureQuoteShareLinkAction(quoteId)
+      if (!res.ok) {
+        toast.error(res.error)
+        return
+      }
+      try {
+        await navigator.clipboard.writeText(res.url)
+        const logRes = await logQuoteShareLinkCopiedAction(quoteId)
+        if (!logRes.ok) {
+          toast.error(logRes.error)
+          return
+        }
+        toast.success("고객 공유 링크를 복사했습니다. 로그인 없이 견적서를 열 수 있습니다.")
+      } catch {
+        toast.error("클립보드 복사에 실패했습니다.")
+      }
     })
-    window.open(`/quotes/${quoteId}/print`, "_blank", "noopener,noreferrer")
   }
 
   const runDuplicateQuote = (quote: QuoteWithItems) => {
@@ -1724,13 +1732,13 @@ function QuotesBoardPanel({
                               <Download className="size-4" />
                               견적서·PDF
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2" onClick={() => copyQuotePrintLink(quote.id)}>
+                            <DropdownMenuItem className="gap-2" onClick={() => copyCustomerShareLink(quote.id)}>
                               <Link2 className="size-4" />
-                              링크 복사
+                              공유 링크 복사
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2" onClick={() => openSendPrep(quote.id)}>
+                            <DropdownMenuItem className="gap-2" onClick={() => setSendQuoteTarget(quote)}>
                               <Send className="size-4" />
-                              발송 준비
+                              보내기
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -1820,11 +1828,11 @@ function QuotesBoardPanel({
               >
                 견적서
               </Button>
-              <Button size="sm" variant="outline" onClick={() => copyQuotePrintLink(drawerQuote.id)}>
-                링크 복사
+              <Button size="sm" variant="outline" onClick={() => copyCustomerShareLink(drawerQuote.id)}>
+                공유 링크
               </Button>
-              <Button size="sm" onClick={() => openSendPrep(drawerQuote.id)}>
-                발송 준비
+              <Button size="sm" onClick={() => setSendQuoteTarget(drawerQuote)}>
+                보내기
               </Button>
               <Link
                 href="/invoices"
@@ -2129,6 +2137,18 @@ function QuotesBoardPanel({
           </div>
         </DialogContent>
       </Dialog>
+
+      <QuoteSendDialog
+        quote={sendQuoteTarget}
+        open={sendQuoteTarget !== null}
+        onOpenChange={(next) => {
+          if (!next) {
+            setSendQuoteTarget(null)
+          }
+        }}
+        emailBodyTemplate={defaultQuoteSummary}
+        onAfterSend={() => router.refresh()}
+      />
     </>
   )
 }

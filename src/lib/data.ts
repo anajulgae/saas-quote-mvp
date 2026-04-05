@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto"
+
 import { resolveActivityHeadline, resolveActivityKind } from "@/lib/activity-presentation"
 import {
   demoActivityLogs,
@@ -127,6 +129,7 @@ function mapQuote(row: QuoteRow): Quote {
     validUntil: row.valid_until ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    publicShareToken: row.public_share_token ?? undefined,
   }
 }
 
@@ -184,6 +187,8 @@ function mapBusinessSettings(row: BusinessSettingsRow): BusinessSettings {
     paymentTerms: row.payment_terms ?? "",
     bankAccount: row.bank_account ?? "",
     reminderMessage: row.reminder_message ?? "",
+    sealImageUrl: row.seal_image_url ?? undefined,
+    sealEnabled: Boolean(row.seal_enabled),
   }
 }
 
@@ -939,6 +944,8 @@ export async function getQuotePrintPageData(quoteId: string): Promise<{
     phone: string
     paymentTerms: string
     bankAccount: string
+    sealImageUrl?: string
+    sealEnabled: boolean
   }
 } | null> {
   const context = await getDataContext()
@@ -963,6 +970,8 @@ export async function getQuotePrintPageData(quoteId: string): Promise<{
         phone: demoBusinessSettings.phone,
         paymentTerms: demoBusinessSettings.paymentTerms,
         bankAccount: demoBusinessSettings.bankAccount,
+        sealImageUrl: demoBusinessSettings.sealImageUrl,
+        sealEnabled: demoBusinessSettings.sealEnabled,
       },
     }
   }
@@ -1021,8 +1030,194 @@ export async function getQuotePrintPageData(quoteId: string): Promise<{
       phone: settings?.phone ?? "",
       paymentTerms: settings?.paymentTerms ?? "",
       bankAccount: settings?.bankAccount ?? "",
+      sealImageUrl: settings?.sealImageUrl,
+      sealEnabled: settings?.sealEnabled ?? false,
     },
   }
+}
+
+/** 견적 소유자 기준 공유 토큰 보장 (없으면 발급) */
+export async function ensureQuoteShareTokenForQuote(quoteId: string): Promise<{ token: string }> {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    const quote = demoQuotes.find((q) => q.id === quoteId)
+    if (!quote?.publicShareToken) {
+      throw new Error("데모 견적에 공유 토큰이 없습니다.")
+    }
+    return { token: quote.publicShareToken }
+  }
+
+  const { data: row, error } = await context.supabase
+    .from("quotes")
+    .select("public_share_token, user_id")
+    .eq("id", quoteId)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  const quoteRow = row as { public_share_token: string | null; user_id: string } | null
+  if (!quoteRow || quoteRow.user_id !== context.userId) {
+    throw new Error("QUOTE_NOT_FOUND")
+  }
+
+  if (quoteRow.public_share_token) {
+    return { token: quoteRow.public_share_token }
+  }
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const token = randomBytes(18).toString("base64url")
+    const { error: upError } = await context.supabase
+      .from("quotes")
+      .update({ public_share_token: token })
+      .eq("id", quoteId)
+      .eq("user_id", context.userId)
+
+    if (!upError) {
+      await createActivityLog({
+        action: "quote.share_token_issued",
+        description: "고객용 견적 공유 링크가 발급되었습니다.",
+        quoteId,
+      })
+      return { token }
+    }
+
+    if ((upError as { code?: string }).code === "23505") {
+      continue
+    }
+    throw upError
+  }
+
+  throw new Error("공유 링크를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.")
+}
+
+export async function updateBusinessSealSettingsRecord(input: {
+  sealImageUrl: string | null
+  sealEnabled: boolean
+}) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return { mode: "demo" as const }
+  }
+
+  const { error } = await context.supabase
+    .from("business_settings")
+    .update({
+      seal_image_url: input.sealImageUrl,
+      seal_enabled: input.sealEnabled,
+    })
+    .eq("user_id", context.userId)
+
+  if (error) {
+    throw error
+  }
+
+  await createActivityLog({
+    action: "settings.seal_updated",
+    description: input.sealImageUrl
+      ? "견적서에 사용할 직인을 저장했습니다."
+      : "견적서 직인 이미지를 삭제했습니다.",
+    metadata: {
+      seal_enabled: input.sealEnabled,
+    },
+  })
+
+  return { mode: "supabase" as const }
+}
+
+/** 이메일 발송 모달용 */
+export async function getQuoteOutboundSnapshot(quoteId: string): Promise<{
+  status: Quote["status"]
+  quoteNumber: string
+  title: string
+  customerId: string
+  customerEmail: string
+} | null> {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    const quote = demoQuotes.find((q) => q.id === quoteId)
+    if (!quote) {
+      return null
+    }
+    const customer = demoCustomers.find((c) => c.id === quote.customerId)
+    return {
+      status: quote.status,
+      quoteNumber: quote.quoteNumber,
+      title: quote.title,
+      customerId: quote.customerId,
+      customerEmail: customer?.email?.trim() ?? "",
+    }
+  }
+
+  const { data: quoteRow, error: qErr } = await context.supabase
+    .from("quotes")
+    .select("id, user_id, status, quote_number, title, customer_id")
+    .eq("id", quoteId)
+    .maybeSingle()
+
+  if (qErr) {
+    throw qErr
+  }
+
+  const q = quoteRow as
+    | {
+        id: string
+        user_id: string
+        status: Quote["status"]
+        quote_number: string
+        title: string
+        customer_id: string
+      }
+    | null
+
+  if (!q || q.user_id !== context.userId) {
+    return null
+  }
+
+  const { data: custRow, error: cErr } = await context.supabase
+    .from("customers")
+    .select("email")
+    .eq("id", q.customer_id)
+    .maybeSingle()
+
+  if (cErr) {
+    throw cErr
+  }
+
+  const email = (custRow as { email: string | null } | null)?.email?.trim() ?? ""
+
+  return {
+    status: q.status,
+    quoteNumber: q.quote_number,
+    title: q.title,
+    customerId: q.customer_id,
+    customerEmail: email,
+  }
+}
+
+/** 견적 메일 Reply-To 등에 사용 */
+export async function getBusinessContactEmail(): Promise<string> {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return demoBusinessSettings.email?.trim() ?? ""
+  }
+
+  const { data, error } = await context.supabase
+    .from("business_settings")
+    .select("email")
+    .eq("user_id", context.userId)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  return ((data as { email: string | null } | null)?.email ?? "").trim()
 }
 
 export async function createInvoiceRecord(input: InvoiceFormInput) {
@@ -2088,6 +2283,7 @@ export async function getSettingsPageData(): Promise<{
         paymentTerms: "",
         bankAccount: "",
         reminderMessage: "",
+        sealEnabled: false,
       }
 
   const templates = ((templateRows ?? []) as TemplateRow[]).map(mapTemplate)

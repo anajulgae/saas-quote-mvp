@@ -8,6 +8,7 @@ import { z } from "zod"
 import {
   createSupabaseServerClient,
   ensureUserProfile,
+  getAppSession,
   getDemoCredentials,
   getDemoSessionCookieName,
   isSupabaseConfigured,
@@ -26,14 +27,19 @@ import {
   createReminderRecord,
   deleteQuoteRecord,
   duplicateQuoteRecord,
+  ensureQuoteShareTokenForQuote,
+  getBusinessContactEmail,
+  getQuoteOutboundSnapshot,
   saveBusinessSettingsRecord,
   saveTemplatesRecord,
+  updateBusinessSealSettingsRecord,
   updateInquiryRecord,
   updateInvoicePaymentStatusRecord,
   updateInvoiceRecord,
   updateQuoteRecord,
   updateQuoteStatusRecord,
 } from "@/lib/data"
+import { sendHtmlEmailViaResend } from "@/lib/send-resend"
 import type {
   InquiryStage,
   InvoiceFormInput,
@@ -994,4 +1000,178 @@ export async function saveSettingsAction(input: {
     return biz
   }
   return saveTemplatesSettingsAction({ templates: input.templates })
+}
+
+function escapeHtmlForEmail(text: string) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+}
+
+const sendQuoteEmailInputSchema = z.object({
+  quoteId: z.string().trim().min(1),
+  to: z.string().trim().email("받는 사람 이메일을 확인해 주세요."),
+  subject: z.string().trim().min(1, "제목을 입력해 주세요."),
+  body: z.string().trim().min(1, "본문을 입력해 주세요."),
+  includePublicLink: z.boolean(),
+  markAsSent: z.boolean(),
+})
+
+export async function ensureQuoteShareLinkAction(quoteId: string) {
+  try {
+    const id = z.string().trim().min(1).parse(quoteId)
+    const { token } = await ensureQuoteShareTokenForQuote(id)
+    const url = `${getSiteOrigin()}/quote-view/${encodeURIComponent(token)}`
+    revalidatePath("/quotes")
+    return { ok: true as const, url, token }
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "공유 링크를 만들지 못했습니다."),
+    }
+  }
+}
+
+export async function logQuoteShareLinkCopiedAction(quoteId: string) {
+  try {
+    const id = z.string().trim().min(1).parse(quoteId)
+    const snap = await getQuoteOutboundSnapshot(id)
+    if (!snap) {
+      return { ok: false as const, error: "견적을 찾을 수 없습니다." }
+    }
+    await createActivityLog({
+      action: "quote.share_link_copied",
+      description: `「${snap.title}」(${snap.quoteNumber}) 고객 공유 링크를 복사했습니다.`,
+      quoteId: id,
+      customerId: snap.customerId,
+    })
+    return { ok: true as const }
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "활동 기록에 실패했습니다."),
+    }
+  }
+}
+
+export async function logQuoteKakaoTemplateCopiedAction(quoteId: string) {
+  try {
+    const id = z.string().trim().min(1).parse(quoteId)
+    const snap = await getQuoteOutboundSnapshot(id)
+    if (!snap) {
+      return { ok: false as const, error: "견적을 찾을 수 없습니다." }
+    }
+    await createActivityLog({
+      action: "quote.kakao_share_prepared",
+      description: `「${snap.title}」(${snap.quoteNumber}) 카카오톡용 안내 문구를 복사했습니다.`,
+      quoteId: id,
+      customerId: snap.customerId,
+    })
+    return { ok: true as const }
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "활동 기록에 실패했습니다."),
+    }
+  }
+}
+
+const sealSettingsSchema = z.object({
+  sealImageUrl: z.string().nullable(),
+  sealEnabled: z.boolean(),
+})
+
+export async function saveSealSettingsAction(input: z.infer<typeof sealSettingsSchema>) {
+  try {
+    const parsed = sealSettingsSchema.parse(input)
+
+    if (parsed.sealImageUrl && parsed.sealImageUrl.length > 520_000) {
+      return {
+        ok: false as const,
+        error: "직인 이미지 데이터가 너무 큽니다. PNG로 저장하거나 크기를 줄여 주세요.",
+      }
+    }
+
+    await updateBusinessSealSettingsRecord({
+      sealImageUrl: parsed.sealImageUrl,
+      sealEnabled: parsed.sealEnabled,
+    })
+    revalidatePath("/settings")
+    revalidatePath("/quotes")
+
+    return { ok: true as const }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { ok: false as const, error: error.issues[0]?.message ?? "입력값을 확인해 주세요." }
+    }
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "직인 설정을 저장하지 못했습니다."),
+    }
+  }
+}
+
+export async function sendQuoteEmailAction(input: z.infer<typeof sendQuoteEmailInputSchema>) {
+  try {
+    const parsed = sendQuoteEmailInputSchema.parse(input)
+    const snap = await getQuoteOutboundSnapshot(parsed.quoteId)
+    if (!snap) {
+      return { ok: false as const, error: "견적을 찾을 수 없습니다." }
+    }
+
+    const { token } = await ensureQuoteShareTokenForQuote(parsed.quoteId)
+    const shareUrl = `${getSiteOrigin()}/quote-view/${encodeURIComponent(token)}`
+
+    let bodyText = parsed.body
+    if (parsed.includePublicLink) {
+      bodyText += `\n\n견적서 보기 (링크):\n${shareUrl}`
+    }
+
+    const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.6;color:#111">${escapeHtmlForEmail(bodyText).replace(/\n/g, "<br/>")}</div>`
+
+    const session = await getAppSession()
+    if (session?.mode === "demo") {
+      revalidatePath("/quotes")
+      return { ok: true as const, demo: true as const }
+    }
+    if (!session) {
+      return { ok: false as const, error: "로그인이 필요합니다." }
+    }
+
+    const replyTo = await getBusinessContactEmail()
+
+    await sendHtmlEmailViaResend({
+      to: parsed.to,
+      subject: parsed.subject,
+      html,
+      replyTo: replyTo || undefined,
+    })
+
+    await createActivityLog({
+      action: "quote.email_sent",
+      description: `「${snap.title}」(${snap.quoteNumber}) 견적서를 이메일로 보냈습니다. (${parsed.to})`,
+      quoteId: parsed.quoteId,
+      customerId: snap.customerId,
+      metadata: {
+        include_public_link: parsed.includePublicLink ? "yes" : "no",
+      },
+    })
+
+    if (parsed.markAsSent && snap.status === "draft") {
+      await updateQuoteStatusRecord(parsed.quoteId, "sent")
+    }
+
+    revalidatePath("/quotes")
+    return { ok: true as const }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { ok: false as const, error: error.issues[0]?.message ?? "입력값을 확인해 주세요." }
+    }
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "이메일을 보내지 못했습니다."),
+    }
+  }
 }

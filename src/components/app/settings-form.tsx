@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, Save } from "lucide-react"
 import { toast } from "sonner"
 
-import { saveBusinessSettingsOnlyAction, saveTemplatesSettingsAction } from "@/app/actions"
+import { saveBusinessSettingsOnlyAction, saveSealSettingsAction, saveTemplatesSettingsAction } from "@/app/actions"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -83,12 +83,21 @@ export function SettingsForm({
   const router = useRouter()
   const [isBizPending, startBizTransition] = useTransition()
   const [isTplPending, startTplTransition] = useTransition()
+  const [isSealPending, startSealTransition] = useTransition()
   const [settings, setSettings] = useState(initialSettings)
+  const [sealUrl, setSealUrl] = useState<string | null>(initialSettings.sealImageUrl ?? null)
+  const [sealEnabled, setSealEnabled] = useState(initialSettings.sealEnabled)
   const [templateState, setTemplateState] = useState<Template[]>(
     templates.length ? templates : defaultTemplates(initialSettings.userId)
   )
   const [errorBusiness, setErrorBusiness] = useState("")
   const [errorTemplates, setErrorTemplates] = useState("")
+  const [errorSeal, setErrorSeal] = useState("")
+
+  useEffect(() => {
+    setSealUrl(initialSettings.sealImageUrl ?? null)
+    setSealEnabled(initialSettings.sealEnabled)
+  }, [initialSettings.sealImageUrl, initialSettings.sealEnabled])
 
   const saveBusiness = () => {
     setErrorBusiness("")
@@ -138,6 +147,38 @@ export function SettingsForm({
       toast.success("기본 템플릿이 저장되었습니다.")
       router.refresh()
     })
+  }
+
+  const saveSeal = () => {
+    setErrorSeal("")
+    startSealTransition(async () => {
+      const result = await saveSealSettingsAction({
+        sealImageUrl: sealUrl,
+        sealEnabled,
+      })
+      if (!result.ok) {
+        setErrorSeal(result.error)
+        toast.error(result.error)
+        return
+      }
+      toast.success("직인 설정을 저장했습니다.")
+      router.refresh()
+    })
+  }
+
+  const onSealFile = (file: File | null) => {
+    if (!file) {
+      return
+    }
+    if (file.size > 400 * 1024) {
+      toast.error("파일 크기는 400KB 이하를 권장합니다. PNG로 줄여 주세요.")
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      setSealUrl(typeof reader.result === "string" ? reader.result : null)
+    }
+    reader.readAsDataURL(file)
   }
 
   return (
@@ -233,6 +274,70 @@ export function SettingsForm({
                 />
               </div>
             </div>
+          </SettingsSection>
+
+          <SettingsSection title="직인·서명" badge={<SectionBadge>견적서·PDF</SectionBadge>}>
+            <FieldHint>
+              PNG·투명 배경을 권장합니다. 견적서 하단 발신 블록에 표시되며, 인쇄·PDF·고객 공유 페이지에 동일하게 반영됩니다.
+            </FieldHint>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+              <div className="flex min-h-[88px] min-w-[88px] items-center justify-center rounded-lg border border-dashed border-border/80 bg-muted/20 p-2">
+                {sealUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={sealUrl} alt="직인 미리보기" className="max-h-20 max-w-[7rem] object-contain" />
+                ) : (
+                  <span className="px-2 text-center text-[11px] text-muted-foreground">미등록</span>
+                )}
+              </div>
+              <div className="flex flex-1 flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <label className="inline-flex h-9 cursor-pointer items-center rounded-md border border-border/70 bg-background px-3 text-xs font-medium hover:bg-muted/40">
+                    이미지 선택
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="sr-only"
+                      onChange={(e) => onSealFile(e.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9"
+                    disabled={!sealUrl}
+                    onClick={() => setSealUrl(null)}
+                  >
+                    삭제
+                  </Button>
+                </div>
+                <label className="flex cursor-pointer items-center gap-2 text-xs">
+                  <input
+                    type="checkbox"
+                    className="size-3.5 rounded border-border"
+                    checked={sealEnabled}
+                    onChange={(e) => setSealEnabled(e.target.checked)}
+                    disabled={!sealUrl}
+                  />
+                  견적서에 직인 표시
+                </label>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-9 w-fit gap-2"
+                  disabled={isSealPending}
+                  onClick={saveSeal}
+                >
+                  {isSealPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+                  직인 설정 저장
+                </Button>
+              </div>
+            </div>
+            {errorSeal ? (
+              <p className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                {errorSeal}
+              </p>
+            ) : null}
           </SettingsSection>
 
           <SettingsSection

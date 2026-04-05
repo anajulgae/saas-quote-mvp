@@ -598,11 +598,19 @@ export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) 
                   <p className="font-medium text-foreground">문의</p>
                   {drawerCustomer.recentSnapshot?.inquiry ? (
                     <p className="mt-0.5 text-muted-foreground">
-                      {drawerCustomer.recentSnapshot.inquiry.title} ·{" "}
-                      {inquiryStageOptions.find(
-                        (o) => o.value === drawerCustomer.recentSnapshot.inquiry.stage
-                      )?.label ?? drawerCustomer.recentSnapshot.inquiry.stage}{" "}
-                      · {formatDate(drawerCustomer.recentSnapshot.inquiry.createdAt)}
+                      {(() => {
+                        const inv = drawerCustomer.recentSnapshot?.inquiry
+                        if (!inv) {
+                          return null
+                        }
+                        return (
+                          <>
+                            {inv.title} ·{" "}
+                            {inquiryStageOptions.find((o) => o.value === inv.stage)?.label ?? inv.stage} ·{" "}
+                            {formatDate(inv.createdAt)}
+                          </>
+                        )
+                      })()}
                     </p>
                   ) : (
                     <p className="mt-0.5 text-muted-foreground">최근 문의 없음</p>

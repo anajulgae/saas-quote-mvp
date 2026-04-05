@@ -13,6 +13,10 @@ const headlineByAction: Record<string, string> = {
   "quote.duplicated": "견적 복제",
   "quote.deleted": "견적 삭제",
   "quote.sent": "견적 발송",
+  "quote.email_sent": "견적 이메일",
+  "quote.share_link_copied": "공유 링크 복사",
+  "quote.share_token_issued": "공유 링크 발급",
+  "quote.kakao_share_prepared": "카카오 공유 문구",
   "invoice.created": "청구 생성",
   "invoice.updated": "청구 수정",
   "invoice.status_changed": "결제 상태 변경",
@@ -22,6 +26,7 @@ const headlineByAction: Record<string, string> = {
   "reminder.created": "리마인드 기록",
   "invoice.deposit_paid": "선금 입금",
   "settings.saved": "설정 저장",
+  "settings.seal_updated": "직인 설정",
 }
 
 export function resolveActivityKind(action: string): ActivityKind {

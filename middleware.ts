@@ -46,7 +46,8 @@ export function middleware(request: NextRequest) {
     return stripStaleDemoCookie(request, NextResponse.next())
   }
 
-  const isPublic = PUBLIC_PATHS.some((path) => pathname.startsWith(path))
+  const isPublic =
+    PUBLIC_PATHS.some((path) => pathname.startsWith(path)) || pathname.startsWith("/quote-view")
   const isAuthenticated = hasSessionCookie(request)
 
   if (pathname === "/") {

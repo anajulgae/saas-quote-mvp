@@ -47,6 +47,8 @@ export interface Database {
           payment_terms: string | null
           bank_account: string | null
           reminder_message: string | null
+          seal_image_url: string | null
+          seal_enabled: boolean
           created_at: string
           updated_at: string
         }
@@ -61,6 +63,8 @@ export interface Database {
           payment_terms?: string | null
           bank_account?: string | null
           reminder_message?: string | null
+          seal_image_url?: string | null
+          seal_enabled?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -75,6 +79,8 @@ export interface Database {
           payment_terms?: string | null
           bank_account?: string | null
           reminder_message?: string | null
+          seal_image_url?: string | null
+          seal_enabled?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -182,6 +188,7 @@ export interface Database {
           total: number
           sent_at: string | null
           valid_until: string | null
+          public_share_token: string | null
           created_at: string
           updated_at: string
         }
@@ -199,6 +206,7 @@ export interface Database {
           total?: number
           sent_at?: string | null
           valid_until?: string | null
+          public_share_token?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -216,6 +224,7 @@ export interface Database {
           total?: number
           sent_at?: string | null
           valid_until?: string | null
+          public_share_token?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -406,7 +415,12 @@ export interface Database {
       }
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      get_quote_share_payload: {
+        Args: { p_token: string }
+        Returns: Json
+      }
+    }
     Enums: {
       inquiry_stage: "new" | "qualified" | "quoted" | "won" | "lost"
       quote_status: "draft" | "sent" | "approved" | "rejected" | "expired"

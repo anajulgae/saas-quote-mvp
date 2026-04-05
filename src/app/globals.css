@@ -149,3 +149,40 @@
       0 4px 12px -4px rgb(15 23 42 / 0.07);
   }
 }
+
+/* 견적서 인쇄 / PDF 저장 */
+@media print {
+  @page {
+    margin: 12mm;
+    size: A4;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #171717 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .quote-document-print-root {
+    min-height: auto !important;
+  }
+
+  .quote-document table {
+    break-inside: auto;
+  }
+
+  .quote-document thead {
+    display: table-header-group;
+  }
+
+  .quote-document tr {
+    break-inside: avoid;
+    break-after: auto;
+  }
+
+  .quote-document img {
+    max-width: 100% !important;
+  }
+}
