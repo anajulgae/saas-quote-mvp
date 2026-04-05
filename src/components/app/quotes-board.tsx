@@ -14,6 +14,7 @@ import {
   Pencil,
   Plus,
   Send,
+  Sparkles,
   Trash2,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -30,7 +31,7 @@ import {
 } from "@/app/actions"
 import { EmptyState } from "@/components/app/empty-state"
 import { PageHeader } from "@/components/app/page-header"
-import { QuoteDraftAssistant } from "@/components/app/quote-draft-assistant"
+import { QuoteDraftAssistantForm } from "@/components/app/quote-draft-assistant"
 import { QuoteSendDialog } from "@/components/app/quote-send-dialog"
 import { PaymentStatusBadge, QuoteStatusBadge } from "@/components/app/status-badge"
 import { resolveActivityHeadline } from "@/lib/activity-presentation"
@@ -262,6 +263,7 @@ function QuotesBoardPanel({
   } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<QuoteWithItems | null>(null)
   const [drawerQuoteId, setDrawerQuoteId] = useState<string | null>(null)
+  const [draftAssistantOpen, setDraftAssistantOpen] = useState(false)
   const [sendQuoteTarget, setSendQuoteTarget] = useState<QuoteWithItems | null>(null)
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false)
   const [quickInquiryId, setQuickInquiryId] = useState(inquiries[0]?.id ?? "")
@@ -510,7 +512,13 @@ function QuotesBoardPanel({
     return invoicesByQuoteId[drawerQuoteId] ?? []
   }, [drawerQuoteId, invoicesByQuoteId])
 
+  const openQuoteDetail = (quoteId: string) => {
+    setDraftAssistantOpen(false)
+    setDrawerQuoteId(quoteId)
+  }
+
   const openEdit = (quote: QuoteWithItems) => {
+    setDraftAssistantOpen(false)
     setDrawerQuoteId(null)
     setEditingQuoteId(quote.id)
     setErrorMessage("")
@@ -518,6 +526,7 @@ function QuotesBoardPanel({
   }
 
   const openCreateFresh = () => {
+    setDraftAssistantOpen(false)
     setEditingQuoteId(null)
     setErrorMessage("")
     setForm(createEmptyForm(customers, defaultQuoteSummary))
@@ -529,6 +538,7 @@ function QuotesBoardPanel({
     if (!inv) {
       return
     }
+    setDraftAssistantOpen(false)
     setEditingQuoteId(null)
     setErrorMessage("")
     setForm({
@@ -1339,13 +1349,33 @@ function QuotesBoardPanel({
         </DialogContent>
       </Dialog>
 
-      <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr] xl:items-start">
-        <div className="min-w-0 space-y-3 md:space-y-4">
-      {hasQuotes ? (
-        <div className="rounded-lg border border-border/60 bg-muted/15 px-3 py-2.5 text-xs text-muted-foreground">
-          검색·필터로 견적을 빠르게 찾고, 행을 눌러 우측 상세에서 수정·복제·견적서·연결 청구·활동 기록을 확인할 수 있습니다.
+      <div className="min-w-0 space-y-3 md:space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          {hasQuotes ? (
+            <div className="min-w-0 max-w-full flex-1 rounded-lg border border-border/60 bg-muted/15 px-3 py-2.5 text-xs text-muted-foreground">
+              검색·필터로 견적을 빠르게 찾고, 행을 눌러 우측 상세에서 수정·복제·견적서·유효기한·발송일·연결 청구·활동 기록을
+              확인할 수 있습니다.
+            </div>
+          ) : null}
+          <Button
+            type="button"
+            variant={draftAssistantOpen ? "secondary" : "outline"}
+            size="sm"
+            className="h-9 shrink-0 gap-1.5"
+            aria-pressed={draftAssistantOpen}
+            onClick={() => {
+              if (draftAssistantOpen) {
+                setDraftAssistantOpen(false)
+              } else {
+                setDrawerQuoteId(null)
+                setDraftAssistantOpen(true)
+              }
+            }}
+          >
+            <Sparkles className="size-3.5" aria-hidden />
+            견적 초안 도우미
+          </Button>
         </div>
-      ) : null}
 
       {hasQuotes ? (
         <OpsToolbar className="space-y-3">
@@ -1621,18 +1651,16 @@ function QuotesBoardPanel({
       {processedQuotes.length > 0 ? (
         <>
           <OpsTableShell className="hidden md:block">
-            <table className={cn(opsTableClass, "min-w-[1000px]")}>
+            <table className={cn(opsTableClass, "!min-w-0 w-full max-w-full table-fixed")}>
               <thead>
                 <tr className={opsTableHeadRowClass}>
-                  <th className={opsTableHeadCellClass}>번호</th>
-                  <th className={opsTableHeadCellClass}>제목</th>
-                  <th className={opsTableHeadCellClass}>고객</th>
-                  <th className={opsTableHeadCellClass}>상태</th>
-                  <th className={cn(opsTableHeadCellClass, "text-right")}>총액</th>
-                  <th className={opsTableHeadCellClass}>작성일</th>
-                  <th className={opsTableHeadCellClass}>유효기한</th>
-                  <th className={opsTableHeadCellClass}>발송일</th>
-                  <th className={cn(opsTableHeadCellClass, "w-12 text-right")} aria-label="작업" />
+                  <th className={cn(opsTableHeadCellClass, "w-[10rem]")}>번호</th>
+                  <th className={cn(opsTableHeadCellClass, "min-w-0")}>제목</th>
+                  <th className={cn(opsTableHeadCellClass, "w-[22%] max-w-[11rem]")}>고객</th>
+                  <th className={cn(opsTableHeadCellClass, "w-[8.5rem]")}>상태</th>
+                  <th className={cn(opsTableHeadCellClass, "w-[6.5rem] text-right")}>총액</th>
+                  <th className={cn(opsTableHeadCellClass, "w-[6.5rem]")}>작성일</th>
+                  <th className={cn(opsTableHeadCellClass, "w-11 text-right pr-3")} aria-label="작업" />
                 </tr>
               </thead>
               <tbody>
@@ -1649,13 +1677,13 @@ function QuotesBoardPanel({
                         validityHint === "due_soon" && "bg-amber-500/[0.06]"
                       )}
                       data-state={drawerQuoteId === quote.id ? "selected" : undefined}
-                      onClick={() => setDrawerQuoteId(quote.id)}
+                      onClick={() => openQuoteDetail(quote.id)}
                     >
                       <td className={cn(opsTableCellClass, "font-mono text-xs tabular-nums text-muted-foreground")}>
                         {quote.quoteNumber}
                       </td>
-                      <td className={cn(opsTableCellClass, "max-w-[240px]")}>
-                        <span className="line-clamp-2 font-medium">{quote.title}</span>
+                      <td className={cn(opsTableCellClass, "min-w-0")}>
+                        <span className="line-clamp-2 break-words font-medium">{quote.title}</span>
                         <div className="mt-1 flex flex-wrap gap-1">
                           {validityHint === "past_due" ? (
                             <Badge variant="destructive" className="text-[9px] px-1 py-0">
@@ -1669,7 +1697,7 @@ function QuotesBoardPanel({
                           ) : null}
                         </div>
                       </td>
-                      <td className={cn(opsTableCellClass, "max-w-[140px] truncate text-sm")}>
+                      <td className={cn(opsTableCellClass, "truncate text-sm")}>
                         {customerPrimaryLabel(customer)}
                       </td>
                       <td className={opsTableCellClass} onClick={(e) => e.stopPropagation()}>
@@ -1683,7 +1711,7 @@ function QuotesBoardPanel({
                             setStatusConfirm({ quote, next })
                           }}
                         >
-                          <SelectTrigger className="h-8 w-[120px] text-xs">
+                          <SelectTrigger className="h-8 w-full min-w-0 max-w-[8rem] text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1700,12 +1728,6 @@ function QuotesBoardPanel({
                       </td>
                       <td className={cn(opsTableCellClass, "whitespace-nowrap text-xs text-muted-foreground")}>
                         {formatDate(quote.createdAt)}
-                      </td>
-                      <td className={cn(opsTableCellClass, "whitespace-nowrap text-xs text-muted-foreground")}>
-                        {formatDate(quote.validUntil)}
-                      </td>
-                      <td className={cn(opsTableCellClass, "whitespace-nowrap text-xs text-muted-foreground")}>
-                        {formatDate(quote.sentAt)}
                       </td>
                       <td className={cn(opsTableCellClass, "text-right")} onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
@@ -1771,7 +1793,7 @@ function QuotesBoardPanel({
                     validityHint === "past_due" && "border-destructive/35",
                     validityHint === "due_soon" && "border-amber-500/35"
                   )}
-                  onClick={() => setDrawerQuoteId(quote.id)}
+                  onClick={() => openQuoteDetail(quote.id)}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -1781,13 +1803,19 @@ function QuotesBoardPanel({
                     </div>
                     <QuoteStatusBadge status={quote.status} />
                   </div>
-                  <p className="text-sm font-semibold tabular-nums text-primary">{formatCurrency(quote.total)}</p>
+                  <div className="flex flex-wrap items-end justify-between gap-2">
+                    <p className="text-sm font-semibold tabular-nums text-primary">{formatCurrency(quote.total)}</p>
+                    <p className="text-[11px] tabular-nums text-muted-foreground">
+                      작성 {formatDate(quote.createdAt)}
+                    </p>
+                  </div>
                 </button>
               )
             })}
           </div>
         </>
       ) : null}
+      </div>
 
       <OpsDetailSheet
         open={drawerQuote !== null}
@@ -1976,12 +2004,22 @@ function QuotesBoardPanel({
         ) : null}
       </OpsDetailSheet>
 
-        </div>
-
-        <QuoteDraftAssistant
+      <OpsDetailSheet
+        open={draftAssistantOpen}
+        onOpenChange={setDraftAssistantOpen}
+        title={
+          <span className="flex items-center gap-2 text-base leading-snug">
+            <Sparkles className="size-4 shrink-0 text-primary/80" aria-hidden />
+            견적 초안 도우미
+          </span>
+        }
+        description="범위·결제 문구·항목 뼈대를 만든 뒤 「이 초안으로 견적 작성」으로 본 화면에 반영합니다."
+      >
+        <QuoteDraftAssistantForm
           hasInquiries={hasInquiries}
           quotesEmpty={!hasQuotes}
           onApplyToNewQuote={(payload) => {
+            setDraftAssistantOpen(false)
             setEditingQuoteId(null)
             setErrorMessage("")
             setForm({
@@ -1994,7 +2032,7 @@ function QuotesBoardPanel({
             toast.success("초안을 견적 작성 화면에 반영했습니다. 단가·수량을 확인해 주세요.")
           }}
         />
-      </div>
+      </OpsDetailSheet>
 
       <Dialog
         open={editingQuoteId !== null}
