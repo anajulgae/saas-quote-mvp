@@ -15,6 +15,7 @@ export interface Database {
           full_name: string
           business_name: string | null
           phone: string | null
+          plan: string
           created_at: string
           updated_at: string
         }
@@ -23,6 +24,7 @@ export interface Database {
           full_name: string
           business_name?: string | null
           phone?: string | null
+          plan?: string
           created_at?: string
           updated_at?: string
         }
@@ -31,6 +33,7 @@ export interface Database {
           full_name?: string
           business_name?: string | null
           phone?: string | null
+          plan?: string
           created_at?: string
           updated_at?: string
         }

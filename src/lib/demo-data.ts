@@ -18,6 +18,7 @@ export const demoUser: AppUser = {
   businessName: "민준 스튜디오",
   email: "demo@flowbill.kr",
   phone: "010-2841-5532",
+  plan: "pro",
 }
 
 export const demoBusinessSettings: BusinessSettings = {

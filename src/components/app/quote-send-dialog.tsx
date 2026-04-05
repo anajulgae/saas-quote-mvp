@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ExternalLink, Link2, Loader2, Mail, MessageCircle, RefreshCw } from "lucide-react"
+import { ExternalLink, Link2, Loader2, Mail, MessageCircle, RefreshCw, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 
 import {
@@ -20,14 +20,25 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { buildKakaoQuoteShareText } from "@/lib/kakao-share"
 import type { QuoteWithItems } from "@/types/domain"
+
+type MessageTone = "polite" | "neutral" | "firm"
 
 export function QuoteSendDialog({
   quote,
   open,
   onOpenChange,
   emailBodyTemplate,
+  businessName = "",
   onAfterSend,
 }: {
   quote: QuoteWithItems | null
@@ -35,6 +46,7 @@ export function QuoteSendDialog({
   onOpenChange: (open: boolean) => void
   /** 설정의 기본 견적 템플릿 본문 — 이메일 초안 앞부분에 반영 */
   emailBodyTemplate: string
+  businessName?: string
   onAfterSend?: () => void
 }) {
   const [shareUrl, setShareUrl] = useState("")
@@ -47,6 +59,8 @@ export function QuoteSendDialog({
   const [body, setBody] = useState("")
   const [includeLink, setIncludeLink] = useState(true)
   const [markAsSent, setMarkAsSent] = useState(true)
+  const [messageTone, setMessageTone] = useState<MessageTone>("neutral")
+  const [aiBusy, setAiBusy] = useState(false)
 
   const quoteId = quote?.id
 
@@ -152,7 +166,7 @@ export function QuoteSendDialog({
           return
         }
         if ("demo" in res && res.demo) {
-          toast.success("데모 모드에서는 실제 이메일이 발송되지 않습니다.")
+          toast.success("데모 세션에서는 실제 메일이 전달되지 않으며, 발송 기록만 남습니다.")
         } else {
           toast.success("이메일을 보냈습니다.")
         }
@@ -224,7 +238,12 @@ export function QuoteSendDialog({
           url = res.url
           setShareUrl(url)
         }
-        const text = `[Bill-IO] 견적 안내\n${quote.title}\n견적번호 ${quote.quoteNumber}\n\n아래 링크에서 견적서를 확인해 주세요.\n${url}\n\n감사합니다.`
+        const text = buildKakaoQuoteShareText({
+          quoteNumber: quote.quoteNumber,
+          title: quote.title,
+          publicUrl: url,
+          businessName: businessName.trim() || undefined,
+        })
         await navigator.clipboard.writeText(text)
         const logRes = await logQuoteKakaoTemplateCopiedAction(quote.id)
         if (!logRes.ok) {
@@ -240,7 +259,58 @@ export function QuoteSendDialog({
     })()
   }
 
-  const busy = shareLoading || actionBusy
+  const composeWithAi = () => {
+    if (!quote) {
+      return
+    }
+    setAiBusy(true)
+    void (async () => {
+      try {
+        let link = shareUrl
+        if (!link) {
+          const res = await ensureQuoteShareLinkAction(quote.id)
+          if (!res.ok) {
+            toast.error(res.error)
+            return
+          }
+          link = res.url
+          setShareUrl(link)
+        }
+        const res = await fetch("/api/ai/compose-message", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            kind: "quote_send",
+            tone: messageTone,
+            context: {
+              quoteNumber: quote.quoteNumber,
+              title: quote.title,
+              customerName: quote.customer?.companyName?.trim() || quote.customer?.name || "",
+              shareUrl: link,
+              businessName: businessName.trim(),
+            },
+          }),
+        })
+        const data = (await res.json()) as { error?: string; message?: { subject?: string; body: string } }
+        if (!res.ok) {
+          toast.error(data.error ?? "문구 생성에 실패했습니다.")
+          return
+        }
+        if (data.message?.subject) {
+          setSubject(data.message.subject)
+        }
+        setBody(data.message?.body ?? "")
+        toast.success("제목·본문에 AI 초안을 넣었습니다. 확인 후 발송해 주세요.")
+      } catch {
+        toast.error("문구 생성 중 오류가 났습니다.")
+      } finally {
+        setAiBusy(false)
+      }
+    })()
+  }
+
+  const busy = shareLoading || actionBusy || aiBusy
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -315,6 +385,35 @@ export function QuoteSendDialog({
                 발신 주소는 설정에 등록한 이메일을 사용합니다. 도메인 인증이 필요하면 Vercel에{" "}
                 <code className="rounded bg-muted px-1">RESEND_FROM</code>을 추가하세요.
               </p>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <label className="text-[11px] font-medium text-muted-foreground">문체</label>
+                  <Select
+                    value={messageTone}
+                    onValueChange={(v) => setMessageTone((v as MessageTone) ?? "neutral")}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="polite">정중형</SelectItem>
+                      <SelectItem value="neutral">기본형</SelectItem>
+                      <SelectItem value="firm">단호형</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 shrink-0 gap-1.5"
+                  disabled={busy || !quote}
+                  onClick={composeWithAi}
+                >
+                  {aiBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+                  AI로 제목·본문
+                </Button>
+              </div>
               <div className="space-y-1.5">
                 <label className="text-[11px] font-medium text-muted-foreground">받는 사람</label>
                 <Input className="h-9" value={to} onChange={(e) => setTo(e.target.value)} type="email" />

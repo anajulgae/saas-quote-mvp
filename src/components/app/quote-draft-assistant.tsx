@@ -62,10 +62,13 @@ function buildStructuredDraft(serviceCategory: string, scope: string, tone: stri
 export function QuoteDraftAssistantForm({
   hasInquiries,
   quotesEmpty,
+  paymentTermsHint = "",
   onApplyToNewQuote,
 }: {
   hasInquiries: boolean
   quotesEmpty: boolean
+  /** 설정의 결제 조건 등 — AI가 참고합니다 */
+  paymentTermsHint?: string
   onApplyToNewQuote: (payload: QuoteDraftApplyPayload) => void
 }) {
   const [serviceCategory, setServiceCategory] = useState("영상 제작")
@@ -73,11 +76,27 @@ export function QuoteDraftAssistantForm({
   const [tone, setTone] = useState("전문적이고 신뢰감 있는 안내")
   const [draftExpanded, setDraftExpanded] = useState(false)
   const [regenBusy, setRegenBusy] = useState(false)
+  const [aiDraft, setAiDraft] = useState<QuoteDraftApplyPayload | null>(null)
 
-  const draft = useMemo(
+  const computedDraft = useMemo(
     () => buildStructuredDraft(serviceCategory, scope, tone),
     [scope, serviceCategory, tone]
   )
+
+  const draft = aiDraft ?? computedDraft
+
+  const bumpInput = (patch: Partial<{ serviceCategory: string; scope: string; tone: string }>) => {
+    setAiDraft(null)
+    if (patch.serviceCategory !== undefined) {
+      setServiceCategory(patch.serviceCategory)
+    }
+    if (patch.scope !== undefined) {
+      setScope(patch.scope)
+    }
+    if (patch.tone !== undefined) {
+      setTone(patch.tone)
+    }
+  }
 
   const summaryLine = useMemo(() => {
     const line = draft.summary.split("\n").find((l) => l.trim().length > 0)
@@ -89,10 +108,45 @@ export function QuoteDraftAssistantForm({
 
   const handleRegenerate = () => {
     setRegenBusy(true)
-    window.setTimeout(() => {
-      setRegenBusy(false)
-      toast.success("입력하신 내용을 기준으로 초안을 다시 정리했습니다.")
-    }, 450)
+    void (async () => {
+      try {
+        const res = await fetch("/api/ai/quote-draft", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            serviceCategory,
+            scope,
+            tone,
+            paymentTermsHint: paymentTermsHint.trim() || undefined,
+          }),
+        })
+        const data = (await res.json()) as { error?: string; draft?: QuoteDraftApplyPayload }
+        if (!res.ok) {
+          toast.error(data.error ?? "초안을 만들지 못했습니다.")
+          return
+        }
+        if (!data.draft?.title || !data.draft.summary || !data.draft.items?.length) {
+          toast.error("응답 형식이 올바르지 않습니다.")
+          return
+        }
+        setAiDraft({
+          title: data.draft.title,
+          summary: data.draft.summary,
+          items: data.draft.items.map((i) => ({
+            name: i.name,
+            description: i.description ?? "",
+            quantity: String(i.quantity ?? "1"),
+            unitPrice: String(i.unitPrice ?? "0"),
+          })),
+        })
+        toast.success("AI 초안을 반영했습니다. 미리보기를 확인해 주세요.")
+      } catch {
+        toast.error("네트워크 오류로 초안을 받지 못했습니다.")
+      } finally {
+        setRegenBusy(false)
+      }
+    })()
   }
 
   const handleApply = () => {
@@ -112,7 +166,7 @@ export function QuoteDraftAssistantForm({
     >
       <div className="space-y-1">
         <p className="text-xs leading-snug text-muted-foreground">
-          서비스 유형·범위·톤을 넣으면 제목·요약·항목 줄·결제 안내 문구를 한 번에 구성합니다.
+          서비스 유형·범위·톤을 넣은 뒤 AI로 초안을 만들거나, 로컬 규칙 초안을 그대로 쓸 수 있습니다.
         </p>
         {!hasInquiries ? (
           <p className="rounded border border-amber-500/25 bg-amber-500/[0.07] px-2 py-1.5 text-[10px] leading-snug text-amber-950 dark:text-amber-50/90">
@@ -125,7 +179,7 @@ export function QuoteDraftAssistantForm({
         <label className="text-[11px] font-medium">서비스 유형</label>
         <Input
           value={serviceCategory}
-          onChange={(event) => setServiceCategory(event.target.value)}
+          onChange={(event) => bumpInput({ serviceCategory: event.target.value })}
           className="h-8 text-sm"
           placeholder="예: 영상 제작, 웹사이트, 브랜딩"
         />
@@ -134,7 +188,7 @@ export function QuoteDraftAssistantForm({
         <label className="text-[11px] font-medium">작업 범위</label>
         <Textarea
           value={scope}
-          onChange={(event) => setScope(event.target.value)}
+          onChange={(event) => bumpInput({ scope: event.target.value })}
           className="min-h-[3.5rem] text-sm"
           placeholder="포함 범위·산출물·납기 희망 등"
         />
@@ -143,7 +197,7 @@ export function QuoteDraftAssistantForm({
         <label className="text-[11px] font-medium">문체·톤</label>
         <Input
           value={tone}
-          onChange={(event) => setTone(event.target.value)}
+          onChange={(event) => bumpInput({ tone: event.target.value })}
           className="h-8 text-sm"
           placeholder="예: 간결·전문·친근"
         />
@@ -162,7 +216,7 @@ export function QuoteDraftAssistantForm({
           ) : (
             <Sparkles className="size-3" />
           )}
-          초안 다시 만들기
+          AI로 초안 생성
         </Button>
         <Button type="button" size="sm" className="h-8 flex-1 gap-1 text-xs font-semibold" onClick={handleApply}>
           이 초안으로 견적 작성

@@ -9,7 +9,7 @@ import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
-const STORAGE_KEY = "flowbill-beta-onboarding-dismissed"
+const STORAGE_KEY = "billio-onboarding-checklist-dismissed"
 
 const steps = [
   { title: "고객 등록", body: "거래처를 등록해 문의·견적에 연결" },

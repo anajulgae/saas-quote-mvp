@@ -221,6 +221,8 @@ function QuotesBoardPanel({
   customers,
   inquiries,
   defaultQuoteSummary,
+  defaultPaymentTerms,
+  defaultBusinessName,
   isCreateOpen,
   onOpenChange,
   createOpenSourceRef,
@@ -234,6 +236,8 @@ function QuotesBoardPanel({
   customers: Customer[]
   inquiries: InquiryWithCustomer[]
   defaultQuoteSummary: string
+  defaultPaymentTerms: string
+  defaultBusinessName: string
   isCreateOpen: boolean
   onOpenChange: (open: boolean) => void
   /** 헤더「새 견적」으로 열 때만 빈 폼으로 초기화 */
@@ -2018,6 +2022,7 @@ function QuotesBoardPanel({
         <QuoteDraftAssistantForm
           hasInquiries={hasInquiries}
           quotesEmpty={!hasQuotes}
+          paymentTermsHint={defaultPaymentTerms}
           onApplyToNewQuote={(payload) => {
             setDraftAssistantOpen(false)
             setEditingQuoteId(null)
@@ -2185,6 +2190,7 @@ function QuotesBoardPanel({
           }
         }}
         emailBodyTemplate={defaultQuoteSummary}
+        businessName={defaultBusinessName}
         onAfterSend={() => router.refresh()}
       />
     </>
@@ -2196,6 +2202,8 @@ export function QuotesWorkspace({
   customers,
   inquiries,
   defaultQuoteSummary,
+  defaultPaymentTerms,
+  defaultBusinessName,
   nextQuoteNumberPreview,
   quoteActivityByQuoteId,
   invoicesByQuoteId,
@@ -2206,6 +2214,8 @@ export function QuotesWorkspace({
   customers: Customer[]
   inquiries: InquiryWithCustomer[]
   defaultQuoteSummary: string
+  defaultPaymentTerms: string
+  defaultBusinessName: string
   nextQuoteNumberPreview: string
   quoteActivityByQuoteId: Record<string, ActivityLog[]>
   invoicesByQuoteId: Record<string, QuoteLinkedInvoiceStub[]>
@@ -2275,6 +2285,8 @@ export function QuotesWorkspace({
         customers={customers}
         inquiries={inquiries}
         defaultQuoteSummary={defaultQuoteSummary}
+        defaultPaymentTerms={defaultPaymentTerms}
+        defaultBusinessName={defaultBusinessName}
         isCreateOpen={isCreateOpen}
         onOpenChange={setIsCreateOpen}
         createOpenSourceRef={createOpenSourceRef}

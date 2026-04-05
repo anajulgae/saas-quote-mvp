@@ -11,6 +11,7 @@ import {
   demoQuotes,
   demoReminders,
   demoTemplates,
+  demoUser,
   getCustomerTimeline,
   getDashboardMetrics,
 } from "@/lib/demo-data"
@@ -22,6 +23,7 @@ import {
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import type {
   ActivityLog,
+  BillingPlan,
   BusinessSettings,
   Customer,
   CustomerSummary,
@@ -1979,6 +1981,8 @@ export async function getQuotesPageData(): Promise<{
   customers: Customer[]
   inquiries: InquiryWithCustomer[]
   defaultQuoteSummary: string
+  defaultPaymentTerms: string
+  defaultBusinessName: string
   nextQuoteNumberPreview: string
   quoteActivityByQuoteId: Record<string, ActivityLog[]>
   invoicesByQuoteId: Record<string, QuoteLinkedInvoiceStub[]>
@@ -2019,6 +2023,8 @@ export async function getQuotesPageData(): Promise<{
         customer: demoCustomers.find((customer) => customer.id === inquiry.customerId),
       })),
       defaultQuoteSummary: defaultQuoteSummaryFromTemplates(demoTemplates),
+      defaultPaymentTerms: demoBusinessSettings.paymentTerms ?? "",
+      defaultBusinessName: demoBusinessSettings.businessName ?? "",
       nextQuoteNumberPreview: computeNextQuoteNumberPreview(quotes),
       quoteActivityByQuoteId,
       invoicesByQuoteId,
@@ -2033,6 +2039,7 @@ export async function getQuotesPageData(): Promise<{
     { data: templateRows, error: templateError },
     { data: invoiceLinkRows, error: invoiceLinkError },
     { data: quoteLogRows, error: quoteLogError },
+    { data: bizRow, error: bizError },
   ] = await Promise.all([
     context.supabase.from("customers").select("*"),
     context.supabase
@@ -2062,6 +2069,11 @@ export async function getQuotesPageData(): Promise<{
       .eq("user_id", context.userId)
       .order("created_at", { ascending: false })
       .limit(600),
+    context.supabase
+      .from("business_settings")
+      .select("payment_terms, business_name")
+      .eq("user_id", context.userId)
+      .maybeSingle(),
   ])
 
   if (customerError) {
@@ -2090,6 +2102,10 @@ export async function getQuotesPageData(): Promise<{
 
   if (quoteLogError) {
     throw quoteLogError
+  }
+
+  if (bizError) {
+    throw bizError
   }
 
   const customerRowsSafe = (customerRows ?? []) as CustomerRow[]
@@ -2151,6 +2167,10 @@ export async function getQuotesPageData(): Promise<{
     invoicesByQuoteId[row.quote_id] = arr
   }
 
+  const biz = bizRow as { payment_terms?: string | null; business_name?: string | null } | null
+  const paymentTerms = biz?.payment_terms?.trim() ?? ""
+  const defaultBusinessName = biz?.business_name?.trim() ?? ""
+
   return {
     quotes,
     customers: customerRowsSafe.map(mapCustomer),
@@ -2162,6 +2182,8 @@ export async function getQuotesPageData(): Promise<{
       }
     }),
     defaultQuoteSummary: defaultQuoteSummaryFromTemplates(mappedTemplates),
+    defaultPaymentTerms: paymentTerms,
+    defaultBusinessName,
     nextQuoteNumberPreview: computeNextQuoteNumberPreview(quotes),
     quoteActivityByQuoteId,
     invoicesByQuoteId,
@@ -2174,6 +2196,9 @@ export async function getInvoicesPageData(): Promise<{
   quotes: Quote[]
   defaultReminderMessage: string
   invoiceActivityByInvoiceId: Record<string, ActivityLog[]>
+  businessName: string
+  bankAccount: string
+  paymentTerms: string
 }> {
   const context = await getDataContext()
 
@@ -2191,6 +2216,9 @@ export async function getInvoicesPageData(): Promise<{
         demoActivityLogs.filter((l) => Boolean(l.invoiceId)),
         12
       ),
+      businessName: demoBusinessSettings.businessName,
+      bankAccount: demoBusinessSettings.bankAccount ?? "",
+      paymentTerms: demoBusinessSettings.paymentTerms ?? "",
     }
   }
 
@@ -2201,6 +2229,7 @@ export async function getInvoicesPageData(): Promise<{
     { data: quoteRows, error: quoteError },
     { data: templateRows, error: templateError },
     { data: invoiceLogRows, error: invoiceLogError },
+    { data: bizRow, error: bizErr },
   ] = await Promise.all([
     context.supabase.from("customers").select("*"),
     context.supabase
@@ -2227,6 +2256,11 @@ export async function getInvoicesPageData(): Promise<{
       .eq("user_id", context.userId)
       .order("created_at", { ascending: false })
       .limit(600),
+    context.supabase
+      .from("business_settings")
+      .select("business_name, bank_account, payment_terms")
+      .eq("user_id", context.userId)
+      .maybeSingle(),
   ])
 
   if (customerError) {
@@ -2251,6 +2285,10 @@ export async function getInvoicesPageData(): Promise<{
 
   if (invoiceLogError) {
     throw invoiceLogError
+  }
+
+  if (bizErr) {
+    throw bizErr
   }
 
   const customerRowsSafe = (customerRows ?? []) as CustomerRow[]
@@ -2279,6 +2317,12 @@ export async function getInvoicesPageData(): Promise<{
     12
   )
 
+  const biz = bizRow as {
+    business_name?: string
+    bank_account?: string | null
+    payment_terms?: string | null
+  } | null
+
   return {
     invoices: invoiceRowsSafe.map((row) => {
       const invoice = mapInvoice(row)
@@ -2293,12 +2337,16 @@ export async function getInvoicesPageData(): Promise<{
     quotes: quoteRowsSafe.map(mapQuote),
     defaultReminderMessage: defaultReminderMessageFromTemplates(mappedTemplates),
     invoiceActivityByInvoiceId,
+    businessName: biz?.business_name?.trim() ?? "",
+    bankAccount: biz?.bank_account?.trim() ?? "",
+    paymentTerms: biz?.payment_terms?.trim() ?? "",
   }
 }
 
 export async function getSettingsPageData(): Promise<{
   settings: BusinessSettings
   templates: Template[]
+  currentPlan: BillingPlan
 }> {
   const context = await getDataContext()
 
@@ -2306,23 +2354,28 @@ export async function getSettingsPageData(): Promise<{
     return {
       settings: demoBusinessSettings,
       templates: demoTemplates,
+      currentPlan: demoUser.plan,
     }
   }
 
-  const [{ data: settingsRow, error: settingsError }, { data: templateRows, error: templateError }] =
-    await Promise.all([
-      context.supabase
-        .from("business_settings")
-        .select("*")
-        .eq("user_id", context.userId)
-        .maybeSingle(),
-      context.supabase
-        .from("templates")
-        .select("*")
-        .eq("user_id", context.userId)
-        .order("is_default", { ascending: false })
-        .order("created_at", { ascending: true }),
-    ])
+  const [
+    { data: settingsRow, error: settingsError },
+    { data: templateRows, error: templateError },
+    { data: userPlanRow, error: userPlanError },
+  ] = await Promise.all([
+    context.supabase
+      .from("business_settings")
+      .select("*")
+      .eq("user_id", context.userId)
+      .maybeSingle(),
+    context.supabase
+      .from("templates")
+      .select("*")
+      .eq("user_id", context.userId)
+      .order("is_default", { ascending: false })
+      .order("created_at", { ascending: true }),
+    context.supabase.from("users").select("plan").eq("id", context.userId).maybeSingle(),
+  ])
 
   if (settingsError) {
     throw settingsError
@@ -2330,6 +2383,10 @@ export async function getSettingsPageData(): Promise<{
 
   if (templateError) {
     throw templateError
+  }
+
+  if (userPlanError) {
+    throw userPlanError
   }
 
   const settings = settingsRow
@@ -2350,9 +2407,13 @@ export async function getSettingsPageData(): Promise<{
 
   const templates = ((templateRows ?? []) as TemplateRow[]).map(mapTemplate)
 
+  const rawPlan = (userPlanRow as { plan?: string } | null)?.plan
+  const currentPlan = rawPlan === "pro" ? ("pro" as const) : ("free" as const)
+
   return {
     settings,
     templates,
+    currentPlan,
   }
 }
 

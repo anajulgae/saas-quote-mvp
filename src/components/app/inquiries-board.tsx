@@ -7,6 +7,7 @@ import {
   ArrowRight,
   ExternalLink,
   ListOrdered,
+  Loader2,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -122,6 +123,7 @@ export function InquiriesBoard({
   const [extraFiltersOpen, setExtraFiltersOpen] = useState(false)
   const [channelFilter, setChannelFilter] = useState<string>("all")
   const [customerFilterId, setCustomerFilterId] = useState<string | "all">("all")
+  const [structureBusy, setStructureBusy] = useState(false)
   const deepLinkAppliedRef = useRef(false)
 
   const [form, setForm] = useState({
@@ -335,6 +337,65 @@ export function InquiriesBoard({
     setIsCreateOpen(true)
   }
 
+  const runAiStructure = () => {
+    const raw = form.details.trim()
+    if (raw.length < 8) {
+      toast.error("상세 요청에 문의 원문을 먼저 붙여 넣어 주세요.")
+      return
+    }
+    setStructureBusy(true)
+    void (async () => {
+      try {
+        const res = await fetch("/api/ai/inquiry-structure", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ rawText: raw }),
+        })
+        const data = (await res.json()) as {
+          error?: string
+          structured?: {
+            suggestedTitle: string
+            customerHint: string
+            requestSummary: string
+            channel: string
+            estimatedScope: string
+            followupMemo: string
+          }
+        }
+        if (!res.ok) {
+          toast.error(data.error ?? "구조화에 실패했습니다.")
+          return
+        }
+        const s = data.structured
+        if (!s) {
+          toast.error("응답이 올바르지 않습니다.")
+          return
+        }
+        setForm((current) => ({
+          ...current,
+          title: s.suggestedTitle || current.title,
+          serviceCategory: s.estimatedScope || current.serviceCategory,
+          channel: s.channel || current.channel,
+          details: [s.requestSummary, s.followupMemo ? `■ 팔로업 메모\n${s.followupMemo}` : ""]
+            .filter(Boolean)
+            .join("\n\n"),
+        }))
+        if (s.customerHint) {
+          toast.message("고객은 목록에서 직접 선택해 주세요.", {
+            description: `추정: ${s.customerHint}`,
+          })
+        } else {
+          toast.success("AI가 제목·채널·범위·요약을 채웠습니다.")
+        }
+      } catch {
+        toast.error("네트워크 오류로 구조화에 실패했습니다.")
+      } finally {
+        setStructureBusy(false)
+      }
+    })()
+  }
+
   const FormFields = (
     <div className="grid gap-4">
       <div className="space-y-2">
@@ -414,7 +475,23 @@ export function InquiriesBoard({
         </div>
       </div>
       <div className="space-y-2">
-        <label className="text-sm font-medium">상세 요청</label>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label className="text-sm font-medium">상세 요청</label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 text-xs"
+            disabled={structureBusy}
+            onClick={runAiStructure}
+          >
+            {structureBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+            AI로 필드 채우기
+          </Button>
+        </div>
+        <p className="text-[11px] leading-snug text-muted-foreground">
+          카톡·메일 등 원문을 붙인 뒤 버튼을 누르면 제목·채널·범위·요약이 정리됩니다. 고객은 반드시 직접 선택합니다.
+        </p>
         <Textarea
           value={form.details}
           onChange={(event) => setForm((current) => ({ ...current, details: event.target.value }))}
@@ -793,7 +870,7 @@ export function InquiriesBoard({
 
       {hasInquiries && filteredInquiries.length > 0 ? (
         <OpsTableShell className="hidden md:block">
-          <table className={cn(opsTableClass, "min-w-[900px]")}>
+          <table className={cn(opsTableClass, "!min-w-0 w-full max-w-full table-fixed")}>
             <thead>
               <tr className={opsTableHeadRowClass}>
                 <th className={opsTableHeadCellClass}>제목</th>

@@ -18,6 +18,7 @@ import {
   Pencil,
   Plus,
   Receipt,
+  Sparkles,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -277,6 +278,9 @@ function InvoicesBoardPanel({
   quotes,
   defaultReminderMessage,
   invoiceActivityByInvoiceId,
+  businessName,
+  bankAccount,
+  paymentTerms,
   isCreateOpen,
   onOpenChange,
   createOpenSourceRef,
@@ -286,6 +290,9 @@ function InvoicesBoardPanel({
   quotes: Quote[]
   defaultReminderMessage: string
   invoiceActivityByInvoiceId: Record<string, ActivityLog[]>
+  businessName: string
+  bankAccount: string
+  paymentTerms: string
   isCreateOpen: boolean
   onOpenChange: (open: boolean) => void
   createOpenSourceRef: MutableRefObject<"header" | null>
@@ -318,6 +325,8 @@ function InvoicesBoardPanel({
     channel: "kakao",
     message: "",
   })
+  const [reminderTone, setReminderTone] = useState<"polite" | "neutral" | "firm">("neutral")
+  const [reminderAiBusy, setReminderAiBusy] = useState(false)
 
   const hasQuotes = quotes.length > 0
   const hasInvoices = invoices.length > 0
@@ -516,6 +525,7 @@ function InvoicesBoardPanel({
   const openReminderFor = (invoice: InvoiceWithReminders) => {
     setDrawerInvoiceId(null)
     setReminderInvoiceId(invoice.id)
+    setReminderTone("neutral")
     setReminderForm({
       channel: "kakao",
       message: defaultReminderMessage,
@@ -648,6 +658,57 @@ function InvoicesBoardPanel({
       })
       router.refresh()
     })
+  }
+
+  const composeReminderAi = () => {
+    const inv = reminderInvoice
+    if (!inv) {
+      return
+    }
+    const customer = inv.customer
+    const name = customer?.companyName?.trim() || customer?.name || ""
+    const overdueLike =
+      inv.paymentStatus === "overdue" || invoiceRowReceivableHint(inv) === "overdue"
+    const kind = overdueLike ? ("overdue_reminder" as const) : ("invoice_notice" as const)
+
+    setReminderAiBusy(true)
+    void (async () => {
+      try {
+        const res = await fetch("/api/ai/compose-message", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            kind,
+            tone: reminderTone,
+            context: {
+              invoiceNumber: inv.invoiceNumber,
+              amount: inv.amount,
+              dueDate: inv.dueDate,
+              customerName: name,
+              bankAccount,
+              paymentTerms,
+              businessName,
+              requestedAt: inv.requestedAt,
+            },
+          }),
+        })
+        const data = (await res.json()) as { error?: string; message?: { body: string } }
+        if (!res.ok) {
+          toast.error(data.error ?? "문구 생성에 실패했습니다.")
+          return
+        }
+        setReminderForm((current) => ({
+          ...current,
+          message: data.message?.body ?? current.message,
+        }))
+        toast.success("리마인드 문구를 채웠습니다. 필요하면 수정해 주세요.")
+      } catch {
+        toast.error("네트워크 오류로 문구를 받지 못했습니다.")
+      } finally {
+        setReminderAiBusy(false)
+      }
+    })()
   }
 
   const formFields = (
@@ -1508,7 +1569,7 @@ function InvoicesBoardPanel({
       {displayInvoices.length > 0 ? (
         <>
           <OpsTableShell className="hidden md:block">
-            <table className={cn(opsTableClass, "min-w-[1100px]")}>
+            <table className={cn(opsTableClass, "!min-w-0 w-full max-w-full table-fixed")}>
               <thead>
                 <tr className={opsTableHeadRowClass}>
                   <th className={opsTableHeadCellClass}>청구 번호</th>
@@ -1660,175 +1721,175 @@ function InvoicesBoardPanel({
               )
             })}
           </div>
-
-          <OpsDetailSheet
-            open={drawerInvoice !== null}
-            onOpenChange={(o) => !o && setDrawerInvoiceId(null)}
-            title={
-              drawerInvoice ? (
-                <span className="flex flex-col gap-1">
-                  <span className="font-mono text-xs text-muted-foreground">{drawerInvoice.invoiceNumber}</span>
-                  <span>
-                    {drawerInvoice.customer?.companyName?.trim() ||
-                      drawerInvoice.customer?.name ||
-                      "고객"}
-                  </span>
-                </span>
-              ) : (
-                ""
-              )
-            }
-            description={
-              drawerInvoice ? (
-                <span>
-                  {invoiceTypeTableLabel(drawerInvoice.invoiceType)} 청구 ·{" "}
-                  {formatCurrency(drawerInvoice.amount)}
-                </span>
-              ) : null
-            }
-            footer={
-              drawerInvoice ? (
-                <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={() => openEdit(drawerInvoice)}>
-                    수정
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => openReminderFor(drawerInvoice)}>
-                    리마인드
-                  </Button>
-                  {drawerInvoice.quoteId ? (
-                    <Link
-                      href={`/quotes/${drawerInvoice.quoteId}/print`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={cn(buttonVariants({ size: "sm", variant: "outline" }), "inline-flex")}
-                    >
-                      연결 견적서
-                    </Link>
-                  ) : null}
-                </div>
-              ) : null
-            }
-          >
-            {drawerInvoice ? (
-              <div className="space-y-4 text-sm">
-                <div className="flex flex-wrap items-center gap-2">
-                  <PaymentStatusBadge status={drawerInvoice.paymentStatus} />
-                  {invoiceRowReceivableHint(drawerInvoice) === "overdue" ? (
-                    <Badge variant="destructive" className="text-[10px]">
-                      연체 또는 기한 경과
-                    </Badge>
-                  ) : null}
-                  {invoiceRowReceivableHint(drawerInvoice) === "due_soon" ? (
-                    <Badge className="border-amber-500/50 bg-amber-500/15 text-[10px] text-amber-950 dark:text-amber-50">
-                      입금 기한 임박
-                    </Badge>
-                  ) : null}
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-muted-foreground">결제 상태 변경</p>
-                  <Select
-                    value={drawerInvoice.paymentStatus}
-                    onValueChange={(value) =>
-                      updatePaymentStatus(
-                        drawerInvoice.id,
-                        (value as PaymentStatus | null) ?? drawerInvoice.paymentStatus,
-                        drawerInvoice.customerId
-                      )
-                    }
-                  >
-                    <SelectTrigger className="h-9 w-full max-w-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {paymentStatusOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {drawerInvoice.quoteId ? (
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground">연결 견적</p>
-                    <p className="mt-1 text-sm">{linkedQuoteSummary(drawerInvoice, quotes)}</p>
-                  </div>
-                ) : null}
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded-lg border border-border/50 p-2">
-                    <p className="text-muted-foreground">청구 금액</p>
-                    <p className="mt-0.5 font-semibold tabular-nums">{formatCurrency(drawerInvoice.amount)}</p>
-                  </div>
-                  <div className="rounded-lg border border-border/50 p-2">
-                    <p className="text-muted-foreground">청구일</p>
-                    <p className="mt-0.5 tabular-nums">{formatDate(drawerInvoice.requestedAt)}</p>
-                  </div>
-                  <div className="rounded-lg border border-border/50 p-2">
-                    <p className="text-muted-foreground">입금 기한</p>
-                    <p className="mt-0.5 tabular-nums">{formatDate(drawerInvoice.dueDate)}</p>
-                  </div>
-                  <div className="rounded-lg border border-border/50 p-2">
-                    <p className="text-muted-foreground">입금일</p>
-                    <p className="mt-0.5 tabular-nums">{formatDate(drawerInvoice.paidAt)}</p>
-                  </div>
-                </div>
-                <div>
-                  <p className="mb-2 text-xs font-semibold text-muted-foreground">활동·상태 기록</p>
-                  {drawerInvoiceActivities.length ? (
-                    <ul className="max-h-44 space-y-2 overflow-y-auto text-xs">
-                      {drawerInvoiceActivities.map((log) => (
-                        <li key={log.id} className="rounded-md border border-border/40 px-2 py-1.5">
-                          <p className="font-medium text-foreground">{resolveActivityHeadline(log.action)}</p>
-                          <p className="mt-0.5 leading-snug text-muted-foreground">{log.description}</p>
-                          <p className="mt-1 tabular-nums text-[10px] text-muted-foreground">
-                            {formatDateTime(log.createdAt)}
-                          </p>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">표시할 활동 기록이 없습니다.</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground">메모</p>
-                  <p className="mt-1 leading-relaxed text-muted-foreground">
-                    {drawerInvoice.notes?.trim() || "메모가 없습니다."}
-                  </p>
-                </div>
-                <div>
-                  <p className="mb-2 text-xs font-semibold text-muted-foreground">리마인드 기록</p>
-                  {drawerInvoice.reminders.length ? (
-                    <ul className="max-h-52 space-y-2 overflow-y-auto">
-                      {drawerInvoice.reminders.map((reminder) => {
-                        const ch =
-                          reminderChannelOptions.find((o) => o.value === reminder.channel)?.label ??
-                          reminder.channel
-                        return (
-                          <li
-                            key={reminder.id}
-                            className="rounded-lg border border-border/50 px-3 py-2 text-xs"
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-medium text-foreground">{ch}</span>
-                              <span className="shrink-0 text-muted-foreground tabular-nums">
-                                {formatDateTime(reminder.sentAt)}
-                              </span>
-                            </div>
-                            <p className="mt-1 leading-snug">{reminder.message}</p>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">기록된 리마인드가 없습니다.</p>
-                  )}
-                </div>
-              </div>
-            ) : null}
-          </OpsDetailSheet>
         </>
       ) : null}
+
+      <OpsDetailSheet
+        open={drawerInvoice !== null}
+        onOpenChange={(o) => !o && setDrawerInvoiceId(null)}
+        title={
+          drawerInvoice ? (
+            <span className="flex flex-col gap-1">
+              <span className="font-mono text-xs text-muted-foreground">{drawerInvoice.invoiceNumber}</span>
+              <span>
+                {drawerInvoice.customer?.companyName?.trim() ||
+                  drawerInvoice.customer?.name ||
+                  "고객"}
+              </span>
+            </span>
+          ) : (
+            ""
+          )
+        }
+        description={
+          drawerInvoice ? (
+            <span>
+              {invoiceTypeTableLabel(drawerInvoice.invoiceType)} 청구 ·{" "}
+              {formatCurrency(drawerInvoice.amount)}
+            </span>
+          ) : null
+        }
+        footer={
+          drawerInvoice ? (
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => openEdit(drawerInvoice)}>
+                수정
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => openReminderFor(drawerInvoice)}>
+                리마인드
+              </Button>
+              {drawerInvoice.quoteId ? (
+                <Link
+                  href={`/quotes/${drawerInvoice.quoteId}/print`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={cn(buttonVariants({ size: "sm", variant: "outline" }), "inline-flex")}
+                >
+                  연결 견적서
+                </Link>
+              ) : null}
+            </div>
+          ) : null
+        }
+      >
+        {drawerInvoice ? (
+          <div className="space-y-4 text-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <PaymentStatusBadge status={drawerInvoice.paymentStatus} />
+              {invoiceRowReceivableHint(drawerInvoice) === "overdue" ? (
+                <Badge variant="destructive" className="text-[10px]">
+                  연체 또는 기한 경과
+                </Badge>
+              ) : null}
+              {invoiceRowReceivableHint(drawerInvoice) === "due_soon" ? (
+                <Badge className="border-amber-500/50 bg-amber-500/15 text-[10px] text-amber-950 dark:text-amber-50">
+                  입금 기한 임박
+                </Badge>
+              ) : null}
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-muted-foreground">결제 상태 변경</p>
+              <Select
+                value={drawerInvoice.paymentStatus}
+                onValueChange={(value) =>
+                  updatePaymentStatus(
+                    drawerInvoice.id,
+                    (value as PaymentStatus | null) ?? drawerInvoice.paymentStatus,
+                    drawerInvoice.customerId
+                  )
+                }
+              >
+                <SelectTrigger className="h-9 w-full max-w-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {paymentStatusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {drawerInvoice.quoteId ? (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground">연결 견적</p>
+                <p className="mt-1 text-sm">{linkedQuoteSummary(drawerInvoice, quotes)}</p>
+              </div>
+            ) : null}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-lg border border-border/50 p-2">
+                <p className="text-muted-foreground">청구 금액</p>
+                <p className="mt-0.5 font-semibold tabular-nums">{formatCurrency(drawerInvoice.amount)}</p>
+              </div>
+              <div className="rounded-lg border border-border/50 p-2">
+                <p className="text-muted-foreground">청구일</p>
+                <p className="mt-0.5 tabular-nums">{formatDate(drawerInvoice.requestedAt)}</p>
+              </div>
+              <div className="rounded-lg border border-border/50 p-2">
+                <p className="text-muted-foreground">입금 기한</p>
+                <p className="mt-0.5 tabular-nums">{formatDate(drawerInvoice.dueDate)}</p>
+              </div>
+              <div className="rounded-lg border border-border/50 p-2">
+                <p className="text-muted-foreground">입금일</p>
+                <p className="mt-0.5 tabular-nums">{formatDate(drawerInvoice.paidAt)}</p>
+              </div>
+            </div>
+            <div>
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">활동·상태 기록</p>
+              {drawerInvoiceActivities.length ? (
+                <ul className="max-h-44 space-y-2 overflow-y-auto text-xs">
+                  {drawerInvoiceActivities.map((log) => (
+                    <li key={log.id} className="rounded-md border border-border/40 px-2 py-1.5">
+                      <p className="font-medium text-foreground">{resolveActivityHeadline(log.action)}</p>
+                      <p className="mt-0.5 leading-snug text-muted-foreground">{log.description}</p>
+                      <p className="mt-1 tabular-nums text-[10px] text-muted-foreground">
+                        {formatDateTime(log.createdAt)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground">표시할 활동 기록이 없습니다.</p>
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground">메모</p>
+              <p className="mt-1 leading-relaxed text-muted-foreground">
+                {drawerInvoice.notes?.trim() || "메모가 없습니다."}
+              </p>
+            </div>
+            <div>
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">리마인드 기록</p>
+              {drawerInvoice.reminders.length ? (
+                <ul className="max-h-52 space-y-2 overflow-y-auto">
+                  {drawerInvoice.reminders.map((reminder) => {
+                    const ch =
+                      reminderChannelOptions.find((o) => o.value === reminder.channel)?.label ??
+                      reminder.channel
+                    return (
+                      <li
+                        key={reminder.id}
+                        className="rounded-lg border border-border/50 px-3 py-2 text-xs"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-foreground">{ch}</span>
+                          <span className="shrink-0 text-muted-foreground tabular-nums">
+                            {formatDateTime(reminder.sentAt)}
+                          </span>
+                        </div>
+                        <p className="mt-1 leading-snug">{reminder.message}</p>
+                      </li>
+                    )
+                  })}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground">기록된 리마인드가 없습니다.</p>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </OpsDetailSheet>
 
       <Dialog
         open={editingInvoiceId !== null}
@@ -1901,6 +1962,7 @@ function InvoicesBoardPanel({
           if (!open) {
             setReminderInvoiceId(null)
             setReminderForm({ channel: "kakao", message: "" })
+            setReminderTone("neutral")
           }
         }}
       >
@@ -1935,6 +1997,41 @@ function InvoicesBoardPanel({
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <div className="min-w-0 flex-1 space-y-2">
+                <label className="text-sm font-medium">문체</label>
+                <Select
+                  value={reminderTone}
+                  onValueChange={(value) =>
+                    setReminderTone((value as "polite" | "neutral" | "firm" | null) ?? "neutral")
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="polite">정중형</SelectItem>
+                    <SelectItem value="neutral">기본형</SelectItem>
+                    <SelectItem value="firm">단호형</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 shrink-0 gap-1.5"
+                disabled={reminderAiBusy || !reminderInvoice}
+                onClick={composeReminderAi}
+              >
+                {reminderAiBusy ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="size-3.5" />
+                )}
+                AI로 메시지
+              </Button>
+            </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">메시지</label>
               <Textarea
@@ -1954,7 +2051,12 @@ function InvoicesBoardPanel({
             <Button variant="outline" type="button" onClick={() => setReminderInvoiceId(null)}>
               취소
             </Button>
-            <Button type="button" onClick={saveReminder} disabled={isPending || !reminderInvoice} className="gap-2">
+            <Button
+              type="button"
+              onClick={saveReminder}
+              disabled={isPending || reminderAiBusy || !reminderInvoice}
+              className="gap-2"
+            >
               {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
               저장
             </Button>
@@ -1971,12 +2073,18 @@ export function InvoicesWorkspace({
   quotes,
   defaultReminderMessage,
   invoiceActivityByInvoiceId,
+  businessName,
+  bankAccount,
+  paymentTerms,
 }: {
   invoices: InvoiceWithReminders[]
   customers: Customer[]
   quotes: Quote[]
   defaultReminderMessage: string
   invoiceActivityByInvoiceId: Record<string, ActivityLog[]>
+  businessName: string
+  bankAccount: string
+  paymentTerms: string
 }) {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const createOpenSourceRef = useRef<"header" | null>(null)
@@ -2064,6 +2172,9 @@ export function InvoicesWorkspace({
         quotes={quotes}
         defaultReminderMessage={defaultReminderMessage}
         invoiceActivityByInvoiceId={invoiceActivityByInvoiceId}
+        businessName={businessName}
+        bankAccount={bankAccount}
+        paymentTerms={paymentTerms}
         isCreateOpen={isCreateOpen}
         onOpenChange={setIsCreateOpen}
         createOpenSourceRef={createOpenSourceRef}

@@ -18,12 +18,15 @@ export type PaymentStatus =
 
 export type ReminderChannel = "sms" | "kakao" | "email" | "manual"
 
+export type BillingPlan = "free" | "pro"
+
 export interface AppUser {
   id: string
   fullName: string
   businessName: string
   email: string
   phone: string
+  plan: BillingPlan
 }
 
 export interface Customer {

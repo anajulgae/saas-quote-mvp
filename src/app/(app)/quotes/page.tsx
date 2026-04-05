@@ -12,6 +12,8 @@ export default async function QuotesPage({
     customers,
     inquiries,
     defaultQuoteSummary,
+    defaultPaymentTerms,
+    defaultBusinessName,
     nextQuoteNumberPreview,
     quoteActivityByQuoteId,
     invoicesByQuoteId,
@@ -25,6 +27,8 @@ export default async function QuotesPage({
       customers={customers}
       inquiries={inquiries}
       defaultQuoteSummary={defaultQuoteSummary}
+      defaultPaymentTerms={defaultPaymentTerms}
+      defaultBusinessName={defaultBusinessName}
       nextQuoteNumberPreview={nextQuoteNumberPreview}
       quoteActivityByQuoteId={quoteActivityByQuoteId}
       invoicesByQuoteId={invoicesByQuoteId}

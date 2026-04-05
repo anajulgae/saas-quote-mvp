@@ -568,6 +568,8 @@ export function LandingFooter() {
     { href: "#features", label: "기능" },
     { href: "#pricing", label: "요금제" },
     { href: "#faq", label: "FAQ" },
+    { href: "/privacy", label: "개인정보처리방침" },
+    { href: "/terms", label: "이용약관" },
     { href: "/login", label: "로그인" },
     { href: "/signup", label: "회원가입" },
   ]

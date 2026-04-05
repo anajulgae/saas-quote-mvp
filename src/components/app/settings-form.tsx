@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
-import type { BusinessSettings, Template } from "@/types/domain"
+import type { BillingPlan, BusinessSettings, Template } from "@/types/domain"
 
 function FieldHint({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
@@ -76,9 +76,11 @@ const defaultTemplates = (userId: string): Template[] => [
 export function SettingsForm({
   initialSettings,
   templates,
+  currentPlan,
 }: {
   initialSettings: BusinessSettings
   templates: Template[]
+  currentPlan: BillingPlan
 }) {
   const router = useRouter()
   const [isBizPending, startBizTransition] = useTransition()
@@ -214,6 +216,29 @@ export function SettingsForm({
 
   return (
     <div className="space-y-5 md:space-y-6">
+      <Card className="border-border/60 bg-muted/10">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">요금제</CardTitle>
+          <CardDescription>
+            계정 플랜입니다. 카드 결제·정기 구독 연동 시 이 구간에서 업그레이드·결제 내역을 다룹니다.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center gap-3 text-sm">
+          <span
+            className={cn(
+              "rounded-full border border-border/70 px-3 py-1 text-xs font-semibold",
+              currentPlan === "pro" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+            )}
+          >
+            {currentPlan === "pro" ? "Pro" : "Free"}
+          </span>
+          <p className="text-muted-foreground">
+            결제 모듈(예: Stripe, 국내 PG)은 <code className="rounded bg-muted px-1">users.plan</code> 과
+            연동해 갱신하는 구조로 두었습니다.
+          </p>
+        </CardContent>
+      </Card>
+
       <Card className="border-border/70">
         <CardHeader className="space-y-1 pb-3">
           <CardTitle className="text-base font-semibold">사업자 및 안내 설정</CardTitle>

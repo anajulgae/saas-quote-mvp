@@ -92,7 +92,20 @@ export default function SignupPage() {
               </CardContent>
             </Card>
           ) : (
-            <SignupForm />
+            <div className="w-full space-y-4">
+              <SignupForm />
+              <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
+                계정을 만들면{" "}
+                <Link href="/terms" className="font-medium text-foreground underline-offset-4 hover:underline">
+                  이용약관
+                </Link>
+                과{" "}
+                <Link href="/privacy" className="font-medium text-foreground underline-offset-4 hover:underline">
+                  개인정보처리방침
+                </Link>
+                에 동의한 것으로 처리됩니다.
+              </p>
+            </div>
           )}
         </section>
       </div>

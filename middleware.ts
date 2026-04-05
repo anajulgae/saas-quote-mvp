@@ -11,6 +11,8 @@ const PUBLIC_PATHS = [
   "/auth/callback",
   "/signup/check-email",
   "/reset-password",
+  "/privacy",
+  "/terms",
 ]
 
 function hasSessionCookie(request: NextRequest) {

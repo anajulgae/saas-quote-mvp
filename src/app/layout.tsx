@@ -22,6 +22,12 @@ export const metadata: Metadata = {
   },
   description:
     "프리랜서·소규모 사업자를 위한 견적·청구·수금 관리. 문의부터 입금까지 한 흐름으로 정리합니다.",
+  keywords: ["견적", "청구", "수금", "프리랜서", "1인 사업자", "Bill-IO", "인보이스"],
+  openGraph: {
+    siteName: "Bill-IO",
+    locale: "ko_KR",
+    type: "website",
+  },
 }
 
 export default function RootLayout({

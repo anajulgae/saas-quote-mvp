@@ -348,7 +348,7 @@ export function CustomersBoard({ customers }: { customers: CustomerSummary[] }) 
 
       {customers.length > 0 && filtered.length > 0 ? (
         <OpsTableShell className="hidden md:block">
-          <table className={opsTableClass}>
+          <table className={cn(opsTableClass, "!min-w-0 w-full max-w-full table-fixed")}>
             <thead>
               <tr className={opsTableHeadRowClass}>
                 <th className={opsTableHeadCellClass}>고객 / 회사</th>
