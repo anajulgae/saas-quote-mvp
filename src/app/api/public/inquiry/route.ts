@@ -61,6 +61,17 @@ const errorMessages: Record<string, string> = {
   rate_limited: "잠시 후 다시 시도해 주세요.",
 }
 
+function isLegacySubmitPublicInquirySignatureError(message: string) {
+  const lower = message.toLowerCase()
+  return (
+    lower.includes("submit_public_inquiry") &&
+    (lower.includes("could not find the function") ||
+      lower.includes("function public.submit_public_inquiry") ||
+      lower.includes("p_source") ||
+      lower.includes("p_source_slug"))
+  )
+}
+
 export async function POST(request: Request) {
   let json: unknown
   try {
@@ -95,7 +106,7 @@ export async function POST(request: Request) {
   const src = body.source.trim().toLowerCase() || null
   const srcSlug = body.sourceSlug.trim() || null
 
-  const { data, error } = await supabase.rpc("submit_public_inquiry", {
+  const latestArgs = {
     p_token: body.token,
     p_name: body.name,
     p_phone: body.phone,
@@ -111,7 +122,32 @@ export async function POST(request: Request) {
     p_honeypot: body.companyWebsite ?? "",
     p_source: src,
     p_source_slug: srcSlug,
-  })
+  }
+
+  let { data, error } = await supabase.rpc("submit_public_inquiry", latestArgs)
+
+  if (error && isLegacySubmitPublicInquirySignatureError(error.message)) {
+    reportServerError(error.message, {
+      route: "public/inquiry",
+      code: "rpc_legacy_retry",
+    })
+
+    ;({ data, error } = await supabase.rpc("submit_public_inquiry", {
+      p_token: body.token,
+      p_name: body.name,
+      p_phone: body.phone,
+      p_email: body.email.trim() || "",
+      p_title: body.title,
+      p_details: body.details,
+      p_service_category: body.serviceCategory.trim() || "",
+      p_hoped_date: hopedDate,
+      p_budget_min: body.budgetMin ?? null,
+      p_budget_max: body.budgetMax ?? null,
+      p_extra_notes: body.extraNotes.trim() || "",
+      p_consent: body.consent,
+      p_honeypot: body.companyWebsite ?? "",
+    }))
+  }
 
   if (error) {
     reportServerError(error.message, { route: "public/inquiry", code: "rpc" })
