@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 
 import { Providers } from "@/components/app/providers"
+import { getSiteOrigin } from "@/lib/site-url"
 
 import "./globals.css"
 
@@ -16,6 +17,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getSiteOrigin()),
   title: {
     default: "Bill-IO",
     template: "%s · Bill-IO",

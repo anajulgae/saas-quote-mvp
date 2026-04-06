@@ -71,15 +71,37 @@ export default function SignupPage() {
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-muted-foreground">
                 <p>
-                  관리자에게{" "}
+                  Vercel 프로젝트(Production·Preview)에{" "}
                   <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
                     NEXT_PUBLIC_SUPABASE_URL
                   </code>{" "}
-                  및{" "}
+                  ·{" "}
                   <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
                     NEXT_PUBLIC_SUPABASE_ANON_KEY
-                  </code>{" "}
-                  설정을 요청하세요.
+                  </code>
+                  를 넣어야 합니다.{" "}
+                  <a
+                    href="https://www.bill-io.com"
+                    className="font-medium text-foreground underline-offset-4 hover:underline"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    www.bill-io.com
+                  </a>{" "}
+                  운영 배포와 동일한 Supabase 값을 복사하면 됩니다.
+                </p>
+                <p className="text-xs">
+                  인증 리다이렉트 기준 URL은{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
+                    NEXT_PUBLIC_SITE_URL
+                  </code>
+                  로 두거나 비워 두면 프로덕션에서는{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
+                    https://www.bill-io.com
+                  </code>
+                  을 씁니다. Supabase Redirect URLs에 해당 주소의{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">/auth/callback</code> 등이
+                  등록돼 있어야 합니다.
                 </p>
                 {demoAllowed ? (
                   <p>
