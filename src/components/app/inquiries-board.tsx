@@ -5,6 +5,7 @@ import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
   ArrowRight,
+  CalendarDays,
   ExternalLink,
   ListOrdered,
   Loader2,
@@ -35,6 +36,7 @@ import {
   opsTableRowClass,
 } from "@/components/operations/ops-table-styles"
 import { OpsToolbar } from "@/components/operations/ops-toolbar"
+import { OpsCalendarView } from "@/components/operations/ops-calendar-view"
 import { Button } from "@/components/ui/button"
 import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent } from "@/components/ui/card"
@@ -63,6 +65,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { inquiryStageOptions } from "@/lib/constants"
+import { mapInquiriesToCalendarEvents } from "@/lib/calendar-events"
 import type { PublicInquiryFormSnippet } from "@/lib/data"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -92,6 +95,7 @@ function inquiryToFormFields(inquiry: InquiryWithCustomer) {
 
 type FollowupFilter = "all" | "overdue" | "week"
 type InquirySort = "created_desc" | "followup_asc" | "followup_desc"
+type InquiryViewMode = "list" | "calendar"
 
 const flowSteps = [
   { step: 1, title: "고객 등록", hint: "거래처를 먼저 등록합니다" },
@@ -154,6 +158,7 @@ export function InquiriesBoard({
   const [structureBusy, setStructureBusy] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [flashHighlightInquiryId, setFlashHighlightInquiryId] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<InquiryViewMode>("list")
   const deepLinkAppliedRef = useRef(false)
   const focusHandledRef = useRef<string | null>(null)
 
@@ -369,6 +374,11 @@ export function InquiriesBoard({
     followupFilter,
     sortKey,
   ])
+
+  const inquiryCalendarEvents = useMemo(
+    () => mapInquiriesToCalendarEvents(filteredInquiries),
+    [filteredInquiries]
+  )
 
   const resetForm = () => {
     setForm({
@@ -1023,6 +1033,45 @@ export function InquiriesBoard({
         </OpsToolbar>
       ) : null}
 
+      {hasInquiries ? (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/15 px-3 py-2">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-foreground">보기 방식</p>
+            <p className="text-[11px] leading-snug text-muted-foreground">
+              리스트가 기본이며, 달력은 일정·희망일 확인용 보조 뷰입니다.
+            </p>
+          </div>
+          <div className="inline-flex items-center rounded-lg border border-border/70 bg-background p-1">
+            <button
+              type="button"
+              className={cn(
+                "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors",
+                viewMode === "list"
+                  ? "bg-primary/12 text-primary"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              )}
+              onClick={() => setViewMode("list")}
+            >
+              <ListOrdered className="size-3.5" />
+              리스트
+            </button>
+            <button
+              type="button"
+              className={cn(
+                "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors",
+                viewMode === "calendar"
+                  ? "bg-primary/12 text-primary"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              )}
+              onClick={() => setViewMode("calendar")}
+            >
+              <CalendarDays className="size-3.5" />
+              캘린더
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {hasInquiries && !filteredInquiries.length ? (
         <EmptyState
           title="조건에 맞는 문의가 없습니다"
@@ -1030,7 +1079,16 @@ export function InquiriesBoard({
         />
       ) : null}
 
-      {hasInquiries && filteredInquiries.length > 0 ? (
+      {hasInquiries && filteredInquiries.length > 0 && viewMode === "calendar" ? (
+        <OpsCalendarView
+          events={inquiryCalendarEvents}
+          emptyTitle="날짜가 지정된 문의 일정이 없습니다"
+          emptyDescription="현재 필터 조건에서는 팔로업 일정이나 고객 희망 일정이 잡힌 문의가 없습니다."
+          onEventClick={(event) => setDrawerInquiryId(event.relatedEntityId)}
+        />
+      ) : null}
+
+      {hasInquiries && filteredInquiries.length > 0 && viewMode === "list" ? (
         <OpsTableShell className="hidden md:block">
           <table className={cn(opsTableClass, "!min-w-0 w-full max-w-full table-fixed")}>
             <thead>
@@ -1146,7 +1204,7 @@ export function InquiriesBoard({
         </OpsTableShell>
       ) : null}
 
-      {hasInquiries && filteredInquiries.length > 0 ? (
+      {hasInquiries && filteredInquiries.length > 0 && viewMode === "list" ? (
         <div className="space-y-2 md:hidden">
           {filteredInquiries.map((inquiry) => {
             const customer = inquiry.customer
@@ -1243,6 +1301,12 @@ export function InquiriesBoard({
                 <span className="text-muted-foreground">팔로업</span>
                 <span className="text-right tabular-nums">
                   {drawerInquiry.followUpAt ? formatDateTime(drawerInquiry.followUpAt) : "—"}
+                </span>
+              </div>
+              <div className="flex justify-between gap-2 border-b border-border/40 py-1">
+                <span className="text-muted-foreground">희망 일정</span>
+                <span className="text-right tabular-nums">
+                  {drawerInquiry.requestedDate ? formatDate(drawerInquiry.requestedDate) : "—"}
                 </span>
               </div>
             </div>

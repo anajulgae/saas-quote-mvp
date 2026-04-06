@@ -13,6 +13,7 @@ import {
 import {
   ArrowRight,
   BellRing,
+  CalendarDays,
   ExternalLink,
   ListOrdered,
   Loader2,
@@ -23,7 +24,7 @@ import {
   Receipt,
   Sparkles,
 } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 
 import {
@@ -43,6 +44,7 @@ import { OpsDetailSheet } from "@/components/operations/ops-detail-sheet"
 import { OpsSearchField } from "@/components/operations/ops-search-field"
 import { OpsTableShell } from "@/components/operations/ops-table-shell"
 import { OpsToolbar } from "@/components/operations/ops-toolbar"
+import { OpsCalendarView } from "@/components/operations/ops-calendar-view"
 import {
   opsTableCellClass,
   opsTableClass,
@@ -82,6 +84,7 @@ import {
   quoteStatusOptions,
   reminderChannelOptions,
 } from "@/lib/constants"
+import { mapInvoicesToCalendarEvents } from "@/lib/calendar-events"
 import { resolveActivityHeadline } from "@/lib/activity-presentation"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -102,6 +105,7 @@ import type {
 type PaymentQuickFilter = "all" | "unpaid" | "overdue" | "paid"
 
 type InvoiceListSort = "requested_desc" | "due_asc" | "amount_desc" | "customer"
+type InvoiceViewMode = "list" | "calendar"
 
 const paymentStatusSelectItemsRecord = Object.fromEntries(
   paymentStatusOptions.map((o) => [o.value, o.label])
@@ -416,8 +420,11 @@ function InvoicesBoardPanel({
   initialCustomerFilterId?: string
 }) {
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const deepLinkConsumedRef = useRef(false)
   const customerFilterDeepLinkRef = useRef(false)
+  const focusHandledRef = useRef<string | null>(null)
   const flowRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -471,7 +478,9 @@ function InvoicesBoardPanel({
   const [invoiceSort, setInvoiceSort] = useState<InvoiceListSort>("requested_desc")
   const [customerFilterId, setCustomerFilterId] = useState<string | "all">("all")
   const [extraInvoiceFiltersOpen, setExtraInvoiceFiltersOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<InvoiceViewMode>("list")
   const [drawerInvoiceId, setDrawerInvoiceId] = useState<string | null>(null)
+  const [flashHighlightInvoiceId, setFlashHighlightInvoiceId] = useState<string | null>(null)
   const [sendInvoiceTarget, setSendInvoiceTarget] = useState<InvoiceWithReminders | null>(null)
   const [quickQuoteId, setQuickQuoteId] = useState(quotes[0]?.id ?? "")
   const [form, setForm] = useState<InvoiceFormState>(() => createEmptyInvoiceForm(customers))
@@ -503,6 +512,22 @@ function InvoicesBoardPanel({
       return state
     }
   )
+
+  useEffect(() => {
+    const fid = searchParams.get("focus")?.trim()
+    if (!fid || focusHandledRef.current === fid) {
+      return
+    }
+    focusHandledRef.current = fid
+    setDrawerInvoiceId(fid)
+    setFlashHighlightInvoiceId(fid)
+    const timeout = window.setTimeout(() => setFlashHighlightInvoiceId(null), 6500)
+    const next = new URLSearchParams(searchParams.toString())
+    next.delete("focus")
+    const qs = next.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+    return () => window.clearTimeout(timeout)
+  }, [searchParams, router, pathname])
 
   const invoiceFormCustomerSelectItems = useMemo(() => {
     const r: Record<string, string> = {}
@@ -740,6 +765,11 @@ function InvoicesBoardPanel({
     })
     return arr
   }, [filteredInvoices, invoiceSort])
+
+  const invoiceCalendarEvents = useMemo(
+    () => mapInvoicesToCalendarEvents(displayInvoices),
+    [displayInvoices]
+  )
 
   const drawerInvoice = useMemo(
     () => optimisticInvoices.find((i) => i.id === drawerInvoiceId) ?? null,
@@ -1743,6 +1773,45 @@ function InvoicesBoardPanel({
         </OpsToolbar>
       ) : null}
 
+      {hasInvoices ? (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/15 px-3 py-2">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-foreground">보기 방식</p>
+            <p className="text-[11px] leading-snug text-muted-foreground">
+              기본 목록은 그대로 두고, 캘린더에서 입금 기한·약속일·재연락 일정을 보조로 확인합니다.
+            </p>
+          </div>
+          <div className="inline-flex items-center rounded-lg border border-border/70 bg-background p-1">
+            <button
+              type="button"
+              className={cn(
+                "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors",
+                viewMode === "list"
+                  ? "bg-primary/12 text-primary"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              )}
+              onClick={() => setViewMode("list")}
+            >
+              <ListOrdered className="size-3.5" />
+              리스트
+            </button>
+            <button
+              type="button"
+              className={cn(
+                "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors",
+                viewMode === "calendar"
+                  ? "bg-primary/12 text-primary"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              )}
+              onClick={() => setViewMode("calendar")}
+            >
+              <CalendarDays className="size-3.5" />
+              캘린더
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {!invoices.length ? (
         <>
           <Card className="border border-primary/30 bg-gradient-to-b from-primary/[0.05] to-background shadow-sm">
@@ -1916,7 +1985,16 @@ function InvoicesBoardPanel({
         />
       ) : null}
 
-      {displayInvoices.length > 0 ? (
+      {displayInvoices.length > 0 && viewMode === "calendar" ? (
+        <OpsCalendarView
+          events={invoiceCalendarEvents}
+          emptyTitle="날짜가 지정된 청구 일정이 없습니다"
+          emptyDescription="현재 필터 조건에서는 청구일, 입금 기한, 약속일 또는 재연락 일정이 잡힌 청구가 없습니다."
+          onEventClick={(event) => setDrawerInvoiceId(event.relatedEntityId)}
+        />
+      ) : null}
+
+      {displayInvoices.length > 0 && viewMode === "list" ? (
         <>
           <OpsTableShell className="hidden md:block">
             <table className={cn(opsTableClass, "!min-w-0 w-full max-w-full table-fixed")}>
@@ -1944,6 +2022,8 @@ function InvoicesBoardPanel({
                       className={cn(
                         opsTableRowClass,
                         "cursor-pointer",
+                        flashHighlightInvoiceId === invoice.id &&
+                          "ring-1 ring-primary/25 bg-primary/[0.07] transition-colors duration-500",
                         recvHint === "overdue" && "bg-destructive/[0.08]",
                         recvHint === "due_soon" && "bg-amber-500/[0.07]"
                       )}
@@ -2075,6 +2155,7 @@ function InvoicesBoardPanel({
                   type="button"
                   className={cn(
                     "flex w-full flex-col gap-2 rounded-xl border border-border/60 bg-card p-3 text-left shadow-sm",
+                    flashHighlightInvoiceId === invoice.id && "ring-2 ring-primary/30",
                     recvHint === "overdue" && "border-destructive/35",
                     recvHint === "due_soon" && "border-amber-500/35"
                   )}

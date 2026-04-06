@@ -17,12 +17,19 @@ import { BetaOnboardingBanner } from "@/components/app/beta-onboarding-banner"
 import { MetricCard } from "@/components/app/metric-card"
 import { PageHeader } from "@/components/app/page-header"
 import { InquiryStageBadge, PaymentStatusBadge } from "@/components/app/status-badge"
+import { OpsAgendaList } from "@/components/operations/ops-agenda-list"
 import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { resolveActivityHeadline, resolveActivityKind } from "@/lib/activity-presentation"
+import {
+  mapInquiriesToCalendarEvents,
+  mapInvoicesToCalendarEvents,
+  mapQuotesToCalendarEvents,
+  pickCalendarEventsInRange,
+} from "@/lib/calendar-events"
 import { getDashboardPageData } from "@/lib/data"
-import { formatCurrency, formatDateTime } from "@/lib/format"
+import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
 
 const pipelineColumns = [
   { key: "new", label: "신규 문의" },
@@ -64,7 +71,10 @@ export default async function DashboardPage() {
   const {
     metrics,
     followUps,
+    upcomingInquiries,
     overdueInvoices,
+    dueSoonInvoices,
+    expiringQuotes,
     recentActivities,
     pipelineSummary,
     showBetaOnboarding,
@@ -76,6 +86,20 @@ export default async function DashboardPage() {
   const showQuickStartStrip = !showBetaOnboarding && counts.inquiries === 0
   /** 온보딩이 주 행동을 안내할 때 상단 CTA는 보조 링크로만 */
   const softenHeaderCta = showBetaOnboarding && counts.inquiries === 0
+  const scheduleStart = new Date()
+  scheduleStart.setHours(0, 0, 0, 0)
+  const scheduleEnd = new Date(scheduleStart)
+  scheduleEnd.setDate(scheduleEnd.getDate() + 7)
+  scheduleEnd.setHours(23, 59, 59, 999)
+  const upcomingSchedule = pickCalendarEventsInRange(
+    [
+      ...mapInquiriesToCalendarEvents(upcomingInquiries),
+      ...mapInvoicesToCalendarEvents([...overdueInvoices, ...dueSoonInvoices]),
+      ...mapQuotesToCalendarEvents(expiringQuotes),
+    ],
+    scheduleStart,
+    scheduleEnd
+  ).slice(0, 8)
 
   return (
     <div className="space-y-6 md:space-y-7">
@@ -249,76 +273,96 @@ export default async function DashboardPage() {
       </section>
 
       <section className="grid gap-3 sm:gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card className="border-border/70">
-          <CardHeader className="space-y-0.5 pb-3">
-            <CardTitle className="text-base font-semibold">오늘 해야 할 후속조치</CardTitle>
-            <CardDescription className="text-xs">정해진 팔로업 일정 중심으로 정리</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {!followUps.length ? (
-              <div className="flex gap-3 rounded-xl border border-dashed border-border/60 bg-muted/15 px-3 py-3 sm:items-start">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                  <CalendarClock className="size-4" aria-hidden />
-                </div>
-                <div className="min-w-0 flex-1 space-y-2">
-                  <span className={emptyBadgeClass("neutral")}>오늘 일정 없음</span>
-                  <p className="text-sm leading-snug text-muted-foreground">
-                    오늘 처리할 후속조치가 없습니다. 문의에 팔로업 일정을 넣으면 여기에 표시됩니다.
-                  </p>
-                  <Link
-                    href="/inquiries"
-                    className={cn(
-                      buttonVariants({ variant: "outline", size: "sm" }),
-                      "inline-flex h-8 gap-1 text-xs"
-                    )}
-                  >
-                    문의로 이동
-                    <ArrowRight className="size-3" />
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              followUps.map((item) => {
-                const customer = item.customer
+        <div className="space-y-3">
+          <OpsAgendaList
+            title="다가오는 일정"
+            description="이번 주 팔로업, 입금 기한, 약속일, 유효기한을 모아 봅니다."
+            events={upcomingSchedule}
+            emptyText="이번 주 일정이 없습니다. 문의 팔로업이나 청구 재연락 일정을 잡으면 여기에 나타납니다."
+          />
 
-                return (
-                  <div
-                    key={item.id}
-                    className="flex flex-col gap-3 rounded-2xl border border-border/70 p-4 md:flex-row md:items-center md:justify-between"
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Clock3 className="size-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          {formatDateTime(item.followUpAt)}
-                        </span>
-                      </div>
+          <Card className="border-border/70">
+            <CardHeader className="space-y-0.5 pb-3">
+              <CardTitle className="text-base font-semibold">오늘 바로 확인할 항목</CardTitle>
+              <CardDescription className="text-xs">오늘 팔로업과 연체 청구를 빠르게 확인합니다.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {!followUps.length && !overdueInvoices.length ? (
+                <div className="flex gap-3 rounded-xl border border-dashed border-border/60 bg-muted/15 px-3 py-3 sm:items-start">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                    <CalendarClock className="size-4" aria-hidden />
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <span className={emptyBadgeClass("neutral")}>오늘 일정 없음</span>
+                    <p className="text-sm leading-snug text-muted-foreground">
+                      오늘 처리할 후속조치가 없습니다. 문의 팔로업이나 청구 추심 일정을 등록하면 여기서 바로 확인할 수 있습니다.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {followUps.map((item) => {
+                    const customer = item.customer
+                    return (
+                      <Link
+                        key={item.id}
+                        href={`/inquiries?focus=${item.id}`}
+                        className="flex flex-col gap-3 rounded-2xl border border-border/70 p-4 transition-colors hover:bg-muted/20 md:flex-row md:items-center md:justify-between"
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Clock3 className="size-4 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">
+                              {formatDateTime(item.followUpAt)}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-medium">{item.title}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {customer?.companyName ?? customer?.name} · {item.serviceCategory}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <InquiryStageBadge stage={item.stage} />
+                          <span
+                            className={cn(
+                              buttonVariants({ variant: "outline", size: "sm" }),
+                              "inline-flex gap-1.5"
+                            )}
+                          >
+                            문의로 이동
+                            <ArrowRight className="size-4" />
+                          </span>
+                        </div>
+                      </Link>
+                    )
+                  })}
+                  {overdueInvoices.map((invoice) => (
+                    <Link
+                      key={invoice.id}
+                      href={`/invoices?focus=${invoice.id}`}
+                      className="flex flex-col gap-3 rounded-2xl border border-destructive/30 bg-destructive/[0.05] p-4 transition-colors hover:bg-destructive/[0.08] md:flex-row md:items-center md:justify-between"
+                    >
                       <div>
-                        <p className="font-medium">{item.title}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {customer?.companyName ?? customer?.name} · {item.serviceCategory}
+                        <p className="text-xs font-semibold text-destructive">
+                          연체 청구 · {invoice.invoiceNumber}
+                        </p>
+                        <p className="mt-1 font-medium">
+                          {invoice.customer?.companyName?.trim() || invoice.customer?.name || "고객"}
+                        </p>
+                        <p className="mt-0.5 text-sm text-muted-foreground">
+                          입금 기한 {formatDate(invoice.dueDate)} · {formatCurrency(invoice.amount)}
                         </p>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <InquiryStageBadge stage={item.stage} />
-                      <Link
-                        href="/inquiries"
-                        className={cn(
-                          buttonVariants({ variant: "outline", size: "sm" }),
-                          "inline-flex gap-1.5"
-                        )}
-                      >
-                        문의로 이동
-                        <ArrowRight className="size-4" />
-                      </Link>
-                    </div>
-                  </div>
-                )
-              })
-            )}
-          </CardContent>
-        </Card>
+                      <PaymentStatusBadge status={invoice.paymentStatus} />
+                    </Link>
+                  ))}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         <Card className="border-border/70">
           <CardHeader className="space-y-0.5 pb-3">

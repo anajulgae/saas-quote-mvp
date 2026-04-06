@@ -3929,7 +3929,10 @@ export async function upsertBusinessPublicPageRecord(
 export async function getDashboardPageData(): Promise<{
   metrics: DashboardMetrics
   followUps: InquiryWithCustomer[]
+  upcomingInquiries: InquiryWithCustomer[]
   overdueInvoices: InvoiceWithReminders[]
+  dueSoonInvoices: InvoiceWithReminders[]
+  expiringQuotes: QuoteWithItems[]
   recentActivities: ActivityLog[]
   pipelineSummary: Record<"new" | "qualified" | "quoted" | "won", number>
   /** 고객·문의·견적이 모두 없을 때 베타 온보딩 배너 표시 */
@@ -3949,6 +3952,7 @@ export async function getDashboardPageData(): Promise<{
     return {
       metrics: { ...baseMetrics, followUpsToday: 0 },
       followUps: [],
+      upcomingInquiries: [],
       overdueInvoices: demoInvoices
         .filter((invoice) => invoice.paymentStatus === "overdue")
         .map((invoice) => ({
@@ -3956,6 +3960,8 @@ export async function getDashboardPageData(): Promise<{
           customer: demoCustomers.find((customer) => customer.id === invoice.customerId),
           reminders: demoReminders.filter((item) => item.invoiceId === invoice.id),
         })),
+      dueSoonInvoices: [],
+      expiringQuotes: [],
       recentActivities: demoActivityLogs,
       pipelineSummary: {
         new: 0,
@@ -4030,6 +4036,11 @@ export async function getDashboardPageData(): Promise<{
   const now = new Date()
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
   const todayKey = now.toISOString().slice(0, 10)
+  const weekEnd = new Date(now)
+  weekEnd.setDate(weekEnd.getDate() + 7)
+  weekEnd.setHours(23, 59, 59, 999)
+  const weekStartAt = new Date(now)
+  weekStartAt.setHours(0, 0, 0, 0)
 
   return {
     metrics: {
@@ -4057,12 +4068,50 @@ export async function getDashboardPageData(): Promise<{
         ...inquiry,
         customer: customerMap.get(inquiry.customerId),
       })),
+    upcomingInquiries: inquiries
+      .filter((inquiry) => inquiry.followUpAt)
+      .filter((inquiry) => {
+        const at = new Date(inquiry.followUpAt!).getTime()
+        return at >= weekStartAt.getTime() && at <= weekEnd.getTime()
+      })
+      .map((inquiry) => ({
+        ...inquiry,
+        customer: customerMap.get(inquiry.customerId),
+      })),
     overdueInvoices: invoices
       .filter((invoice) => invoice.paymentStatus === "overdue")
       .map((invoice) => ({
         ...invoice,
         customer: customerMap.get(invoice.customerId),
         reminders: [],
+      })),
+    dueSoonInvoices: invoices
+      .filter(
+        (invoice) =>
+          Boolean(invoice.dueDate) &&
+          invoice.paymentStatus !== "paid" &&
+          invoice.paymentStatus !== "deposit_paid"
+      )
+      .filter((invoice) => {
+        const at = new Date(`${invoice.dueDate!}T23:59:59`).getTime()
+        return at >= weekStartAt.getTime() && at <= weekEnd.getTime()
+      })
+      .map((invoice) => ({
+        ...invoice,
+        customer: customerMap.get(invoice.customerId),
+        reminders: [],
+      })),
+    expiringQuotes: quotes
+      .filter((quote) => Boolean(quote.validUntil))
+      .filter((quote) => !["approved", "rejected", "expired"].includes(quote.status))
+      .filter((quote) => {
+        const at = new Date(`${quote.validUntil!}T23:59:59`).getTime()
+        return at >= weekStartAt.getTime() && at <= weekEnd.getTime()
+      })
+      .map((quote) => ({
+        ...quote,
+        customer: customerMap.get(quote.customerId),
+        items: [],
       })),
     recentActivities: activityRowsSafe.map(mapActivityLog),
     pipelineSummary: {

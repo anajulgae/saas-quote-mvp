@@ -12,6 +12,7 @@ import {
 import Link from "next/link"
 import {
   ArrowRight,
+  CalendarDays,
   Copy,
   Download,
   FileText,
@@ -25,7 +26,7 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 
 import {
@@ -45,6 +46,8 @@ import { OpsTimeHintChip, OpsToolbarFilterButton } from "@/components/app/ops-st
 import { PaymentStatusBadge, QuoteStatusBadge } from "@/components/app/status-badge"
 import { resolveActivityHeadline } from "@/lib/activity-presentation"
 import { OpsDetailSheet } from "@/components/operations/ops-detail-sheet"
+import { OpsAgendaList } from "@/components/operations/ops-agenda-list"
+import { OpsCalendarView } from "@/components/operations/ops-calendar-view"
 import { OpsSearchField } from "@/components/operations/ops-search-field"
 import { OpsTableShell } from "@/components/operations/ops-table-shell"
 import { OpsToolbar } from "@/components/operations/ops-toolbar"
@@ -85,6 +88,7 @@ import {
   inquiryStageOptions,
   quoteStatusOptions,
 } from "@/lib/constants"
+import { mapQuotesToCalendarEvents } from "@/lib/calendar-events"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
 import { planAllowsFeature } from "@/lib/plan-features"
 import {
@@ -123,6 +127,8 @@ type QuoteFormState = {
   sentAt: string
   items: QuoteItemForm[]
 }
+
+type QuoteViewMode = "list" | "calendar"
 
 function defaultValidUntilDate(): string {
   const d = new Date()
@@ -271,6 +277,8 @@ function QuotesBoardPanel({
   currentPlan: BillingPlan
 }) {
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const flowRef = useRef<HTMLDivElement>(null)
   const [isPending, startTransition] = useTransition()
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null)
@@ -289,9 +297,11 @@ function QuotesBoardPanel({
   } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<QuoteWithItems | null>(null)
   const [drawerQuoteId, setDrawerQuoteId] = useState<string | null>(null)
+  const [flashHighlightQuoteId, setFlashHighlightQuoteId] = useState<string | null>(null)
   const [draftAssistantOpen, setDraftAssistantOpen] = useState(false)
   const [sendQuoteTarget, setSendQuoteTarget] = useState<QuoteWithItems | null>(null)
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<QuoteViewMode>("list")
   const [quickInquiryId, setQuickInquiryId] = useState(inquiries[0]?.id ?? "")
   const [form, setForm] = useState<QuoteFormState>(() =>
     createEmptyForm(customers, defaultQuoteSummary)
@@ -312,6 +322,7 @@ function QuotesBoardPanel({
   const hasInquiries = inquiries.length > 0
   const hasQuotes = quotes.length > 0
   const quoteDeepLinkDoneRef = useRef(false)
+  const focusHandledRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (quoteDeepLinkDoneRef.current) {
@@ -339,6 +350,22 @@ function QuotesBoardPanel({
     defaultQuoteSummary,
     onOpenChange,
   ])
+
+  useEffect(() => {
+    const fid = searchParams.get("focus")?.trim()
+    if (!fid || focusHandledRef.current === fid) {
+      return
+    }
+    focusHandledRef.current = fid
+    setDrawerQuoteId(fid)
+    setFlashHighlightQuoteId(fid)
+    const timeout = window.setTimeout(() => setFlashHighlightQuoteId(null), 6500)
+    const next = new URLSearchParams(searchParams.toString())
+    next.delete("focus")
+    const qs = next.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+    return () => window.clearTimeout(timeout)
+  }, [searchParams, router, pathname])
 
   useEffect(() => {
     setQuickInquiryId((current) => {
@@ -562,6 +589,19 @@ function QuotesBoardPanel({
       total: subtotal + tax,
     }
   }, [form.items])
+
+  const quoteCalendarAgenda = useMemo(() => {
+    const now = new Date()
+    now.setHours(0, 0, 0, 0)
+    const end = new Date(now)
+    end.setDate(end.getDate() + 14)
+    end.setHours(23, 59, 59, 999)
+    return mapQuotesToCalendarEvents(processedQuotes)
+      .filter((event) => event.sortAt >= now.getTime() && event.sortAt <= end.getTime())
+      .slice(0, 6)
+  }, [processedQuotes])
+
+  const quoteCalendarEvents = useMemo(() => mapQuotesToCalendarEvents(processedQuotes), [processedQuotes])
 
   const resetForm = () => {
     setForm(createEmptyForm(customers, defaultQuoteSummary))
@@ -1586,6 +1626,45 @@ function QuotesBoardPanel({
         </OpsToolbar>
       ) : null}
 
+      {hasQuotes ? (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/15 px-3 py-2">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-foreground">보기 방식</p>
+            <p className="text-[11px] leading-snug text-muted-foreground">
+              기본은 리스트이며, 캘린더는 유효기한 중심으로 보는 보조 뷰입니다.
+            </p>
+          </div>
+          <div className="inline-flex items-center rounded-lg border border-border/70 bg-background p-1">
+            <button
+              type="button"
+              className={cn(
+                "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors",
+                viewMode === "list"
+                  ? "bg-primary/12 text-primary"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              )}
+              onClick={() => setViewMode("list")}
+            >
+              <ListOrdered className="size-3.5" />
+              리스트
+            </button>
+            <button
+              type="button"
+              className={cn(
+                "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors",
+                viewMode === "calendar"
+                  ? "bg-primary/12 text-primary"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              )}
+              onClick={() => setViewMode("calendar")}
+            >
+              <CalendarDays className="size-3.5" />
+              캘린더
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {!quotes.length ? (
         <>
         <Card className="border border-primary/30 bg-gradient-to-b from-primary/[0.05] to-background shadow-sm">
@@ -1730,7 +1809,25 @@ function QuotesBoardPanel({
         />
       ) : null}
 
-      {processedQuotes.length > 0 ? (
+      {hasQuotes ? (
+        <OpsAgendaList
+          title="유효기한 일정"
+          description="리스트를 유지한 채, 필터에 걸린 견적의 임박한 유효기한만 따로 봅니다."
+          events={quoteCalendarAgenda}
+          emptyText="현재 필터 조건에서는 2주 내 유효기한 일정이 있는 견적이 없습니다."
+        />
+      ) : null}
+
+      {processedQuotes.length > 0 && viewMode === "calendar" ? (
+        <OpsCalendarView
+          events={quoteCalendarEvents}
+          emptyTitle="날짜가 지정된 견적 일정이 없습니다"
+          emptyDescription="현재 필터 조건에서는 유효기한이 잡힌 견적이 없습니다."
+          onEventClick={(event) => openQuoteDetail(event.relatedEntityId)}
+        />
+      ) : null}
+
+      {processedQuotes.length > 0 && viewMode === "list" ? (
         <>
           <OpsTableShell className="hidden md:block">
             <table className={cn(opsTableClass, "!min-w-0 w-full max-w-full table-fixed")}>
@@ -1755,6 +1852,8 @@ function QuotesBoardPanel({
                       className={cn(
                         opsTableRowClass,
                         "cursor-pointer",
+                        flashHighlightQuoteId === quote.id &&
+                          "bg-primary/[0.07] ring-1 ring-primary/25 transition-colors duration-500",
                         validityHint === "past_due" && "bg-destructive/[0.04]",
                         validityHint === "due_soon" && "bg-amber-500/[0.06]"
                       )}
@@ -1872,6 +1971,7 @@ function QuotesBoardPanel({
                   type="button"
                   className={cn(
                     "flex w-full flex-col gap-2 rounded-xl border border-border/60 bg-card p-3 text-left shadow-sm",
+                    flashHighlightQuoteId === quote.id && "ring-2 ring-primary/30",
                     validityHint === "past_due" && "border-destructive/35",
                     validityHint === "due_soon" && "border-amber-500/35"
                   )}
