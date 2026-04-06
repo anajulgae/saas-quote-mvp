@@ -40,6 +40,8 @@ export interface Customer {
   notes?: string
   createdAt: string
   updatedAt?: string
+  /** Pro 고객 미니 포털 링크용(내부 전용) */
+  portalToken?: string
 }
 
 export interface Inquiry {
@@ -92,6 +94,8 @@ export interface Quote {
   shareLastOpenedAt?: string
 }
 
+export type CollectionToneHint = "polite" | "neutral" | "firm"
+
 export interface Invoice {
   id: string
   userId: string
@@ -111,6 +115,28 @@ export interface Invoice {
   publicShareToken?: string
   shareOpenCount?: number
   shareLastOpenedAt?: string
+  /** 추심·후속: 입금 약속일 */
+  promisedPaymentDate?: string
+  /** 추심·후속: 다음 연락 예정 */
+  nextCollectionFollowupAt?: string
+  /** 리마인드 톤 힌트 */
+  collectionTone?: CollectionToneHint
+}
+
+/** 설정 화면 — BYOA 카카오 알림톡(또는 동일 페이로드를 받는 프록시) */
+export interface MessagingChannelConfig {
+  id: string
+  userId: string
+  channelKind: "kakao_alimtalk"
+  providerType: "custom_http"
+  apiEndpoint: string
+  apiKey: string
+  apiKeyHeader: string
+  senderKey: string
+  templateCode: string
+  enabled: boolean
+  extraConfig: Record<string, unknown>
+  updatedAt?: string
 }
 
 export interface Reminder {
@@ -367,6 +393,9 @@ export interface InvoiceFormInput {
   requestedAt?: string
   paidAt?: string
   notes: string
+  promisedPaymentDate?: string
+  nextCollectionFollowupAt?: string
+  collectionTone?: CollectionToneHint
 }
 
 export interface ReminderFormInput {

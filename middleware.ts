@@ -54,7 +54,8 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/quote-view") ||
     pathname.startsWith("/invoice-view") ||
     pathname.startsWith("/request/") ||
-    pathname.startsWith("/biz/")
+    pathname.startsWith("/biz/") ||
+    pathname.startsWith("/c/")
   const isAuthenticated = hasSessionCookie(request)
 
   if (pathname === "/") {

@@ -24,6 +24,10 @@ export type PlanFeature =
   | "public_share_tracking"
   /** 업체 소개 미니 랜딩(`/biz/[slug]`) — Pro 전용 */
   | "mini_landing"
+  /** BYOA 카카오 알림톡(사용자 엔드포인트로 POST) — Pro 전용 */
+  | "kakao_byoa_messaging"
+  /** 고객 미니 포털(`/c/[token]`) — Pro 전용 */
+  | "customer_mini_portal"
 
 /**
  * 현재(무료 공개·PG 전): 핵심·AI·메일 흐름을 막지 않습니다.
@@ -35,6 +39,8 @@ export const FEATURE_GATES: Record<PlanFeature, BillingPlan[]> = {
   email_outbound: ["free", "pro"],
   public_share_tracking: ["free", "pro"],
   mini_landing: ["pro"],
+  kakao_byoa_messaging: ["pro"],
+  customer_mini_portal: ["pro"],
 }
 
 export function planAllowsFeature(plan: BillingPlan, feature: PlanFeature): boolean {

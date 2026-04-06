@@ -30,6 +30,7 @@ import {
   createInvoiceAction,
   createReminderAction,
   updateInvoiceAction,
+  updateInvoiceCollectionFieldsAction,
   updateInvoicePaymentStatusAction,
 } from "@/app/actions"
 import { EmptyState } from "@/components/app/empty-state"
@@ -84,9 +85,12 @@ import {
 import { resolveActivityHeadline } from "@/lib/activity-presentation"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { planAllowsFeature } from "@/lib/plan-features"
 import type {
   ActivityLog,
+  BillingPlan,
   Customer,
+  CollectionToneHint,
   InvoiceFormInput,
   InvoiceType,
   InvoiceWithReminders,
@@ -132,6 +136,34 @@ const reminderToneSelectItemsRecord: Record<string, string> = {
   polite: "정중형",
   neutral: "기본형",
   firm: "단호형",
+}
+
+function toDatetimeLocalValue(iso?: string): string {
+  if (!iso?.trim()) {
+    return ""
+  }
+  const d = new Date(iso)
+  if (!Number.isFinite(d.getTime())) {
+    return ""
+  }
+  const p = (n: number) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+function collectionNextStepHint(inv: InvoiceWithReminders): string {
+  switch (inv.paymentStatus) {
+    case "pending":
+      return "첫 안내를 보내 보세요. 발송에서 링크·이메일·알림톡·문자 문구를 쓸 수 있습니다."
+    case "deposit_paid":
+    case "partially_paid":
+      return "잔금이 남았을 수 있습니다. 금액·기한을 다시 안내하고, 입금 약속이 있으면 아래에 적어 두세요."
+    case "overdue":
+      return "기한이 지났습니다. 정중한 재안내와 다음 연락일을 정해 두면 관리가 쉬워집니다."
+    case "paid":
+      return "입금이 완료된 청구입니다."
+    default:
+      return "상태에 맞춰 고객에게 안내해 보세요."
+  }
 }
 
 function invoiceListSearchHaystack(inv: InvoiceWithReminders): string {
@@ -206,6 +238,9 @@ type InvoiceFormState = {
   requestedAt: string
   paidAt: string
   notes: string
+  promisedPaymentDate: string
+  nextCollectionFollowupAt: string
+  collectionTone: CollectionToneHint
 }
 
 function createEmptyInvoiceForm(customers: Customer[]): InvoiceFormState {
@@ -219,6 +254,9 @@ function createEmptyInvoiceForm(customers: Customer[]): InvoiceFormState {
     requestedAt: todayDateInput(),
     paidAt: "",
     notes: "",
+    promisedPaymentDate: "",
+    nextCollectionFollowupAt: "",
+    collectionTone: "neutral",
   }
 }
 
@@ -233,6 +271,9 @@ function toInvoiceForm(invoice: InvoiceWithReminders): InvoiceFormState {
     requestedAt: invoice.requestedAt ?? "",
     paidAt: invoice.paidAt ?? "",
     notes: invoice.notes ?? "",
+    promisedPaymentDate: invoice.promisedPaymentDate?.slice(0, 10) ?? "",
+    nextCollectionFollowupAt: toDatetimeLocalValue(invoice.nextCollectionFollowupAt),
+    collectionTone: invoice.collectionTone ?? "neutral",
   }
 }
 
@@ -349,6 +390,7 @@ function InvoicesBoardPanel({
   businessName,
   bankAccount,
   paymentTerms,
+  currentPlan,
   isCreateOpen,
   onOpenChange,
   createOpenSourceRef,
@@ -364,6 +406,7 @@ function InvoicesBoardPanel({
   businessName: string
   bankAccount: string
   paymentTerms: string
+  currentPlan: BillingPlan
   isCreateOpen: boolean
   onOpenChange: (open: boolean) => void
   createOpenSourceRef: MutableRefObject<"header" | null>
@@ -709,6 +752,38 @@ function InvoicesBoardPanel({
     }
     return invoiceActivityByInvoiceId[drawerInvoiceId] ?? []
   }, [drawerInvoiceId, invoiceActivityByInvoiceId])
+
+  const [collPromised, setCollPromised] = useState("")
+  const [collNext, setCollNext] = useState("")
+  const [collTone, setCollTone] = useState<CollectionToneHint>("neutral")
+
+  useEffect(() => {
+    if (!drawerInvoice) {
+      return
+    }
+    setCollPromised(drawerInvoice.promisedPaymentDate?.slice(0, 10) ?? "")
+    setCollNext(toDatetimeLocalValue(drawerInvoice.nextCollectionFollowupAt))
+    setCollTone(drawerInvoice.collectionTone ?? "neutral")
+  }, [drawerInvoice])
+
+  const saveDrawerCollection = () => {
+    if (!drawerInvoiceId) {
+      return
+    }
+    startTransition(async () => {
+      const result = await updateInvoiceCollectionFieldsAction(drawerInvoiceId, {
+        promisedPaymentDate: collPromised,
+        nextCollectionFollowupAt: collNext,
+        collectionTone: collTone,
+      })
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      toast.success("추심·연락 일정을 저장했습니다.")
+      router.refresh()
+    })
+  }
 
   const resetInvoiceForm = () => {
     setAmountFollowsSuggestion(true)
@@ -1408,6 +1483,61 @@ function InvoicesBoardPanel({
         />
       </section>
 
+      <section className="rounded-lg border border-border/60 bg-muted/5 px-3 py-2.5 sm:px-4">
+        <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          4) 추심·연락 일정 (선택)
+        </p>
+        <p className="mb-2 text-[10px] leading-snug text-muted-foreground">
+          입금 약속일·다음 연락 시점·리마인드 톤을 기록해 두면 미수 관리에 도움이 됩니다.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <label className="text-sm font-semibold">입금 약속일</label>
+            <Input
+              type="date"
+              className="h-10 max-w-full sm:max-w-xs"
+              value={form.promisedPaymentDate}
+              onChange={(e) =>
+                setForm((c) => ({ ...c, promisedPaymentDate: e.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-semibold">다음 연락·리마인드 예정</label>
+            <Input
+              type="datetime-local"
+              className="h-10 max-w-full sm:max-w-xs"
+              value={form.nextCollectionFollowupAt}
+              onChange={(e) =>
+                setForm((c) => ({ ...c, nextCollectionFollowupAt: e.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-1 sm:col-span-2">
+            <label className="text-sm font-semibold">리마인드 톤 힌트</label>
+            <Select
+              value={form.collectionTone}
+              items={reminderToneSelectItemsRecord}
+              onValueChange={(value) =>
+                setForm((c) => ({
+                  ...c,
+                  collectionTone: (value as CollectionToneHint | null) ?? "neutral",
+                }))
+              }
+            >
+              <SelectTrigger className="h-10 w-full max-w-xs justify-between text-left">
+                <SelectValue>{reminderToneSelectItemsRecord[form.collectionTone]}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="polite">정중형</SelectItem>
+                <SelectItem value="neutral">기본형</SelectItem>
+                <SelectItem value="firm">단호형</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </section>
+
       {errorMessage ? (
         <p className="rounded-lg border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {errorMessage}
@@ -2052,6 +2182,71 @@ function InvoicesBoardPanel({
                 <OpsTimeHintChip kind="invoice_due_soon" />
               ) : null}
             </div>
+            <div
+              className={cn(
+                "rounded-lg border px-3 py-2.5",
+                drawerInvoice.paymentStatus === "overdue" || invoiceRowReceivableHint(drawerInvoice) === "overdue"
+                  ? "border-amber-500/45 bg-amber-500/[0.07]"
+                  : "border-border/60 bg-muted/20"
+              )}
+            >
+              <p className="text-[11px] font-semibold text-muted-foreground">다음으로 할 일</p>
+              <p className="mt-1 text-xs leading-relaxed text-foreground/90">
+                {collectionNextStepHint(drawerInvoice)}
+              </p>
+            </div>
+            <div className="space-y-2 rounded-lg border border-border/50 bg-muted/10 p-3">
+              <p className="text-xs font-semibold text-muted-foreground">추심·연락 일정</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-muted-foreground">입금 약속일</label>
+                  <Input
+                    type="date"
+                    className="h-9"
+                    value={collPromised}
+                    onChange={(e) => setCollPromised(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-muted-foreground">다음 연락 예정</label>
+                  <Input
+                    type="datetime-local"
+                    className="h-9"
+                    value={collNext}
+                    onChange={(e) => setCollNext(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-[11px] font-medium text-muted-foreground">리마인드 톤</label>
+                  <Select
+                    value={collTone}
+                    items={reminderToneSelectItemsRecord}
+                    onValueChange={(value) =>
+                      setCollTone((value as CollectionToneHint | null) ?? "neutral")
+                    }
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue>{reminderToneSelectItemsRecord[collTone]}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="polite">정중형</SelectItem>
+                      <SelectItem value="neutral">기본형</SelectItem>
+                      <SelectItem value="firm">단호형</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="mt-2 h-8 w-full sm:w-auto"
+                disabled={isPending}
+                onClick={saveDrawerCollection}
+              >
+                추심 일정 저장
+              </Button>
+            </div>
             <div className="space-y-2">
               <p className="text-xs font-semibold text-muted-foreground">결제 상태 변경</p>
               <PaymentStatusBadge status={drawerInvoice.paymentStatus} className="w-fit" />
@@ -2357,6 +2552,7 @@ function InvoicesBoardPanel({
         paymentTerms={paymentTerms}
         bankAccount={bankAccount}
         businessName={businessName}
+        kakaoByoaAllowed={planAllowsFeature(currentPlan, "kakao_byoa_messaging")}
         onAfterSend={() => router.refresh()}
       />
     </div>
@@ -2372,6 +2568,7 @@ export function InvoicesWorkspace({
   businessName,
   bankAccount,
   paymentTerms,
+  currentPlan,
   deepLinkQuoteId,
   deepLinkOpenCreate,
   initialCustomerFilterId,
@@ -2384,6 +2581,7 @@ export function InvoicesWorkspace({
   businessName: string
   bankAccount: string
   paymentTerms: string
+  currentPlan: BillingPlan
   deepLinkQuoteId?: string
   deepLinkOpenCreate?: boolean
   initialCustomerFilterId?: string
@@ -2477,6 +2675,7 @@ export function InvoicesWorkspace({
         businessName={businessName}
         bankAccount={bankAccount}
         paymentTerms={paymentTerms}
+        currentPlan={currentPlan}
         isCreateOpen={isCreateOpen}
         onOpenChange={setIsCreateOpen}
         createOpenSourceRef={createOpenSourceRef}

@@ -86,6 +86,7 @@ import {
   quoteStatusOptions,
 } from "@/lib/constants"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
+import { planAllowsFeature } from "@/lib/plan-features"
 import {
   customerPrimaryLabel,
   formatKrwDigitsInput,
@@ -97,6 +98,7 @@ import {
 import { cn } from "@/lib/utils"
 import type {
   ActivityLog,
+  BillingPlan,
   Customer,
   InquiryWithCustomer,
   QuoteLinkedInvoiceStub,
@@ -249,6 +251,7 @@ function QuotesBoardPanel({
   nextQuoteNumberPreview,
   quoteActivityByQuoteId,
   invoicesByQuoteId,
+  currentPlan,
 }: {
   quotes: QuoteWithItems[]
   customers: Customer[]
@@ -265,6 +268,7 @@ function QuotesBoardPanel({
   nextQuoteNumberPreview: string
   quoteActivityByQuoteId: Record<string, ActivityLog[]>
   invoicesByQuoteId: Record<string, QuoteLinkedInvoiceStub[]>
+  currentPlan: BillingPlan
 }) {
   const router = useRouter()
   const flowRef = useRef<HTMLDivElement>(null)
@@ -2286,6 +2290,7 @@ function QuotesBoardPanel({
         }}
         emailBodyTemplate={defaultQuoteSummary}
         businessName={defaultBusinessName}
+        kakaoByoaAllowed={planAllowsFeature(currentPlan, "kakao_byoa_messaging")}
         onAfterSend={() => router.refresh()}
       />
     </>
@@ -2302,6 +2307,7 @@ export function QuotesWorkspace({
   nextQuoteNumberPreview,
   quoteActivityByQuoteId,
   invoicesByQuoteId,
+  currentPlan,
   deepLinkCustomerId,
   deepLinkOpenCreate = false,
 }: {
@@ -2314,6 +2320,7 @@ export function QuotesWorkspace({
   nextQuoteNumberPreview: string
   quoteActivityByQuoteId: Record<string, ActivityLog[]>
   invoicesByQuoteId: Record<string, QuoteLinkedInvoiceStub[]>
+  currentPlan: BillingPlan
   deepLinkCustomerId?: string
   deepLinkOpenCreate?: boolean
 }) {
@@ -2390,6 +2397,7 @@ export function QuotesWorkspace({
         nextQuoteNumberPreview={nextQuoteNumberPreview}
         quoteActivityByQuoteId={quoteActivityByQuoteId}
         invoicesByQuoteId={invoicesByQuoteId}
+        currentPlan={currentPlan}
       />
     </div>
   )

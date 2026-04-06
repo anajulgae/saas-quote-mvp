@@ -9,6 +9,7 @@ import {
   logInvoiceKakaoTemplateCopiedAction,
   logInvoiceShareLinkCopiedAction,
   sendInvoiceEmailAction,
+  sendInvoiceKakaoByoaAction,
 } from "@/app/actions"
 import { Button } from "@/components/ui/button"
 import {
@@ -29,7 +30,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { formatCurrency, formatDate } from "@/lib/format"
-import { buildKakaoInvoiceShareText } from "@/lib/kakao-share"
+import { buildKakaoInvoiceShareText, buildSmsInvoiceShareText } from "@/lib/kakao-share"
 import type { InvoiceWithReminders } from "@/types/domain"
 
 type MessageTone = "polite" | "neutral" | "firm"
@@ -47,6 +48,7 @@ export function InvoiceSendDialog({
   paymentTerms,
   bankAccount,
   businessName = "",
+  kakaoByoaAllowed,
   onAfterSend,
 }: {
   invoice: InvoiceWithReminders | null
@@ -55,6 +57,7 @@ export function InvoiceSendDialog({
   paymentTerms: string
   bankAccount: string
   businessName?: string
+  kakaoByoaAllowed: boolean
   onAfterSend?: () => void
 }) {
   const [shareUrl, setShareUrl] = useState("")
@@ -68,6 +71,8 @@ export function InvoiceSendDialog({
   const [includeLink, setIncludeLink] = useState(true)
   const [messageTone, setMessageTone] = useState<MessageTone>("neutral")
   const [aiBusy, setAiBusy] = useState(false)
+  const [alimPhone, setAlimPhone] = useState("")
+  const [alimBusy, setAlimBusy] = useState(false)
 
   const invoiceId = invoice?.id
 
@@ -75,6 +80,8 @@ export function InvoiceSendDialog({
     if (!open || !invoice) {
       return
     }
+    const digits = (invoice.customer?.phone ?? "").replace(/\D/g, "")
+    setAlimPhone(digits.length >= 10 ? invoice.customer?.phone?.trim() ?? "" : "")
     setSubject(`[Bill-IO] 청구서 ${invoice.invoiceNumber} 안내드립니다`)
     const terms = paymentTerms.trim()
     const acct = bankAccount.trim()
@@ -246,6 +253,65 @@ export function InvoiceSendDialog({
     window.open(`/invoices/${invoice.id}/print`, "_blank", "noopener,noreferrer")
   }
 
+  const copySmsMessage = () => {
+    if (!invoice) {
+      return
+    }
+    setActionBusy(true)
+    void (async () => {
+      try {
+        let url = shareUrl
+        if (!url) {
+          const res = await ensureInvoiceShareLinkAction(invoice.id)
+          if (!res.ok) {
+            toast.error(res.error)
+            setShareError(res.error)
+            return
+          }
+          url = res.url
+          setShareUrl(url)
+        }
+        const text = buildSmsInvoiceShareText({
+          invoiceNumber: invoice.invoiceNumber,
+          amountLabel: formatCurrency(invoice.amount),
+          publicUrl: url,
+          businessName: businessName.trim() || undefined,
+        })
+        await navigator.clipboard.writeText(text)
+        toast.success("문자용 짧은 안내를 복사했습니다.")
+      } catch {
+        toast.error("클립보드 복사에 실패했습니다.")
+      } finally {
+        setActionBusy(false)
+      }
+    })()
+  }
+
+  const sendAlimtalkByoa = () => {
+    if (!invoice) {
+      return
+    }
+    setAlimBusy(true)
+    void (async () => {
+      try {
+        const res = await sendInvoiceKakaoByoaAction({
+          invoiceId: invoice.id,
+          recipientPhone: alimPhone.trim(),
+        })
+        if (!res.ok) {
+          toast.error(res.error)
+          return
+        }
+        toast.success("알림톡 발송을 요청했습니다. 외부 채널에서 결과를 확인해 주세요.")
+        onAfterSend?.()
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "요청에 실패했습니다.")
+      } finally {
+        setAlimBusy(false)
+      }
+    })()
+  }
+
   const copyKakaoMessage = () => {
     if (!invoice) {
       return
@@ -340,7 +406,17 @@ export function InvoiceSendDialog({
     })()
   }
 
-  const busy = shareLoading || actionBusy || aiBusy
+  const busy = shareLoading || actionBusy || aiBusy || alimBusy
+
+  const previewVariables =
+    invoice && shareUrl
+      ? {
+          shareUrl,
+          docType: "invoice",
+          invoiceNumber: invoice.invoiceNumber,
+          amountWon: String(invoice.amount),
+        }
+      : null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -393,6 +469,16 @@ export function InvoiceSendDialog({
                 <MessageCircle className="size-3.5" />
                 카톡 문구 복사
               </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                disabled={busy}
+                onClick={copySmsMessage}
+              >
+                문자 문구 복사
+              </Button>
             </div>
 
             {shareLoading ? (
@@ -414,6 +500,54 @@ export function InvoiceSendDialog({
                 {shareUrl}
               </p>
             ) : null}
+
+            {kakaoByoaAllowed ? (
+              <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/[0.04] p-3">
+                <p className="text-xs font-semibold text-foreground">카카오 알림톡 (BYOA)</p>
+                <p className="text-[11px] leading-snug text-muted-foreground">
+                  설정에 저장한 <strong className="font-medium text-foreground/85">본인 프록시</strong>로
+                  발송 요청만 전달합니다. 비용·승인 템플릿은 사용 중인 알림톡 사업자에서 관리합니다.
+                </p>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-muted-foreground">수신 번호</label>
+                  <Input
+                    className="h-9 font-mono text-xs"
+                    value={alimPhone}
+                    onChange={(e) => setAlimPhone(e.target.value)}
+                    placeholder="01012345678"
+                  />
+                </div>
+                {previewVariables ? (
+                  <details className="text-[11px] text-muted-foreground">
+                    <summary className="cursor-pointer font-medium text-foreground/80">미리보기 (variables)</summary>
+                    <pre className="mt-2 max-h-32 overflow-auto rounded border border-border/60 bg-muted/30 p-2 font-mono text-[10px]">
+                      {JSON.stringify(
+                        { billIoVersion: 1, channelKind: "kakao_alimtalk", variables: previewVariables },
+                        null,
+                        2
+                      )}
+                    </pre>
+                  </details>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">공유 링크가 준비되면 미리보기가 표시됩니다.</p>
+                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-9 gap-1.5"
+                  disabled={busy || !invoiceId}
+                  onClick={sendAlimtalkByoa}
+                >
+                  {alimBusy ? <Loader2 className="size-3.5 animate-spin" /> : <MessageCircle className="size-3.5" />}
+                  알림톡 발송 요청
+                </Button>
+              </div>
+            ) : (
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                Pro에서 BYOA 알림톡 연동을 켜면 이곳에서 발송 요청을 보낼 수 있습니다.{" "}
+                <span className="font-mono text-[10px]">설정 → 메시지 채널 연결</span>
+              </p>
+            )}
 
             <div className="space-y-2 border-t border-border/50 pt-3">
               <p className="text-xs font-semibold text-foreground">이메일 보내기</p>

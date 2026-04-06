@@ -41,6 +41,11 @@ const headlineByAction: Record<string, string> = {
   "inquiry_form.kakao_copied": "문의 폼 카카오 문구",
   "inquiry_form.sms_copied": "문의 폼 문자 문구",
   "inquiry_form.qr_viewed": "문의 폼 QR",
+  "messaging.channel_saved": "알림톡 채널 설정",
+  "invoice.collection_plan_updated": "추심·연락 일정",
+  "invoice.messaging_kakao_sent": "알림톡 발송",
+  "quote.messaging_kakao_sent": "알림톡 발송",
+  "customer.portal_token_issued": "고객 포털 링크",
 }
 
 export function resolveActivityKind(action: string): ActivityKind {

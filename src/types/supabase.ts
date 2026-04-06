@@ -205,6 +205,7 @@ export interface Database {
           email: string | null
           notes: string | null
           tags: string[]
+          portal_token: string | null
           created_at: string
           updated_at: string
         }
@@ -217,6 +218,7 @@ export interface Database {
           email?: string | null
           notes?: string | null
           tags?: string[]
+          portal_token?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -229,6 +231,7 @@ export interface Database {
           email?: string | null
           notes?: string | null
           tags?: string[]
+          portal_token?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -497,6 +500,9 @@ export interface Database {
           public_share_token: string | null
           share_open_count: number
           share_last_opened_at: string | null
+          promised_payment_date: string | null
+          next_collection_followup_at: string | null
+          collection_tone: string
           created_at: string
           updated_at: string
         }
@@ -516,6 +522,9 @@ export interface Database {
           public_share_token?: string | null
           share_open_count?: number
           share_last_opened_at?: string | null
+          promised_payment_date?: string | null
+          next_collection_followup_at?: string | null
+          collection_tone?: string
           created_at?: string
           updated_at?: string
         }
@@ -535,8 +544,98 @@ export interface Database {
           public_share_token?: string | null
           share_open_count?: number
           share_last_opened_at?: string | null
+          promised_payment_date?: string | null
+          next_collection_followup_at?: string | null
+          collection_tone?: string
           created_at?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      messaging_channel_configs: {
+        Row: {
+          id: string
+          user_id: string
+          channel_kind: string
+          provider_type: string
+          api_endpoint: string
+          api_key: string | null
+          api_key_header: string
+          sender_key: string
+          template_code: string
+          enabled: boolean
+          extra_config: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          channel_kind?: string
+          provider_type?: string
+          api_endpoint?: string
+          api_key?: string | null
+          api_key_header?: string
+          sender_key?: string
+          template_code?: string
+          enabled?: boolean
+          extra_config?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          channel_kind?: string
+          provider_type?: string
+          api_endpoint?: string
+          api_key?: string | null
+          api_key_header?: string
+          sender_key?: string
+          template_code?: string
+          enabled?: boolean
+          extra_config?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      messaging_send_logs: {
+        Row: {
+          id: string
+          user_id: string
+          channel_kind: string
+          recipient_phone: string
+          status: string
+          error_message: string | null
+          related_kind: string | null
+          related_id: string | null
+          payload: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          channel_kind: string
+          recipient_phone: string
+          status: string
+          error_message?: string | null
+          related_kind?: string | null
+          related_id?: string | null
+          payload?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          channel_kind?: string
+          recipient_phone?: string
+          status?: string
+          error_message?: string | null
+          related_kind?: string | null
+          related_id?: string | null
+          payload?: Json
+          created_at?: string
         }
         Relationships: []
       }
@@ -667,6 +766,10 @@ export interface Database {
       }
       get_public_business_landing: {
         Args: { p_slug: string }
+        Returns: Json
+      }
+      get_customer_portal_payload: {
+        Args: { p_token: string }
         Returns: Json
       }
       submit_public_inquiry: {

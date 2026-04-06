@@ -42,8 +42,13 @@ import {
   upsertBusinessPublicPageRecord,
   updateBusinessSealSettingsRecord,
   updateInquiryRecord,
+  ensureCustomerPortalTokenRecord,
+  sendKakaoAlimtalkForInvoiceRecord,
+  sendKakaoAlimtalkForQuoteRecord,
+  updateInvoiceCollectionFieldsRecord,
   updateInvoicePaymentStatusRecord,
   updateInvoiceRecord,
+  upsertMessagingChannelConfigRecord,
   updateQuoteRecord,
   updateQuoteStatusRecord,
 } from "@/lib/data"
@@ -52,6 +57,7 @@ import { isResendConfigured, sendHtmlEmailViaResend } from "@/lib/send-resend"
 import { OpenAiError, runLandingDraftAi } from "@/lib/server/landing-draft-core"
 import type {
   BusinessSettings,
+  CollectionToneHint,
   InquiryStage,
   InvoiceFormInput,
   PaymentStatus,
@@ -144,6 +150,9 @@ const invoiceFormSchema = z.object({
   requestedAt: z.string().optional(),
   paidAt: z.string().optional(),
   notes: z.string().trim().default(""),
+  promisedPaymentDate: z.string().optional(),
+  nextCollectionFollowupAt: z.string().optional(),
+  collectionTone: z.enum(["polite", "neutral", "firm"]).optional(),
 })
 
 const reminderFormSchema = z.object({
@@ -225,6 +234,9 @@ function normalizeInvoiceInput(input: {
   requestedAt: string
   paidAt: string
   notes: string
+  promisedPaymentDate?: string
+  nextCollectionFollowupAt?: string
+  collectionTone?: CollectionToneHint
 }): InvoiceFormInput {
   return invoiceFormSchema.parse({
     customerId: input.customerId,
@@ -236,6 +248,9 @@ function normalizeInvoiceInput(input: {
     requestedAt: input.requestedAt || undefined,
     paidAt: input.paidAt || undefined,
     notes: input.notes,
+    promisedPaymentDate: input.promisedPaymentDate?.trim() || undefined,
+    nextCollectionFollowupAt: input.nextCollectionFollowupAt?.trim() || undefined,
+    collectionTone: input.collectionTone,
   })
 }
 
@@ -843,6 +858,9 @@ export async function createInvoiceAction(input: {
   requestedAt: string
   paidAt: string
   notes: string
+  promisedPaymentDate?: string
+  nextCollectionFollowupAt?: string
+  collectionTone?: CollectionToneHint
 }) {
   try {
     const parsed = normalizeInvoiceInput(input)
@@ -873,6 +891,9 @@ export async function updateInvoiceAction(
     requestedAt: string
     paidAt: string
     notes: string
+    promisedPaymentDate?: string
+    nextCollectionFollowupAt?: string
+    collectionTone?: CollectionToneHint
   }
 ) {
   try {
@@ -1358,6 +1379,145 @@ export async function sendInvoiceEmailAction(input: z.infer<typeof sendInvoiceEm
     return {
       ok: false as const,
       error: toUserFacingActionError(error, "이메일을 보내지 못했습니다."),
+    }
+  }
+}
+
+const messagingChannelSaveSchema = z
+  .object({
+    apiEndpoint: z.string().trim().max(2000),
+    apiKey: z.string().trim().max(4000),
+    apiKeyHeader: z.string().trim().max(120).default("Authorization"),
+    senderKey: z.string().trim().max(500),
+    templateCode: z.string().trim().max(200),
+    enabled: z.boolean(),
+  })
+  .refine(
+    (v) => !v.enabled || v.apiEndpoint.trim().startsWith("https://"),
+    "엔드포인트는 https:// 로 시작해야 합니다."
+  )
+
+export async function saveMessagingChannelConfigAction(
+  input: z.infer<typeof messagingChannelSaveSchema>
+) {
+  try {
+    const parsed = messagingChannelSaveSchema.parse(input)
+    const session = await getAppSession()
+    if (!session) {
+      return { ok: false as const, error: "로그인이 필요합니다." }
+    }
+    if (session.mode === "demo") {
+      return { ok: false as const, error: "데모에서는 저장할 수 없습니다." }
+    }
+    await upsertMessagingChannelConfigRecord(parsed)
+    revalidatePath("/settings")
+    return { ok: true as const }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { ok: false as const, error: error.issues[0]?.message ?? "입력값을 확인해 주세요." }
+    }
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "메시징 설정을 저장하지 못했습니다."),
+    }
+  }
+}
+
+export async function sendInvoiceKakaoByoaAction(input: {
+  invoiceId: string
+  recipientPhone?: string
+}) {
+  try {
+    const invoiceId = z.string().trim().min(1).parse(input.invoiceId)
+    const phone = String(input.recipientPhone ?? "").trim()
+    const result = await sendKakaoAlimtalkForInvoiceRecord(invoiceId, phone)
+    if (!result.ok) {
+      return { ok: false as const, error: result.error }
+    }
+    revalidatePath("/invoices")
+    return { ok: true as const }
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "알림톡 발송 요청에 실패했습니다."),
+    }
+  }
+}
+
+export async function sendQuoteKakaoByoaAction(input: {
+  quoteId: string
+  recipientPhone?: string
+}) {
+  try {
+    const quoteId = z.string().trim().min(1).parse(input.quoteId)
+    const phone = String(input.recipientPhone ?? "").trim()
+    const result = await sendKakaoAlimtalkForQuoteRecord(quoteId, phone)
+    if (!result.ok) {
+      return { ok: false as const, error: result.error }
+    }
+    revalidatePath("/quotes")
+    return { ok: true as const }
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "알림톡 발송 요청에 실패했습니다."),
+    }
+  }
+}
+
+const invoiceCollectionFieldsSchema = z.object({
+  promisedPaymentDate: z.string(),
+  nextCollectionFollowupAt: z.string(),
+  collectionTone: z.enum(["polite", "neutral", "firm"]),
+})
+
+export async function updateInvoiceCollectionFieldsAction(
+  invoiceId: string,
+  input: z.infer<typeof invoiceCollectionFieldsSchema>
+) {
+  try {
+    const id = z.string().trim().min(1).parse(invoiceId)
+    const parsed = invoiceCollectionFieldsSchema.parse(input)
+    await updateInvoiceCollectionFieldsRecord(id, {
+      promisedPaymentDate: parsed.promisedPaymentDate,
+      nextCollectionFollowupAt: parsed.nextCollectionFollowupAt,
+      collectionTone: parsed.collectionTone,
+    })
+    revalidatePath("/invoices")
+    return { ok: true as const }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { ok: false as const, error: error.issues[0]?.message ?? "입력값을 확인해 주세요." }
+    }
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "추심 일정을 저장하지 못했습니다."),
+    }
+  }
+}
+
+export async function ensureCustomerPortalTokenAction(customerId: string) {
+  try {
+    const id = z.string().trim().min(1).parse(customerId)
+    const session = await getAppSession()
+    if (!session) {
+      return { ok: false as const, error: "로그인이 필요합니다." }
+    }
+    if (session.mode === "demo") {
+      const token = `demo${id.replace(/-/g, "").slice(0, 24)}`
+      return { ok: true as const, token }
+    }
+    const result = await ensureCustomerPortalTokenRecord(id)
+    if ("error" in result) {
+      return { ok: false as const, error: result.error }
+    }
+    revalidatePath(`/customers/${id}`)
+    revalidatePath("/customers")
+    return { ok: true as const, token: result.token }
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "포털 링크를 발급하지 못했습니다."),
     }
   }
 }

@@ -246,7 +246,7 @@ export function InquiriesBoard({
   )
 
   const channelOptions = useMemo(() => {
-    const set = new Set<string>()
+    const set = new Set<string>(["웹폼"])
     for (const i of optimisticInquiries) {
       if (i.channel?.trim()) {
         set.add(i.channel.trim())

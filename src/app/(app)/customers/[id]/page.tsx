@@ -19,9 +19,12 @@ import { PageHeader } from "@/components/app/page-header"
 import { InquiryStageBadge, PaymentStatusBadge, QuoteStatusBadge } from "@/components/app/status-badge"
 import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { CustomerPortalLinkBlock } from "@/components/app/customer-portal-link-block"
 import { invoiceTypeOptions } from "@/lib/constants"
 import { getCustomerDetailData } from "@/lib/data"
 import { formatCurrency } from "@/lib/format"
+import { planAllowsFeature } from "@/lib/plan-features"
+import { getSiteOrigin } from "@/lib/site-url"
 import { cn } from "@/lib/utils"
 
 function invoiceTypeLabel(type: string) {
@@ -34,12 +37,15 @@ export default async function CustomerDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const { customer, inquiries, quotes, invoices, timeline } =
+  const { customer, inquiries, quotes, invoices, timeline, currentPlan } =
     await getCustomerDetailData(id)
 
   if (!customer) {
     notFound()
   }
+
+  const siteOrigin = getSiteOrigin()
+  const portalAllowed = planAllowsFeature(currentPlan, "customer_mini_portal")
 
   const displayTitle = customer.companyName?.trim() || customer.name
   const hasCompany = Boolean(customer.companyName?.trim())
@@ -163,6 +169,13 @@ export default async function CustomerDetailPage({
             </div>
           </div>
         }
+      />
+
+      <CustomerPortalLinkBlock
+        customerId={customer.id}
+        initialToken={customer.portalToken}
+        siteOrigin={siteOrigin}
+        portalAllowed={portalAllowed}
       />
 
       <Card className="border-border/70 shadow-sm">

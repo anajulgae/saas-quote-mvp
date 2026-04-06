@@ -25,6 +25,9 @@ import {
 } from "@/lib/template-defaults"
 import { formatBusinessRegNoInput } from "@/lib/format"
 import { defaultNotificationPreferences } from "@/lib/notification-defaults"
+import { planAllowsFeature } from "@/lib/plan-features"
+import { postBillIoMessagingPayload } from "@/lib/server/messaging/user-endpoint"
+import { getSiteOrigin } from "@/lib/site-url"
 
 export { defaultNotificationPreferences }
 import { createServerSupabaseClient } from "@/lib/supabase/server"
@@ -36,6 +39,7 @@ import type {
   Customer,
   CustomerSummary,
   DashboardMetrics,
+  MessagingChannelConfig,
   Inquiry,
   InquiryStage,
   InquiryWithCustomer,
@@ -59,7 +63,7 @@ import type {
   Template,
   TimelineEvent,
 } from "@/types/domain"
-import type { Database } from "@/types/supabase"
+import type { Database, Json } from "@/types/supabase"
 
 type CustomerRow = Database["public"]["Tables"]["customers"]["Row"]
 type InquiryRow = Database["public"]["Tables"]["inquiries"]["Row"]
@@ -72,6 +76,8 @@ type BusinessSettingsRow = Database["public"]["Tables"]["business_settings"]["Ro
 type TemplateRow = Database["public"]["Tables"]["templates"]["Row"]
 type NotificationPreferencesRow = Database["public"]["Tables"]["notification_preferences"]["Row"]
 type BusinessPublicPageRow = Database["public"]["Tables"]["business_public_pages"]["Row"]
+type MessagingChannelConfigRow = Database["public"]["Tables"]["messaging_channel_configs"]["Row"]
+type MessagingSendLogInsert = Database["public"]["Tables"]["messaging_send_logs"]["Insert"]
 type QueryResult = {
   data: unknown
   error: Error | null
@@ -108,6 +114,7 @@ function mapCustomer(row: CustomerRow): Customer {
     tags: row.tags ?? [],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    portalToken: row.portal_token ?? undefined,
   }
 }
 
@@ -166,6 +173,13 @@ function mapQuoteItem(row: QuoteItemRow): QuoteItem {
   }
 }
 
+function parseCollectionTone(raw: string | null | undefined): Invoice["collectionTone"] {
+  if (raw === "polite" || raw === "neutral" || raw === "firm") {
+    return raw
+  }
+  return "neutral"
+}
+
 function mapInvoice(row: InvoiceRow): Invoice {
   return {
     id: row.id,
@@ -185,6 +199,28 @@ function mapInvoice(row: InvoiceRow): Invoice {
     publicShareToken: row.public_share_token ?? undefined,
     shareOpenCount: row.share_open_count ?? undefined,
     shareLastOpenedAt: row.share_last_opened_at ?? undefined,
+    promisedPaymentDate: row.promised_payment_date ?? undefined,
+    nextCollectionFollowupAt: row.next_collection_followup_at ?? undefined,
+    collectionTone: parseCollectionTone(row.collection_tone),
+  }
+}
+
+function mapMessagingChannelConfig(row: MessagingChannelConfigRow): MessagingChannelConfig {
+  const ex = row.extra_config
+  return {
+    id: row.id,
+    userId: row.user_id,
+    channelKind: row.channel_kind === "kakao_alimtalk" ? "kakao_alimtalk" : "kakao_alimtalk",
+    providerType: row.provider_type === "custom_http" ? "custom_http" : "custom_http",
+    apiEndpoint: row.api_endpoint ?? "",
+    apiKey: row.api_key ?? "",
+    apiKeyHeader: row.api_key_header?.trim() || "Authorization",
+    senderKey: row.sender_key ?? "",
+    templateCode: row.template_code ?? "",
+    enabled: Boolean(row.enabled),
+    extraConfig:
+      ex && typeof ex === "object" && !Array.isArray(ex) ? (ex as Record<string, unknown>) : {},
+    updatedAt: row.updated_at,
   }
 }
 
@@ -1633,6 +1669,7 @@ export async function getQuoteOutboundSnapshot(quoteId: string): Promise<{
   title: string
   customerId: string
   customerEmail: string
+  customerPhone: string
 } | null> {
   const context = await getDataContext()
 
@@ -1648,6 +1685,7 @@ export async function getQuoteOutboundSnapshot(quoteId: string): Promise<{
       title: quote.title,
       customerId: quote.customerId,
       customerEmail: customer?.email?.trim() ?? "",
+      customerPhone: customer?.phone?.replace(/\D/g, "") ?? "",
     }
   }
 
@@ -1678,7 +1716,7 @@ export async function getQuoteOutboundSnapshot(quoteId: string): Promise<{
 
   const { data: custRow, error: cErr } = await context.supabase
     .from("customers")
-    .select("email")
+    .select("email, phone")
     .eq("id", q.customer_id)
     .maybeSingle()
 
@@ -1686,7 +1724,9 @@ export async function getQuoteOutboundSnapshot(quoteId: string): Promise<{
     throw cErr
   }
 
-  const email = (custRow as { email: string | null } | null)?.email?.trim() ?? ""
+  const c = custRow as { email: string | null; phone: string | null } | null
+  const email = c?.email?.trim() ?? ""
+  const phone = (c?.phone ?? "").replace(/\D/g, "")
 
   return {
     status: q.status,
@@ -1694,6 +1734,7 @@ export async function getQuoteOutboundSnapshot(quoteId: string): Promise<{
     title: q.title,
     customerId: q.customer_id,
     customerEmail: email,
+    customerPhone: phone,
   }
 }
 
@@ -1702,6 +1743,7 @@ export async function getInvoiceOutboundSnapshot(invoiceId: string): Promise<{
   invoiceNumber: string
   customerId: string
   customerEmail: string
+  customerPhone: string
   amount: number
   paymentStatus: PaymentStatus
 } | null> {
@@ -1717,6 +1759,7 @@ export async function getInvoiceOutboundSnapshot(invoiceId: string): Promise<{
       invoiceNumber: inv.invoiceNumber,
       customerId: inv.customerId,
       customerEmail: customer?.email?.trim() ?? "",
+      customerPhone: customer?.phone?.replace(/\D/g, "") ?? "",
       amount: inv.amount,
       paymentStatus: inv.paymentStatus,
     }
@@ -1749,7 +1792,7 @@ export async function getInvoiceOutboundSnapshot(invoiceId: string): Promise<{
 
   const { data: custRow, error: cErr } = await context.supabase
     .from("customers")
-    .select("email")
+    .select("email, phone")
     .eq("id", inv.customer_id)
     .maybeSingle()
 
@@ -1757,12 +1800,15 @@ export async function getInvoiceOutboundSnapshot(invoiceId: string): Promise<{
     throw cErr
   }
 
-  const email = (custRow as { email: string | null } | null)?.email?.trim() ?? ""
+  const c = custRow as { email: string | null; phone: string | null } | null
+  const email = c?.email?.trim() ?? ""
+  const phone = (c?.phone ?? "").replace(/\D/g, "")
 
   return {
     invoiceNumber: inv.invoice_number,
     customerId: inv.customer_id,
     customerEmail: email,
+    customerPhone: phone,
     amount: inv.amount,
     paymentStatus: inv.payment_status,
   }
@@ -1840,6 +1886,11 @@ export async function createInvoiceRecord(input: InvoiceFormInput) {
       ? input.paidAt ?? new Date().toISOString()
       : input.paidAt ?? null
 
+  const collectionTone =
+    input.collectionTone === "polite" || input.collectionTone === "firm"
+      ? input.collectionTone
+      : "neutral"
+
   const { data, error } = await context.supabase
     .from("invoices")
     .insert({
@@ -1854,6 +1905,11 @@ export async function createInvoiceRecord(input: InvoiceFormInput) {
       requested_at: requestedAt,
       paid_at: paidAt,
       notes: input.notes,
+      promised_payment_date: input.promisedPaymentDate?.trim() || null,
+      next_collection_followup_at: input.nextCollectionFollowupAt?.trim()
+        ? new Date(input.nextCollectionFollowupAt).toISOString()
+        : null,
+      collection_tone: collectionTone,
     })
     .select("*")
     .single()
@@ -1914,6 +1970,11 @@ export async function updateInvoiceRecord(invoiceId: string, input: InvoiceFormI
         ? input.paidAt ?? null
         : null
 
+  const collectionTone =
+    input.collectionTone === "polite" || input.collectionTone === "firm"
+      ? input.collectionTone
+      : "neutral"
+
   const { data, error } = await context.supabase
     .from("invoices")
     .update({
@@ -1926,6 +1987,11 @@ export async function updateInvoiceRecord(invoiceId: string, input: InvoiceFormI
       requested_at: input.requestedAt ?? new Date().toISOString(),
       paid_at: paidAt,
       notes: input.notes,
+      promised_payment_date: input.promisedPaymentDate?.trim() || null,
+      next_collection_followup_at: input.nextCollectionFollowupAt?.trim()
+        ? new Date(input.nextCollectionFollowupAt).toISOString()
+        : null,
+      collection_tone: collectionTone,
     })
     .eq("id", invoiceId)
     .select("*")
@@ -1967,6 +2033,434 @@ export async function updateInvoiceRecord(invoiceId: string, input: InvoiceFormI
     mode: "supabase" as const,
     invoice: mapInvoice(invoice),
   }
+}
+
+export async function updateInvoiceCollectionFieldsRecord(
+  invoiceId: string,
+  input: {
+    promisedPaymentDate: string
+    nextCollectionFollowupAt: string
+    collectionTone: Invoice["collectionTone"]
+  }
+) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return { mode: "demo" as const }
+  }
+
+  const { data: invMeta, error: metaErr } = await context.supabase
+    .from("invoices")
+    .select("id, user_id, invoice_number, customer_id, quote_id")
+    .eq("id", invoiceId)
+    .maybeSingle()
+
+  if (metaErr) {
+    throw metaErr
+  }
+
+  const meta = invMeta as
+    | {
+        id: string
+        user_id: string
+        invoice_number: string
+        customer_id: string
+        quote_id: string | null
+      }
+    | null
+
+  if (!meta || meta.user_id !== context.userId) {
+    throw new Error("청구를 찾을 수 없습니다.")
+  }
+
+  const tone =
+    input.collectionTone === "polite" || input.collectionTone === "firm"
+      ? input.collectionTone
+      : "neutral"
+
+  const { data, error } = await context.supabase
+    .from("invoices")
+    .update({
+      promised_payment_date: input.promisedPaymentDate.trim() || null,
+      next_collection_followup_at: input.nextCollectionFollowupAt.trim()
+        ? new Date(input.nextCollectionFollowupAt).toISOString()
+        : null,
+      collection_tone: tone,
+    })
+    .eq("id", invoiceId)
+    .select("*")
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  const invoice = data as InvoiceRow
+
+  await createActivityLog({
+    action: "invoice.collection_plan_updated",
+    description: `${invoice.invoice_number} 입금 약속·다음 연락일·리마인드 톤을 저장했습니다.`,
+    customerId: invoice.customer_id,
+    quoteId: invoice.quote_id ?? undefined,
+    invoiceId,
+  })
+
+  return {
+    mode: "supabase" as const,
+    invoice: mapInvoice(invoice),
+  }
+}
+
+export async function getMessagingChannelConfigRecord(): Promise<MessagingChannelConfig | null> {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return null
+  }
+
+  const { data, error } = await context.supabase
+    .from("messaging_channel_configs")
+    .select("*")
+    .eq("user_id", context.userId)
+    .eq("channel_kind", "kakao_alimtalk")
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  return data ? mapMessagingChannelConfig(data as MessagingChannelConfigRow) : null
+}
+
+export async function upsertMessagingChannelConfigRecord(input: {
+  apiEndpoint: string
+  apiKey: string
+  apiKeyHeader: string
+  senderKey: string
+  templateCode: string
+  enabled: boolean
+}) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return { mode: "demo" as const }
+  }
+
+  const { plan } = await fetchUserPlanRow(
+    context.supabase as unknown as SupabaseClient<Database>,
+    context.userId
+  )
+  if (!planAllowsFeature(plan, "kakao_byoa_messaging")) {
+    throw new Error("카카오 알림톡(BYOA) 연동은 Pro 플랜에서만 저장할 수 있습니다.")
+  }
+
+  const { error } = await context.supabase.from("messaging_channel_configs").upsert(
+    {
+      user_id: context.userId,
+      channel_kind: "kakao_alimtalk",
+      provider_type: "custom_http",
+      api_endpoint: input.apiEndpoint.trim(),
+      api_key: input.apiKey.trim() ? input.apiKey.trim() : null,
+      api_key_header: input.apiKeyHeader.trim() || "Authorization",
+      sender_key: input.senderKey.trim(),
+      template_code: input.templateCode.trim(),
+      enabled: input.enabled,
+      extra_config: {},
+    },
+    { onConflict: "user_id,channel_kind" }
+  )
+
+  if (error) {
+    throw error
+  }
+
+  await createActivityLog({
+    action: "messaging.channel_saved",
+    description: "카카오 알림톡(BYOA) 연동 설정을 저장했습니다.",
+  })
+
+  return { mode: "supabase" as const }
+}
+
+export async function insertMessagingSendLogRecord(
+  entry: Omit<MessagingSendLogInsert, "user_id" | "created_at">
+) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return
+  }
+
+  const { error } = await context.supabase.from("messaging_send_logs").insert({
+    ...entry,
+    user_id: context.userId,
+  })
+
+  if (error) {
+    throw error
+  }
+}
+
+export async function ensureCustomerPortalTokenRecord(
+  customerId: string
+): Promise<{ token: string } | { error: string }> {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return { token: `demo${customerId.replace(/-/g, "").slice(0, 24)}` }
+  }
+
+  const { plan } = await fetchUserPlanRow(
+    context.supabase as unknown as SupabaseClient<Database>,
+    context.userId
+  )
+
+  if (plan !== "pro") {
+    return { error: "고객 미니 포털은 Pro 플랜에서 사용할 수 있습니다." }
+  }
+
+  const { data: cust, error: cErr } = await context.supabase
+    .from("customers")
+    .select("id, user_id, portal_token")
+    .eq("id", customerId)
+    .maybeSingle()
+
+  if (cErr) {
+    throw cErr
+  }
+
+  const row = cust as { id: string; user_id: string; portal_token: string | null } | null
+
+  if (!row || row.user_id !== context.userId) {
+    return { error: "고객을 찾을 수 없습니다." }
+  }
+
+  const existing = row.portal_token?.trim()
+  if (existing) {
+    return { token: existing }
+  }
+
+  const token = randomBytes(20).toString("hex")
+
+  const { error: uErr } = await context.supabase
+    .from("customers")
+    .update({ portal_token: token })
+    .eq("id", customerId)
+    .eq("user_id", context.userId)
+
+  if (uErr) {
+    throw uErr
+  }
+
+  await createActivityLog({
+    action: "customer.portal_token_issued",
+    description: "고객 미니 포털 링크를 발급했습니다.",
+    customerId,
+  })
+
+  return { token }
+}
+
+function normalizeKakaoRecipientDigits(raw: string): string | null {
+  const d = raw.replace(/\D/g, "")
+  if (d.length >= 10 && d.length <= 13) {
+    return d
+  }
+  return null
+}
+
+export async function sendKakaoAlimtalkForInvoiceRecord(
+  invoiceId: string,
+  recipientPhoneRaw: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return { ok: false, error: "데모 세션에서는 알림톡 발송을 사용할 수 없습니다." }
+  }
+
+  const { plan } = await fetchUserPlanRow(
+    context.supabase as unknown as SupabaseClient<Database>,
+    context.userId
+  )
+  if (!planAllowsFeature(plan, "kakao_byoa_messaging")) {
+    return { ok: false, error: "카카오 알림톡(BYOA)은 Pro 플랜에서만 사용할 수 있습니다." }
+  }
+
+  const config = await getMessagingChannelConfigRecord()
+  if (!config?.enabled) {
+    return { ok: false, error: "설정에서 알림톡 채널을 켜고 엔드포인트를 저장해 주세요." }
+  }
+  if (!config.apiEndpoint.trim()) {
+    return { ok: false, error: "HTTPS 발송 엔드포인트(URL)를 입력해 주세요." }
+  }
+  if (!config.senderKey.trim() || !config.templateCode.trim()) {
+    return { ok: false, error: "발신 프로필 키와 템플릿 코드를 입력해 주세요." }
+  }
+
+  const snap = await getInvoiceOutboundSnapshot(invoiceId)
+  if (!snap) {
+    return { ok: false, error: "청구를 찾을 수 없습니다." }
+  }
+
+  const recipient =
+    normalizeKakaoRecipientDigits(recipientPhoneRaw) ??
+    normalizeKakaoRecipientDigits(snap.customerPhone)
+  if (!recipient) {
+    return { ok: false, error: "수신 전화번호를 입력하거나 고객 카드에 전화번호를 등록해 주세요." }
+  }
+
+  const { token } = await ensureInvoiceShareTokenForInvoice(invoiceId)
+  const shareUrl = `${getSiteOrigin()}/invoice-view/${encodeURIComponent(token)}`
+
+  const payload = {
+    billIoVersion: 1 as const,
+    channelKind: "kakao_alimtalk" as const,
+    senderKey: config.senderKey.trim(),
+    templateCode: config.templateCode.trim(),
+    recipientPhone: recipient,
+    variables: {
+      shareUrl,
+      docType: "invoice",
+      invoiceNumber: snap.invoiceNumber,
+      amountWon: String(snap.amount),
+    },
+  }
+
+  const postResult = await postBillIoMessagingPayload({
+    endpoint: config.apiEndpoint,
+    headerName: config.apiKeyHeader.trim() || "Authorization",
+    headerValue: config.apiKey.trim(),
+    payload,
+  })
+
+  const logPayload: Json = {
+    ...payload,
+    httpOk: postResult.ok,
+    ...(postResult.ok
+      ? { httpStatus: postResult.status, bodyPreview: postResult.bodyPreview }
+      : { error: postResult.error }),
+  }
+
+  await insertMessagingSendLogRecord({
+    channel_kind: "kakao_alimtalk",
+    recipient_phone: recipient,
+    status: postResult.ok ? "sent" : "failed",
+    error_message: postResult.ok ? null : postResult.error.slice(0, 2000),
+    related_kind: "invoice",
+    related_id: invoiceId,
+    payload: logPayload,
+  })
+
+  if (!postResult.ok) {
+    return { ok: false, error: postResult.error }
+  }
+
+  await createActivityLog({
+    action: "invoice.messaging_kakao_sent",
+    description: `「${snap.invoiceNumber}」 카카오 알림톡(BYOA) 발송을 요청했습니다.`,
+    invoiceId,
+    customerId: snap.customerId,
+  })
+
+  return { ok: true }
+}
+
+export async function sendKakaoAlimtalkForQuoteRecord(
+  quoteId: string,
+  recipientPhoneRaw: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return { ok: false, error: "데모 세션에서는 알림톡 발송을 사용할 수 없습니다." }
+  }
+
+  const { plan } = await fetchUserPlanRow(
+    context.supabase as unknown as SupabaseClient<Database>,
+    context.userId
+  )
+  if (!planAllowsFeature(plan, "kakao_byoa_messaging")) {
+    return { ok: false, error: "카카오 알림톡(BYOA)은 Pro 플랜에서만 사용할 수 있습니다." }
+  }
+
+  const config = await getMessagingChannelConfigRecord()
+  if (!config?.enabled) {
+    return { ok: false, error: "설정에서 알림톡 채널을 켜고 엔드포인트를 저장해 주세요." }
+  }
+  if (!config.apiEndpoint.trim()) {
+    return { ok: false, error: "HTTPS 발송 엔드포인트(URL)를 입력해 주세요." }
+  }
+  if (!config.senderKey.trim() || !config.templateCode.trim()) {
+    return { ok: false, error: "발신 프로필 키와 템플릿 코드를 입력해 주세요." }
+  }
+
+  const snap = await getQuoteOutboundSnapshot(quoteId)
+  if (!snap) {
+    return { ok: false, error: "견적을 찾을 수 없습니다." }
+  }
+
+  const recipient =
+    normalizeKakaoRecipientDigits(recipientPhoneRaw) ??
+    normalizeKakaoRecipientDigits(snap.customerPhone)
+  if (!recipient) {
+    return { ok: false, error: "수신 전화번호를 입력하거나 고객 카드에 전화번호를 등록해 주세요." }
+  }
+
+  const { token } = await ensureQuoteShareTokenForQuote(quoteId)
+  const shareUrl = `${getSiteOrigin()}/quote-view/${encodeURIComponent(token)}`
+
+  const payload = {
+    billIoVersion: 1 as const,
+    channelKind: "kakao_alimtalk" as const,
+    senderKey: config.senderKey.trim(),
+    templateCode: config.templateCode.trim(),
+    recipientPhone: recipient,
+    variables: {
+      shareUrl,
+      docType: "quote",
+      quoteNumber: snap.quoteNumber,
+      title: snap.title.trim().slice(0, 200),
+    },
+  }
+
+  const postResult = await postBillIoMessagingPayload({
+    endpoint: config.apiEndpoint,
+    headerName: config.apiKeyHeader.trim() || "Authorization",
+    headerValue: config.apiKey.trim(),
+    payload,
+  })
+
+  const logPayload: Json = {
+    ...payload,
+    httpOk: postResult.ok,
+    ...(postResult.ok
+      ? { httpStatus: postResult.status, bodyPreview: postResult.bodyPreview }
+      : { error: postResult.error }),
+  }
+
+  await insertMessagingSendLogRecord({
+    channel_kind: "kakao_alimtalk",
+    recipient_phone: recipient,
+    status: postResult.ok ? "sent" : "failed",
+    error_message: postResult.ok ? null : postResult.error.slice(0, 2000),
+    related_kind: "quote",
+    related_id: quoteId,
+    payload: logPayload,
+  })
+
+  if (!postResult.ok) {
+    return { ok: false, error: postResult.error }
+  }
+
+  await createActivityLog({
+    action: "quote.messaging_kakao_sent",
+    description: `「${snap.title}」(${snap.quoteNumber}) 카카오 알림톡(BYOA) 발송을 요청했습니다.`,
+    quoteId,
+    customerId: snap.customerId,
+  })
+
+  return { ok: true }
 }
 
 export async function updateInvoicePaymentStatusRecord(
@@ -2702,6 +3196,7 @@ export async function getCustomerDetailData(customerId: string): Promise<{
   quotes: Quote[]
   invoices: Invoice[]
   timeline: TimelineEvent[]
+  currentPlan: BillingPlan
 }> {
   const context = await getDataContext()
 
@@ -2714,6 +3209,7 @@ export async function getCustomerDetailData(customerId: string): Promise<{
       quotes: demoQuotes.filter((item) => item.customerId === customerId),
       invoices: demoInvoices.filter((item) => item.customerId === customerId),
       timeline: getCustomerTimeline(customerId),
+      currentPlan: demoUser.plan,
     }
   }
 
@@ -2771,6 +3267,11 @@ export async function getCustomerDetailData(customerId: string): Promise<{
     throw activityError
   }
 
+  const { plan: currentPlan } = await fetchUserPlanRow(
+    context.supabase as unknown as SupabaseClient<Database>,
+    context.userId
+  )
+
   return {
     customer: customerRow ? mapCustomer(customerRow as CustomerRow) : null,
     inquiries: ((inquiryRows ?? []) as InquiryRow[]).map(mapInquiry),
@@ -2779,6 +3280,7 @@ export async function getCustomerDetailData(customerId: string): Promise<{
     timeline: ((activityRows ?? []) as ActivityLogRow[])
       .map(mapActivityLog)
       .map(mapActivityToTimeline),
+    currentPlan,
   }
 }
 
@@ -2792,6 +3294,7 @@ export async function getQuotesPageData(): Promise<{
   nextQuoteNumberPreview: string
   quoteActivityByQuoteId: Record<string, ActivityLog[]>
   invoicesByQuoteId: Record<string, QuoteLinkedInvoiceStub[]>
+  currentPlan: BillingPlan
 }> {
   const context = await getDataContext()
 
@@ -2834,6 +3337,7 @@ export async function getQuotesPageData(): Promise<{
       nextQuoteNumberPreview: computeNextQuoteNumberPreview(quotes),
       quoteActivityByQuoteId,
       invoicesByQuoteId,
+      currentPlan: demoUser.plan,
     }
   }
 
@@ -2977,6 +3481,11 @@ export async function getQuotesPageData(): Promise<{
   const paymentTerms = biz?.payment_terms?.trim() ?? ""
   const defaultBusinessName = biz?.business_name?.trim() ?? ""
 
+  const { plan: currentPlan } = await fetchUserPlanRow(
+    context.supabase as unknown as SupabaseClient<Database>,
+    context.userId
+  )
+
   return {
     quotes,
     customers: customerRowsSafe.map(mapCustomer),
@@ -2993,6 +3502,7 @@ export async function getQuotesPageData(): Promise<{
     nextQuoteNumberPreview: computeNextQuoteNumberPreview(quotes),
     quoteActivityByQuoteId,
     invoicesByQuoteId,
+    currentPlan,
   }
 }
 
@@ -3005,6 +3515,7 @@ export async function getInvoicesPageData(): Promise<{
   businessName: string
   bankAccount: string
   paymentTerms: string
+  currentPlan: BillingPlan
 }> {
   const context = await getDataContext()
 
@@ -3025,6 +3536,7 @@ export async function getInvoicesPageData(): Promise<{
       businessName: demoBusinessSettings.businessName,
       bankAccount: demoBusinessSettings.bankAccount ?? "",
       paymentTerms: demoBusinessSettings.paymentTerms ?? "",
+      currentPlan: demoUser.plan,
     }
   }
 
@@ -3129,6 +3641,11 @@ export async function getInvoicesPageData(): Promise<{
     payment_terms?: string | null
   } | null
 
+  const { plan: currentPlan } = await fetchUserPlanRow(
+    context.supabase as unknown as SupabaseClient<Database>,
+    context.userId
+  )
+
   return {
     invoices: invoiceRowsSafe.map((row) => {
       const invoice = mapInvoice(row)
@@ -3146,6 +3663,7 @@ export async function getInvoicesPageData(): Promise<{
     businessName: biz?.business_name?.trim() ?? "",
     bankAccount: biz?.bank_account?.trim() ?? "",
     paymentTerms: biz?.payment_terms?.trim() ?? "",
+    currentPlan,
   }
 }
 
@@ -3155,6 +3673,7 @@ export async function getSettingsPageData(): Promise<{
   currentPlan: BillingPlan
   planColumnMissing: boolean
   notificationPreferences: NotificationPreferences
+  messagingChannelConfig: MessagingChannelConfig | null
 }> {
   const context = await getDataContext()
 
@@ -3165,6 +3684,7 @@ export async function getSettingsPageData(): Promise<{
       currentPlan: demoUser.plan,
       planColumnMissing: false,
       notificationPreferences: defaultNotificationPreferences(demoUser.id),
+      messagingChannelConfig: null,
     }
   }
 
@@ -3172,6 +3692,7 @@ export async function getSettingsPageData(): Promise<{
     { data: settingsRow, error: settingsError },
     { data: templateRows, error: templateError },
     { data: notifPrefRow, error: notifPrefError },
+    { data: messagingRow, error: messagingError },
   ] = await Promise.all([
     context.supabase
       .from("business_settings")
@@ -3189,6 +3710,12 @@ export async function getSettingsPageData(): Promise<{
       .select("*")
       .eq("user_id", context.userId)
       .maybeSingle(),
+    context.supabase
+      .from("messaging_channel_configs")
+      .select("*")
+      .eq("user_id", context.userId)
+      .eq("channel_kind", "kakao_alimtalk")
+      .maybeSingle(),
   ])
 
   if (settingsError) {
@@ -3201,6 +3728,10 @@ export async function getSettingsPageData(): Promise<{
 
   if (notifPrefError) {
     throw notifPrefError
+  }
+
+  if (messagingError) {
+    throw messagingError
   }
 
   const { plan: currentPlan, columnMissing: planColumnMissing } = await fetchUserPlanRow(
@@ -3244,6 +3775,9 @@ export async function getSettingsPageData(): Promise<{
     currentPlan,
     planColumnMissing,
     notificationPreferences,
+    messagingChannelConfig: messagingRow
+      ? mapMessagingChannelConfig(messagingRow as MessagingChannelConfigRow)
+      : null,
   }
 }
 

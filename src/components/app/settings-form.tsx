@@ -12,6 +12,7 @@ import {
   saveTemplatesSettingsAction,
 } from "@/app/actions"
 import { SettingsNotificationPreferencesCard } from "@/components/app/settings-notification-preferences-card"
+import { SettingsMessagingChannelCard } from "@/components/app/settings-messaging-channel-card"
 import { SettingsPublicInquiryCard } from "@/components/app/settings-public-inquiry-card"
 import { Button } from "@/components/ui/button"
 import { buttonVariants } from "@/components/ui/button-variants"
@@ -22,7 +23,13 @@ import { formatBusinessRegNoInput } from "@/lib/format"
 import { planAllowsFeature } from "@/lib/plan-features"
 import { computeTemplatesSyncKey } from "@/lib/settings-form-key"
 import { cn } from "@/lib/utils"
-import type { BillingPlan, BusinessSettings, NotificationPreferences, Template } from "@/types/domain"
+import type {
+  BillingPlan,
+  BusinessSettings,
+  MessagingChannelConfig,
+  NotificationPreferences,
+  Template,
+} from "@/types/domain"
 
 function FieldHint({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
@@ -91,6 +98,7 @@ export function SettingsForm({
   planColumnMissing,
   siteOrigin,
   initialNotificationPreferences,
+  messagingChannelConfig,
 }: {
   initialSettings: BusinessSettings
   templates: Template[]
@@ -98,6 +106,7 @@ export function SettingsForm({
   planColumnMissing: boolean
   siteOrigin: string
   initialNotificationPreferences: NotificationPreferences
+  messagingChannelConfig: MessagingChannelConfig | null
 }) {
   const router = useRouter()
   const [isBizPending, startBizTransition] = useTransition()
@@ -501,6 +510,8 @@ export function SettingsForm({
           )}
         </CardContent>
       </Card>
+
+      <SettingsMessagingChannelCard currentPlan={currentPlan} initialConfig={messagingChannelConfig} />
 
       <section id="public-inquiry">
         <SettingsPublicInquiryCard siteOrigin={siteOrigin} initialSettings={settings} />

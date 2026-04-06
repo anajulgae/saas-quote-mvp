@@ -211,9 +211,11 @@ npm run build
 
 ## 현재 제품 범위 요약
 
-**포함**: 회원가입·이메일 인증, 고객·문의·견적·청구, 견적·청구 공개 링크·인쇄/PDF, **Resend 견적·청구 메일**, **OpenAI 보조**(초안·문의 구조화·문구), 리마인드, 설정·직인, 플랜 컬럼(`free`/`pro`), **Pro 전용 업체 소개 공개 랜딩** (`/biz/[slug]`, 설정 → 업체 소개 페이지, AI 초안, 공개 문의 CTA·유입 추적), **`/billing` 결제 진입점(문서·UI)**, **승인 견적 → `/invoices?quote={id}&new=1` 청구 초안**(선금·잔금 자동 제안), **운영 딥링크** (`/customers?customer=…`·`?new=1`, `/invoices?customer=…` 고객 필터 등).
+**포함**: 회원가입·이메일 인증, 고객·문의·견적·청구, 견적·청구 공개 링크·인쇄/PDF, **Resend 견적·청구 메일**, **OpenAI 보조**(초안·문의 구조화·문구), 리마인드, 설정·직인, 플랜 컬럼(`free`/`pro`), **Pro 전용 업체 소개 공개 랜딩** (`/biz/[slug]`, 설정 → 업체 소개 페이지, AI 초안, 공개 문의 CTA·유입 추적), **`/billing` 결제 진입점(문서·UI)**, **승인 견적 → `/invoices?quote={id}&new=1` 청구 초안**(선금·잔금 자동 제안), **운영 딥링크** (`/customers?customer=…`·`?new=1`, `/invoices?customer=…` 고객 필터 등), **공개 문의 폼 자동 접수**(기존 `/request/[token]`·활동 로그), **Pro BYOA 카카오 알림톡**(설정 → 메시지 채널 연결, 사용자 HTTPS 프록시로 `BillIoMessagingPayloadV1` POST, 발송 로그·견적/청구 발송 모달), **Pro 고객 미니 포털** (`/c/[token]`, RPC `get_customer_portal_payload`), **청구 추심 보조**(입금 약속일·다음 연락일·톤, drawer·편집 폼).
 
-**미포함**: 실제 PG(카드) 결제, 자동 청구서 발행, 회계·팀 좌석 본격 지원 등 — 플랜 게이트는 `src/lib/plan-features.ts` / `src/lib/billing/catalog.ts` 에서 확장합니다.
+**미포함**: Bill-IO 자체 알림톡 과금/충전, 실제 PG(카드) 결제, 자동 청구서 발행, 회계·팀 좌석 본격 지원 등 — 플랜 게이트는 `src/lib/plan-features.ts` / `src/lib/billing/catalog.ts` 에서 확장합니다.
+
+**DB**: `supabase/migrations/0010_messaging_portal_collections.sql` — 메시징 설정·발송 로그, `customers.portal_token`, 청구 추심 컬럼, 포털 RPC.
 
 ---
 

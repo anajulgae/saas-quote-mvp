@@ -16,6 +16,7 @@ export default async function InvoicesPage({
     businessName,
     bankAccount,
     paymentTerms,
+    currentPlan,
   } = await getInvoicesPageData()
 
   const deepLinkOpenCreate = sp.new === "1" || sp.new === "true"
@@ -31,6 +32,7 @@ export default async function InvoicesPage({
       businessName={businessName}
       bankAccount={bankAccount}
       paymentTerms={paymentTerms}
+      currentPlan={currentPlan}
       deepLinkQuoteId={sp.quote}
       deepLinkOpenCreate={deepLinkOpenCreate}
       initialCustomerFilterId={quoteDeepLink ? undefined : sp.customer}

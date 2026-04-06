@@ -17,6 +17,7 @@ export default async function QuotesPage({
     nextQuoteNumberPreview,
     quoteActivityByQuoteId,
     invoicesByQuoteId,
+    currentPlan,
   } = await getQuotesPageData()
 
   const initialCreateOpen = sp.new === "1" || sp.new === "true"
@@ -32,6 +33,7 @@ export default async function QuotesPage({
       nextQuoteNumberPreview={nextQuoteNumberPreview}
       quoteActivityByQuoteId={quoteActivityByQuoteId}
       invoicesByQuoteId={invoicesByQuoteId}
+      currentPlan={currentPlan}
       deepLinkCustomerId={sp.customer}
       deepLinkOpenCreate={initialCreateOpen}
     />

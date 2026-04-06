@@ -70,3 +70,16 @@ export function buildKakaoInvoiceShareWebPayload(input: KakaoInvoiceShareInput) 
     buttonTitle: "청구서 보기",
   }
 }
+
+/** 문자 앱에 붙여넣기용(짧은 안내 + 링크) */
+export function buildSmsInvoiceShareText(input: KakaoInvoiceShareInput): string {
+  const who = input.businessName?.trim()
+  const head = who ? `[${who}] 청구 안내` : "청구 안내"
+  return `${head} ${input.invoiceNumber} ${input.amountLabel}\n링크: ${input.publicUrl}`
+}
+
+export function buildSmsQuoteShareText(input: KakaoQuoteShareInput): string {
+  const who = input.businessName?.trim()
+  const head = who ? `[${who}] 견적 안내` : "견적 안내"
+  return `${head} ${input.quoteNumber}\n링크: ${input.publicUrl}`
+}

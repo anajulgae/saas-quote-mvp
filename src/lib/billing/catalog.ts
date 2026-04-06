@@ -27,6 +27,8 @@ export const FEATURE_GATES_AFTER_PAYMENT: Record<PlanFeature, BillingPlan[]> = {
   public_share_tracking: ["pro"],
   /** 업체 소개 미니 랜딩 — Pro 전용 (현재 `FEATURE_GATES`와 동일) */
   mini_landing: ["pro"],
+  kakao_byoa_messaging: ["pro"],
+  customer_mini_portal: ["pro"],
 }
 
 export const BILLING_UPGRADE_CONTACT_COPY =
