@@ -4,6 +4,7 @@ import Link from "next/link"
 import {
   useEffect,
   useMemo,
+  useOptimistic,
   useRef,
   useState,
   useTransition,
@@ -446,6 +447,20 @@ function InvoicesBoardPanel({
   const hasQuotes = quotes.length > 0
   const hasInvoices = invoices.length > 0
 
+  type InvoicePaymentPatch = { type: "payment"; id: string; paymentStatus: PaymentStatus }
+
+  const [optimisticInvoices, patchInvoicePaymentOptimistic] = useOptimistic(
+    invoices,
+    (state, action: InvoicePaymentPatch) => {
+      if (action.type === "payment") {
+        return state.map((inv) =>
+          inv.id === action.id ? { ...inv, paymentStatus: action.paymentStatus } : inv
+        )
+      }
+      return state
+    }
+  )
+
   const invoiceFormCustomerSelectItems = useMemo(() => {
     const r: Record<string, string> = {}
     for (const c of customers) {
@@ -616,7 +631,7 @@ function InvoicesBoardPanel({
 
   const filteredInvoices = useMemo(() => {
     const q = invoiceListSearch.trim().toLowerCase()
-    return invoices.filter((inv) => {
+    return optimisticInvoices.filter((inv) => {
       if (customerFilterId !== "all" && inv.customerId !== customerFilterId) {
         return false
       }
@@ -641,7 +656,7 @@ function InvoicesBoardPanel({
       return true
     })
   }, [
-    invoices,
+    optimisticInvoices,
     invoiceListSearch,
     invoiceTypeFilter,
     customerFilterId,
@@ -684,8 +699,8 @@ function InvoicesBoardPanel({
   }, [filteredInvoices, invoiceSort])
 
   const drawerInvoice = useMemo(
-    () => invoices.find((i) => i.id === drawerInvoiceId) ?? null,
-    [drawerInvoiceId, invoices]
+    () => optimisticInvoices.find((i) => i.id === drawerInvoiceId) ?? null,
+    [drawerInvoiceId, optimisticInvoices]
   )
 
   const drawerInvoiceActivities = useMemo(() => {
@@ -776,6 +791,14 @@ function InvoicesBoardPanel({
     setErrorMessage("")
 
     startTransition(async () => {
+      const prev = optimisticInvoices.find((i) => i.id === editingInvoiceId)
+      if (prev && form.paymentStatus !== prev.paymentStatus) {
+        patchInvoicePaymentOptimistic({
+          type: "payment",
+          id: editingInvoiceId,
+          paymentStatus: form.paymentStatus,
+        })
+      }
       const result = await updateInvoiceAction(editingInvoiceId, form)
 
       if (!result.ok) {
@@ -796,6 +819,7 @@ function InvoicesBoardPanel({
     customerId?: string
   ) => {
     startTransition(async () => {
+      patchInvoicePaymentOptimistic({ type: "payment", id: invoiceId, paymentStatus: status })
       const result = await updateInvoicePaymentStatusAction(invoiceId, status, customerId)
 
       if (!result.ok) {
@@ -804,19 +828,18 @@ function InvoicesBoardPanel({
         return
       }
 
-      toast.success("결제 상태가 변경되었습니다.")
       router.refresh()
     })
   }
 
   const editingInvoice = useMemo(
-    () => invoices.find((i) => i.id === editingInvoiceId) ?? null,
-    [editingInvoiceId, invoices]
+    () => optimisticInvoices.find((i) => i.id === editingInvoiceId) ?? null,
+    [editingInvoiceId, optimisticInvoices]
   )
 
   const reminderInvoice = useMemo(
-    () => invoices.find((i) => i.id === reminderInvoiceId) ?? null,
-    [reminderInvoiceId, invoices]
+    () => optimisticInvoices.find((i) => i.id === reminderInvoiceId) ?? null,
+    [reminderInvoiceId, optimisticInvoices]
   )
 
   const saveReminder = () => {
@@ -824,7 +847,7 @@ function InvoicesBoardPanel({
       return
     }
 
-    const invoice = invoices.find((item) => item.id === reminderInvoiceId)
+    const invoice = optimisticInvoices.find((item) => item.id === reminderInvoiceId)
 
     startTransition(async () => {
       const result = await createReminderAction({

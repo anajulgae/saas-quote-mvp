@@ -1,6 +1,14 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState, useTransition, type MutableRefObject } from "react"
+import {
+  useEffect,
+  useMemo,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+  type MutableRefObject,
+} from "react"
 import Link from "next/link"
 import {
   ArrowRight,
@@ -285,6 +293,18 @@ function QuotesBoardPanel({
     createEmptyForm(customers, defaultQuoteSummary)
   )
 
+  type QuoteOptimisticPatch = { type: "status"; id: string; status: QuoteStatus }
+
+  const [optimisticQuotes, patchQuoteOptimistic] = useOptimistic(
+    quotes,
+    (state, action: QuoteOptimisticPatch) => {
+      if (action.type === "status") {
+        return state.map((q) => (q.id === action.id ? { ...q, status: action.status } : q))
+      }
+      return state
+    }
+  )
+
   const hasInquiries = inquiries.length > 0
   const hasQuotes = quotes.length > 0
   const quoteDeepLinkDoneRef = useRef(false)
@@ -470,7 +490,7 @@ function QuotesBoardPanel({
   }, [inquiries])
 
   const processedQuotes = useMemo(() => {
-    let list = [...quotes]
+    let list = [...optimisticQuotes]
     if (statusFilter !== "all") {
       list = list.filter((q) => q.status === statusFilter)
     }
@@ -510,7 +530,7 @@ function QuotesBoardPanel({
     }
     return list
   }, [
-    quotes,
+    optimisticQuotes,
     statusFilter,
     searchQuery,
     customerFilterId,
@@ -549,8 +569,8 @@ function QuotesBoardPanel({
     if (!drawerQuoteId) {
       return null
     }
-    return quotes.find((q) => q.id === drawerQuoteId) ?? null
-  }, [drawerQuoteId, quotes])
+    return optimisticQuotes.find((q) => q.id === drawerQuoteId) ?? null
+  }, [drawerQuoteId, optimisticQuotes])
 
   const drawerQuoteActivities = useMemo(() => {
     if (!drawerQuoteId) {
@@ -730,6 +750,10 @@ function QuotesBoardPanel({
     setErrorMessage("")
 
     startTransition(async () => {
+      const prev = optimisticQuotes.find((q) => q.id === editingQuoteId)
+      if (prev && form.status !== prev.status) {
+        patchQuoteOptimistic({ type: "status", id: editingQuoteId, status: form.status })
+      }
       const result = await updateQuoteAction(editingQuoteId, form)
 
       if (!result.ok) {
@@ -746,6 +770,7 @@ function QuotesBoardPanel({
 
   const changeStatus = (quoteId: string, status: QuoteStatus, customerId?: string) => {
     startTransition(async () => {
+      patchQuoteOptimistic({ type: "status", id: quoteId, status })
       const result = await updateQuoteStatusAction(quoteId, status, customerId)
 
       if (!result.ok) {
@@ -754,7 +779,6 @@ function QuotesBoardPanel({
         return
       }
 
-      toast.success("견적 상태가 변경되었습니다.")
       router.refresh()
     })
   }

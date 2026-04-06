@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react"
+import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
@@ -118,7 +118,7 @@ const inquirySortSelectItems: Record<string, string> = {
 export function InquiriesBoard({
   inquiries,
   customers,
-  stageSummary,
+  stageSummary: _stageSummaryFromServer,
   initialCustomerId,
   initialCreateOpen = false,
   publicInquiryForm,
@@ -152,6 +152,34 @@ export function InquiriesBoard({
   const [structureBusy, setStructureBusy] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const deepLinkAppliedRef = useRef(false)
+
+  type InquiryOptimisticPatch = { type: "stage"; id: string; stage: InquiryStage }
+
+  const [optimisticInquiries, patchInquiryOptimistic] = useOptimistic(
+    inquiries,
+    (state, action: InquiryOptimisticPatch) => {
+      if (action.type === "stage") {
+        return state.map((i) => (i.id === action.id ? { ...i, stage: action.stage } : i))
+      }
+      return state
+    }
+  )
+
+  const displayStageSummary = useMemo(() => {
+    let n = 0
+    let qualified = 0
+    let quoted = 0
+    for (const i of optimisticInquiries) {
+      if (i.stage === "new") {
+        n += 1
+      } else if (i.stage === "qualified") {
+        qualified += 1
+      } else if (i.stage === "quoted") {
+        quoted += 1
+      }
+    }
+    return { new: n, qualified, quoted }
+  }, [optimisticInquiries])
 
   const publicFormUrl =
     publicInquiryForm?.publicInquiryFormEnabled && publicInquiryForm.publicInquiryFormToken
@@ -188,24 +216,24 @@ export function InquiriesBoard({
   }
 
   const editingInquiry = useMemo(
-    () => inquiries.find((item) => item.id === editingId) ?? null,
-    [editingId, inquiries]
+    () => optimisticInquiries.find((item) => item.id === editingId) ?? null,
+    [editingId, optimisticInquiries]
   )
 
   const drawerInquiry = useMemo(
-    () => inquiries.find((item) => item.id === drawerInquiryId) ?? null,
-    [drawerInquiryId, inquiries]
+    () => optimisticInquiries.find((item) => item.id === drawerInquiryId) ?? null,
+    [drawerInquiryId, optimisticInquiries]
   )
 
   const channelOptions = useMemo(() => {
     const set = new Set<string>()
-    for (const i of inquiries) {
+    for (const i of optimisticInquiries) {
       if (i.channel?.trim()) {
         set.add(i.channel.trim())
       }
     }
     return [...set].sort((a, b) => a.localeCompare(b, "ko"))
-  }, [inquiries])
+  }, [optimisticInquiries])
 
   const inquiryFormCustomerSelectItems = useMemo(() => {
     const r: Record<string, string> = {}
@@ -254,7 +282,7 @@ export function InquiriesBoard({
   }, [initialCreateOpen, initialCustomerId, customers, router])
 
   const filteredInquiries = useMemo(() => {
-    let list = [...inquiries]
+    let list = [...optimisticInquiries]
     const q = searchQuery.trim().toLowerCase()
     if (q) {
       list = list.filter((inquiry) => {
@@ -312,7 +340,15 @@ export function InquiriesBoard({
       return bf - af
     })
     return list
-  }, [inquiries, searchQuery, stageFilter, channelFilter, customerFilterId, followupFilter, sortKey])
+  }, [
+    optimisticInquiries,
+    searchQuery,
+    stageFilter,
+    channelFilter,
+    customerFilterId,
+    followupFilter,
+    sortKey,
+  ])
 
   const resetForm = () => {
     setForm({
@@ -357,6 +393,9 @@ export function InquiriesBoard({
     setErrorMessage("")
 
     startTransition(async () => {
+      if (form.stage !== editingInquiry.stage) {
+        patchInquiryOptimistic({ type: "stage", id: editingInquiry.id, stage: form.stage })
+      }
       const result = await updateInquiryAction(editingInquiry.id, form)
 
       if (!result.ok) {
@@ -382,12 +421,12 @@ export function InquiriesBoard({
   const quickUpdateStage = (inquiry: InquiryWithCustomer, stage: InquiryStage) => {
     const payload = { ...inquiryToFormFields(inquiry), stage }
     startTransition(async () => {
+      patchInquiryOptimistic({ type: "stage", id: inquiry.id, stage })
       const result = await updateInquiryAction(inquiry.id, payload)
       if (!result.ok) {
         toast.error(result.error)
         return
       }
-      toast.success("문의 단계가 변경되었습니다.")
       router.refresh()
     })
   }
@@ -847,19 +886,19 @@ export function InquiriesBoard({
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border/50 bg-muted/15 px-3 py-2 text-[11px] text-muted-foreground">
           <span>
             신규{" "}
-            <strong className="font-semibold tabular-nums text-foreground">{stageSummary.new}</strong>
+            <strong className="font-semibold tabular-nums text-foreground">{displayStageSummary.new}</strong>
           </span>
           <span className="hidden sm:inline">·</span>
           <span>
             검토 중{" "}
             <strong className="font-semibold tabular-nums text-foreground">
-              {stageSummary.qualified}
+              {displayStageSummary.qualified}
             </strong>
           </span>
           <span className="hidden sm:inline">·</span>
           <span>
             견적 단계{" "}
-            <strong className="font-semibold tabular-nums text-foreground">{stageSummary.quoted}</strong>
+            <strong className="font-semibold tabular-nums text-foreground">{displayStageSummary.quoted}</strong>
           </span>
         </div>
       ) : null}
