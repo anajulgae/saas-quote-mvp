@@ -5,6 +5,7 @@ import { buttonVariants } from "@/components/ui/button-variants"
 import { formatCurrency, formatDate } from "@/lib/format"
 import { getOpsStatusMeta, opsStatusChipVariants } from "@/lib/ops-status-meta"
 import type { BillCalendarEvent } from "@/lib/calendar-events"
+import { koreanCalendarListDateCn, parseLocalDateKey } from "@/lib/korean-calendar-display"
 import { cn } from "@/lib/utils"
 import type { InquiryStage, PaymentStatus, QuoteStatus } from "@/types/domain"
 
@@ -75,9 +76,15 @@ export function OpsAgendaList({
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-muted-foreground">
-                      {formatDate(event.date)} · {event.kindLabel}
-                      {event.timeLabel ? ` ${event.timeLabel}` : ""}
+                    <p className="text-xs font-semibold">
+                      <span className={cn("tabular-nums", koreanCalendarListDateCn(parseLocalDateKey(event.dateKey)))}>
+                        {formatDate(event.date)}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        · {event.kindLabel}
+                        {event.timeLabel ? ` ${event.timeLabel}` : ""}
+                      </span>
                     </p>
                     <p className="mt-0.5 line-clamp-2 text-sm font-semibold text-foreground">{event.title}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">{event.customerName}</p>

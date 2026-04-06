@@ -8,6 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency, formatDate } from "@/lib/format"
 import { getOpsStatusMeta, opsStatusChipVariants, type OpsStatusTone } from "@/lib/ops-status-meta"
 import type { BillCalendarEvent } from "@/lib/calendar-events"
+import {
+  buildKoreanMonthGridSlots,
+  formatLocalDateKey,
+  koreanCalendarDateTitleCn,
+  koreanCalendarDayNumberCn,
+  koreanHeaderTextClass,
+  koreanWeekdayHeaders,
+  parseLocalDateKey,
+} from "@/lib/korean-calendar-display"
 import { cn } from "@/lib/utils"
 import type { InquiryStage, PaymentStatus, QuoteStatus } from "@/types/domain"
 
@@ -21,18 +30,6 @@ function addMonths(date: Date, amount: number) {
 
 function monthLabel(date: Date) {
   return `${date.getFullYear()}년 ${date.getMonth() + 1}월`
-}
-
-function startOfCalendarGrid(date: Date) {
-  const first = startOfMonth(date)
-  return new Date(first.getFullYear(), first.getMonth(), 1 - first.getDay())
-}
-
-function formatDateKey(date: Date) {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, "0")
-  const d = String(date.getDate()).padStart(2, "0")
-  return `${y}-${m}-${d}`
 }
 
 function accentClass(tone: OpsStatusTone, emphasis: boolean) {
@@ -89,6 +86,7 @@ export function OpsCalendarView({
   className,
 }: OpsCalendarViewProps) {
   const today = useMemo(() => new Date(), [])
+  const todayKey = useMemo(() => formatLocalDateKey(today), [today])
   const [currentMonth, setCurrentMonth] = useState(() =>
     startOfMonth(events[0] ? new Date(events[0].sortAt) : today)
   )
@@ -110,25 +108,17 @@ export function OpsCalendarView({
     return grouped
   }, [events])
 
-  const days = useMemo(() => {
-    const start = startOfCalendarGrid(currentMonth)
-    return Array.from({ length: 42 }, (_, index) => {
-      const date = new Date(start)
-      date.setDate(start.getDate() + index)
-      return date
-    })
-  }, [currentMonth])
+  const gridSlots = useMemo(() => buildKoreanMonthGridSlots(currentMonth), [currentMonth])
 
   const resolvedSelectedDateKey = useMemo(() => {
     if (selectedDateKey && groupedEvents.has(selectedDateKey)) {
       return selectedDateKey
     }
-    const todayKey = formatDateKey(today)
     if (groupedEvents.has(todayKey)) {
       return todayKey
     }
     return [...groupedEvents.keys()].sort()[0] ?? null
-  }, [groupedEvents, selectedDateKey, today])
+  }, [groupedEvents, selectedDateKey, todayKey])
 
   const selectedEvents = resolvedSelectedDateKey ? groupedEvents.get(resolvedSelectedDateKey) ?? [] : []
 
@@ -178,20 +168,29 @@ export function OpsCalendarView({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold text-muted-foreground">
-          {["일", "월", "화", "수", "목", "금", "토"].map((label) => (
-            <div key={label} className="py-1">
-              {label}
+        <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold">
+          {koreanWeekdayHeaders.map((col) => (
+            <div key={col.label} className={cn("py-1", koreanHeaderTextClass(col.tone))}>
+              {col.label}
             </div>
           ))}
         </div>
 
         <div className="grid grid-cols-7 gap-1.5">
-          {days.map((date) => {
-            const key = formatDateKey(date)
+          {gridSlots.map((slot, index) => {
+            if (slot.kind === "padding") {
+              return (
+                <div
+                  key={`pad-${index}`}
+                  className="min-h-[132px] rounded-xl border border-transparent p-2 pointer-events-none"
+                  aria-hidden
+                />
+              )
+            }
+            const date = slot.date
+            const key = formatLocalDateKey(date)
             const dayEvents = groupedEvents.get(key) ?? []
-            const isCurrentMonth = date.getMonth() === currentMonth.getMonth()
-            const isToday = key === formatDateKey(today)
+            const isToday = key === todayKey
             const isSelected = key === resolvedSelectedDateKey
             const visibleEvents = dayEvents.slice(0, 3)
             const hiddenCount = Math.max(0, dayEvents.length - visibleEvents.length)
@@ -199,8 +198,7 @@ export function OpsCalendarView({
               <div
                 key={key}
                 className={cn(
-                  "flex min-h-[132px] flex-col rounded-xl border p-2",
-                  isCurrentMonth ? "border-border/70 bg-card" : "border-border/45 bg-muted/20 text-muted-foreground",
+                  "flex min-h-[132px] flex-col rounded-xl border border-border/70 bg-card p-2",
                   isToday && "border-primary/45 ring-1 ring-primary/15",
                   isSelected && "shadow-sm"
                 )}
@@ -210,14 +208,7 @@ export function OpsCalendarView({
                   className="flex items-center justify-between text-left"
                   onClick={() => setSelectedDateKey(dayEvents.length ? key : null)}
                 >
-                  <span
-                    className={cn(
-                      "inline-flex size-6 items-center justify-center rounded-full text-xs font-semibold",
-                      isToday && "bg-primary/12 text-primary"
-                    )}
-                  >
-                    {date.getDate()}
-                  </span>
+                  <span className={koreanCalendarDayNumberCn(date, { isToday })}>{date.getDate()}</span>
                   {dayEvents.length ? (
                     <span className="text-[10px] text-muted-foreground">{dayEvents.length}건</span>
                   ) : null}
@@ -267,7 +258,14 @@ export function OpsCalendarView({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-xs font-semibold text-muted-foreground">선택한 날짜</p>
-                <p className="text-sm font-semibold text-foreground">{formatDate(resolvedSelectedDateKey)}</p>
+                <p
+                  className={cn(
+                    "text-sm font-semibold",
+                    koreanCalendarDateTitleCn(parseLocalDateKey(resolvedSelectedDateKey))
+                  )}
+                >
+                  {formatDate(resolvedSelectedDateKey)}
+                </p>
               </div>
               <span className="text-xs text-muted-foreground">{selectedEvents.length}건 일정</span>
             </div>
