@@ -3,7 +3,7 @@
 국내 1인 사업자용 **문의 · 견적 · 청구 · 수금** 관리 MVP입니다. Next.js App Router, TypeScript, Tailwind, Supabase를 사용합니다.
 
 **실전 배포 실행 순서**: **[docs/deploy-runbook.md](./docs/deploy-runbook.md)**  
-**배포 상세**(환경변수·Auth URL·마이그레이션·Resend·OpenAI): **[docs/deployment.md](./docs/deployment.md)**  
+**배포 상세**(환경변수·Auth URL·마이그레이션·Resend·OpenAI·**알림**): **[docs/deployment.md](./docs/deployment.md)** (§4.1 알림)  
 **출시 E2E 체크리스트**: **[docs/production-e2e-checklist.md](./docs/production-e2e-checklist.md)**  
 **운영 오류 대응 표**: **[docs/operations-errors.md](./docs/operations-errors.md)**  
 **배포 직후 스모크**: **[docs/beta-qa-checklist.md](./docs/beta-qa-checklist.md)**  
@@ -37,7 +37,7 @@ npm run build
 | **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** | 브라우저에 노출됩니다. **anon(public) 키만** 사용하세요. 데이터 보호는 **RLS**에 의존합니다. |
 | **`service_role` / Service Role secret** | **절대** `NEXT_PUBLIC_*` 환경변수에 넣지 마세요. 클라이언트 번들에 실릴 수 있습니다. service_role 은 RLS를 우회합니다. |
 
-이 프로젝트는 현재 **서버에서 service_role 을 사용하지 않습니다.**
+**선택**: 서버 환경에만 `SUPABASE_SERVICE_ROLE_KEY` 를 두면, 공개 문의 폼 제출 후 **운영자 이메일 알림**(Resend)에서 알림 설정·수신 주소를 조회할 수 있습니다. 없으면 이메일 단계만 건너뜁니다.
 
 ---
 
@@ -50,6 +50,8 @@ npm run build
 | `NEXT_PUBLIC_SITE_URL` | 강력 권장 | 고정 도메인(슬래시 없음). 인증·재설정·공유 링크 기준 |
 | `RESEND_API_KEY` | 견적 메일 시 사실상 필수 | Resend에서 발급 |
 | `RESEND_FROM` | 권장 | 인증된 발신 주소 |
+| `RESEND_FROM_EMAIL` | 선택 | 새 문의 운영자 메일 전용(없으면 `RESEND_FROM` 사용) |
+| `SUPABASE_SERVICE_ROLE_KEY` | 선택 | 서버 전용. 운영자 이메일 알림 시 설정 조회(없으면 이메일만 생략) |
 | `OPENAI_API_KEY` | AI 사용 시 필수 | `/api/ai/*` |
 | `OPENAI_MODEL_INQUIRY_STRUCTURE` | AI 사용 시 필수 | 문의 구조화 → 기본 `gpt-5.4-nano` (`.env.example` 참고) |
 | `OPENAI_MODEL_COMPOSE_MESSAGE` | AI 사용 시 필수 | 발송·리마인드 문구 → 기본 `gpt-5.4-nano` |
@@ -116,9 +118,20 @@ npm run build
 4. `0003_quote_seal_share_document.sql` — 견적 공유·직인·RPC  
 5. `0004_user_plan.sql` — `users.plan` (`free` / `pro`)  
 6. `0005_business_registration_number.sql` — 사업자등록번호 컬럼·공유 견적 RPC  
-7. `0006_invoice_public_share_and_link_opens.sql` — 공개 청구 토큰·열람 카운트·`get_invoice_share_payload`·열람 시 활동 로그
+7. `0006_invoice_public_share_and_link_opens.sql` — 공개 청구 토큰·열람 카운트·`get_invoice_share_payload`·열람 시 활동 로그  
+8. `0007_public_inquiry_form.sql` — 공개 문의 폼·`submit_public_inquiry`  
+9. `0008_notifications.sql` — `notifications` / `notification_preferences`, 문의 INSERT 시 알림, Realtime
 
-`0003_rls` 미적용 시 보안 공격면이 남습니다. `0004` 미적용 시 앱은 동작하지만 설정에 **플랜 마이그레이션 안내**가 표시됩니다. **공개 청구 링크·열람 추적**은 **0006** 이 필요합니다.
+`0003_rls` 미적용 시 보안 공격면이 남습니다. `0004` 미적용 시 앱은 동작하지만 설정에 **플랜 마이그레이션 안내**가 표시됩니다. **공개 청구 링크·열람 추적**은 **0006** 이 필요합니다. **앱 내·브라우저·이메일 알림**은 **0008** 과 Supabase Realtime(`notifications`) 전제를 확인하세요. 상세는 **[docs/deployment.md §4.1](./docs/deployment.md#41-알림실시간브라우저이메일)**.
+
+---
+
+## 운영자 알림 (요약)
+
+- **앱**: 로그인 후 헤더 종 아이콘 — 미읽음 배지, 목록, 읽음/모두 읽음, **설정 → 알림 설정**에서 채널 on/off.  
+- **브라우저**: Web Notification 권한은 종 메뉴에서 요청(강제하지 않음).  
+- **이메일**: 공개 문의 접수 시 Resend로 운영자 메일( **`RESEND_API_KEY`**, **`RESEND_FROM`** 또는 **`RESEND_FROM_EMAIL`**, 선택 **`SUPABASE_SERVICE_ROLE_KEY`** ). 실패해도 문의 저장·앱 알림은 계속됩니다.  
+- **문의로 이동**: 알림 클릭 시 `/inquiries?focus=<id>` 로 열리며 해당 문의가 강조됩니다.
 
 ---
 

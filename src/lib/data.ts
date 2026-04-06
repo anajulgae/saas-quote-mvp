@@ -23,6 +23,9 @@ import {
   defaultReminderMessageFromTemplates,
 } from "@/lib/template-defaults"
 import { formatBusinessRegNoInput } from "@/lib/format"
+import { defaultNotificationPreferences } from "@/lib/notification-defaults"
+
+export { defaultNotificationPreferences }
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { fetchUserPlanRow } from "@/lib/user-plan"
 import type {
@@ -45,6 +48,7 @@ import type {
   QuoteLinkedInvoiceStub,
   QuoteStatus,
   QuoteWithItems,
+  NotificationPreferences,
   ReminderFormInput,
   Template,
   TimelineEvent,
@@ -60,6 +64,7 @@ type ReminderRow = Database["public"]["Tables"]["reminders"]["Row"]
 type ActivityLogRow = Database["public"]["Tables"]["activity_logs"]["Row"]
 type BusinessSettingsRow = Database["public"]["Tables"]["business_settings"]["Row"]
 type TemplateRow = Database["public"]["Tables"]["templates"]["Row"]
+type NotificationPreferencesRow = Database["public"]["Tables"]["notification_preferences"]["Row"]
 type QueryResult = {
   data: unknown
   error: Error | null
@@ -355,6 +360,149 @@ export async function createActivityLog(input: {
     description: input.description,
     metadata: input.metadata ?? {},
   })
+}
+
+function mapNotificationPreferencesRow(row: NotificationPreferencesRow): NotificationPreferences {
+  return {
+    userId: row.user_id,
+    inquiryInApp: row.inquiry_in_app,
+    inquiryBrowser: row.inquiry_browser,
+    inquiryEmail: row.inquiry_email,
+    quoteEventsInApp: row.quote_events_in_app,
+    quoteEventsBrowser: row.quote_events_browser,
+    quoteEventsEmail: row.quote_events_email,
+    invoiceEventsInApp: row.invoice_events_in_app,
+    invoiceEventsBrowser: row.invoice_events_browser,
+    invoiceEventsEmail: row.invoice_events_email,
+    reminderEventsInApp: row.reminder_events_in_app,
+    reminderEventsBrowser: row.reminder_events_browser,
+    reminderEventsEmail: row.reminder_events_email,
+  }
+}
+
+/** 견적·청구·리마인드 등 운영자 알림 행 삽입(중복 dedupe_key 는 무시) */
+export async function insertBillNotificationForUser(input: {
+  type: string
+  title: string
+  body: string
+  linkPath: string
+  relatedEntityType: string
+  relatedEntityId: string
+  dedupeKey: string
+}) {
+  const context = await getDataContext()
+  if (context.mode === "demo") {
+    return
+  }
+
+  const { error } = await context.supabase.from("notifications").insert({
+    user_id: context.userId,
+    type: input.type,
+    title: input.title,
+    body: input.body,
+    link_path: input.linkPath,
+    related_entity_type: input.relatedEntityType,
+    related_entity_id: input.relatedEntityId,
+    dedupe_key: input.dedupeKey,
+  })
+
+  if (error) {
+    const code = "code" in error ? String((error as { code?: string }).code) : ""
+    if (code !== "23505") {
+      throw error
+    }
+  }
+}
+
+export async function getNotificationPreferencesRecord(): Promise<NotificationPreferences> {
+  const context = await getDataContext()
+  if (context.mode === "demo") {
+    return defaultNotificationPreferences(context.userId)
+  }
+
+  const { data, error } = await context.supabase
+    .from("notification_preferences")
+    .select("*")
+    .eq("user_id", context.userId)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  if (!data) {
+    return defaultNotificationPreferences(context.userId)
+  }
+
+  return mapNotificationPreferencesRow(data as NotificationPreferencesRow)
+}
+
+export async function saveNotificationPreferencesRecord(
+  prefs: Omit<NotificationPreferences, "userId">
+): Promise<NotificationPreferences> {
+  const context = await getDataContext()
+  if (context.mode === "demo") {
+    throw new Error("데모 모드에서는 알림 설정을 저장할 수 없습니다.")
+  }
+
+  const row = {
+    user_id: context.userId,
+    inquiry_in_app: prefs.inquiryInApp,
+    inquiry_browser: prefs.inquiryBrowser,
+    inquiry_email: prefs.inquiryEmail,
+    quote_events_in_app: prefs.quoteEventsInApp,
+    quote_events_browser: prefs.quoteEventsBrowser,
+    quote_events_email: prefs.quoteEventsEmail,
+    invoice_events_in_app: prefs.invoiceEventsInApp,
+    invoice_events_browser: prefs.invoiceEventsBrowser,
+    invoice_events_email: prefs.invoiceEventsEmail,
+    reminder_events_in_app: prefs.reminderEventsInApp,
+    reminder_events_browser: prefs.reminderEventsBrowser,
+    reminder_events_email: prefs.reminderEventsEmail,
+    updated_at: new Date().toISOString(),
+  }
+
+  const { data, error } = await context.supabase
+    .from("notification_preferences")
+    .upsert(row, { onConflict: "user_id" })
+    .select("*")
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return mapNotificationPreferencesRow(data as NotificationPreferencesRow)
+}
+
+export async function markNotificationReadRecord(notificationId: string) {
+  const context = await getDataContext()
+  if (context.mode === "demo") {
+    return
+  }
+  const { error } = await context.supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("id", notificationId)
+    .eq("user_id", context.userId)
+  if (error) {
+    throw error
+  }
+}
+
+export async function markAllNotificationsReadRecord() {
+  const context = await getDataContext()
+  if (context.mode === "demo") {
+    return
+  }
+  const { error } = await context.supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("user_id", context.userId)
+    .eq("is_read", false)
+  if (error) {
+    throw error
+  }
 }
 
 export async function createInquiryRecord(input: {
@@ -806,6 +954,19 @@ export async function updateQuoteStatusRecord(quoteId: string, status: Quote["st
     quoteId,
     quote.title
   )
+
+  if (status === "sent" || status === "approved" || status === "rejected") {
+    const label = status === "sent" ? "발송됨" : status === "approved" ? "승인됨" : "거절됨"
+    await insertBillNotificationForUser({
+      type: status === "sent" ? "quote_sent" : status === "approved" ? "quote_approved" : "quote_rejected",
+      title: `견적이 ${label}`,
+      body: `${quote.title} · ${quote.quote_number}`,
+      linkPath: "/quotes",
+      relatedEntityType: "quote",
+      relatedEntityId: quoteId,
+      dedupeKey: `quote_status:${quoteId}:${status}`,
+    })
+  }
 
   return {
     mode: "supabase" as const,
@@ -1584,6 +1745,16 @@ export async function createInvoiceRecord(input: InvoiceFormInput) {
     },
   })
 
+  await insertBillNotificationForUser({
+    type: "invoice_created",
+    title: "새 청구가 등록되었습니다",
+    body: `${invoice.invoice_number} · ${invoice.amount.toLocaleString("ko-KR")}원`,
+    linkPath: "/invoices",
+    relatedEntityType: "invoice",
+    relatedEntityId: invoice.id,
+    dedupeKey: `invoice_created:${invoice.id}`,
+  })
+
   return {
     mode: "supabase" as const,
     invoice: mapInvoice(invoice),
@@ -1677,6 +1848,14 @@ export async function updateInvoicePaymentStatusRecord(
     return { mode: "demo" as const }
   }
 
+  const { data: prevInv } = await context.supabase
+    .from("invoices")
+    .select("payment_status, invoice_number")
+    .eq("id", invoiceId)
+    .maybeSingle()
+  const prevStatus = (prevInv as { payment_status: PaymentStatus; invoice_number: string } | null)
+    ?.payment_status
+
   const paidAt =
     status === "paid" || status === "deposit_paid" ? new Date().toISOString() : null
 
@@ -1706,6 +1885,30 @@ export async function updateInvoicePaymentStatusRecord(
       paymentStatus: status,
     },
   })
+
+  if (prevStatus !== status) {
+    if (status === "overdue") {
+      await insertBillNotificationForUser({
+        type: "invoice_overdue",
+        title: "청구가 연체 상태입니다",
+        body: `${invoice.invoice_number} — 입금을 확인해 주세요.`,
+        linkPath: "/invoices",
+        relatedEntityType: "invoice",
+        relatedEntityId: invoiceId,
+        dedupeKey: `invoice_overdue:${invoiceId}`,
+      })
+    } else {
+      await insertBillNotificationForUser({
+        type: "invoice_status_changed",
+        title: "청구 결제 상태가 변경되었습니다",
+        body: `${invoice.invoice_number}: ${prevStatus ?? "?"} → ${status}`,
+        linkPath: "/invoices",
+        relatedEntityType: "invoice",
+        relatedEntityId: invoiceId,
+        dedupeKey: `invoice_pay:${invoiceId}:${String(prevStatus)}:${status}`,
+      })
+    }
+  }
 
   return {
     mode: "supabase" as const,
@@ -1759,9 +1962,21 @@ export async function createReminderRecord(input: ReminderFormInput) {
     },
   })
 
+  const reminder = data as ReminderRow
+
+  await insertBillNotificationForUser({
+    type: "reminder_added",
+    title: "리마인드가 기록되었습니다",
+    body: `${invoice?.invoice_number ?? "청구"} · ${input.channel}`,
+    linkPath: "/invoices",
+    relatedEntityType: "invoice",
+    relatedEntityId: input.invoiceId,
+    dedupeKey: `reminder:${reminder.id}`,
+  })
+
   return {
     mode: "supabase" as const,
-    reminder: mapReminder(data as ReminderRow),
+    reminder: mapReminder(reminder),
   }
 }
 
@@ -2808,6 +3023,7 @@ export async function getSettingsPageData(): Promise<{
   templates: Template[]
   currentPlan: BillingPlan
   planColumnMissing: boolean
+  notificationPreferences: NotificationPreferences
 }> {
   const context = await getDataContext()
 
@@ -2817,23 +3033,32 @@ export async function getSettingsPageData(): Promise<{
       templates: demoTemplates,
       currentPlan: demoUser.plan,
       planColumnMissing: false,
+      notificationPreferences: defaultNotificationPreferences(demoUser.id),
     }
   }
 
-  const [{ data: settingsRow, error: settingsError }, { data: templateRows, error: templateError }] =
-    await Promise.all([
-      context.supabase
-        .from("business_settings")
-        .select("*")
-        .eq("user_id", context.userId)
-        .maybeSingle(),
-      context.supabase
-        .from("templates")
-        .select("*")
-        .eq("user_id", context.userId)
-        .order("is_default", { ascending: false })
-        .order("created_at", { ascending: true }),
-    ])
+  const [
+    { data: settingsRow, error: settingsError },
+    { data: templateRows, error: templateError },
+    { data: notifPrefRow, error: notifPrefError },
+  ] = await Promise.all([
+    context.supabase
+      .from("business_settings")
+      .select("*")
+      .eq("user_id", context.userId)
+      .maybeSingle(),
+    context.supabase
+      .from("templates")
+      .select("*")
+      .eq("user_id", context.userId)
+      .order("is_default", { ascending: false })
+      .order("created_at", { ascending: true }),
+    context.supabase
+      .from("notification_preferences")
+      .select("*")
+      .eq("user_id", context.userId)
+      .maybeSingle(),
+  ])
 
   if (settingsError) {
     throw settingsError
@@ -2841,6 +3066,10 @@ export async function getSettingsPageData(): Promise<{
 
   if (templateError) {
     throw templateError
+  }
+
+  if (notifPrefError) {
+    throw notifPrefError
   }
 
   const { plan: currentPlan, columnMissing: planColumnMissing } = await fetchUserPlanRow(
@@ -2874,11 +3103,16 @@ export async function getSettingsPageData(): Promise<{
 
   const templates = ((templateRows ?? []) as TemplateRow[]).map(mapTemplate)
 
+  const notificationPreferences = notifPrefRow
+    ? mapNotificationPreferencesRow(notifPrefRow as NotificationPreferencesRow)
+    : defaultNotificationPreferences(context.userId)
+
   return {
     settings,
     templates,
     currentPlan,
     planColumnMissing,
+    notificationPreferences,
   }
 }
 

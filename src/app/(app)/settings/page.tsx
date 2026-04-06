@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic"
 export const revalidate = 0
 
 export default async function SettingsPage() {
-  const { settings, templates, currentPlan, planColumnMissing } = await getSettingsPageData()
+  const { settings, templates, currentPlan, planColumnMissing, notificationPreferences } =
+    await getSettingsPageData()
   const businessFormKey = computeBusinessSettingsFormKey(settings)
   const siteOrigin = getSiteOrigin()
 
@@ -26,6 +27,7 @@ export default async function SettingsPage() {
         currentPlan={currentPlan}
         planColumnMissing={planColumnMissing}
         siteOrigin={siteOrigin}
+        initialNotificationPreferences={notificationPreferences}
       />
     </div>
   )

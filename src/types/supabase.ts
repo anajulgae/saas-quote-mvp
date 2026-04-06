@@ -201,6 +201,102 @@ export interface Database {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          user_id: string
+          inquiry_in_app: boolean
+          inquiry_browser: boolean
+          inquiry_email: boolean
+          quote_events_in_app: boolean
+          quote_events_browser: boolean
+          quote_events_email: boolean
+          invoice_events_in_app: boolean
+          invoice_events_browser: boolean
+          invoice_events_email: boolean
+          reminder_events_in_app: boolean
+          reminder_events_browser: boolean
+          reminder_events_email: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          inquiry_in_app?: boolean
+          inquiry_browser?: boolean
+          inquiry_email?: boolean
+          quote_events_in_app?: boolean
+          quote_events_browser?: boolean
+          quote_events_email?: boolean
+          invoice_events_in_app?: boolean
+          invoice_events_browser?: boolean
+          invoice_events_email?: boolean
+          reminder_events_in_app?: boolean
+          reminder_events_browser?: boolean
+          reminder_events_email?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          inquiry_in_app?: boolean
+          inquiry_browser?: boolean
+          inquiry_email?: boolean
+          quote_events_in_app?: boolean
+          quote_events_browser?: boolean
+          quote_events_email?: boolean
+          invoice_events_in_app?: boolean
+          invoice_events_browser?: boolean
+          invoice_events_email?: boolean
+          reminder_events_in_app?: boolean
+          reminder_events_browser?: boolean
+          reminder_events_email?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          type: string
+          title: string
+          body: string
+          link_path: string | null
+          related_entity_type: string | null
+          related_entity_id: string | null
+          is_read: boolean
+          dedupe_key: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: string
+          title: string
+          body?: string
+          link_path?: string | null
+          related_entity_type?: string | null
+          related_entity_id?: string | null
+          is_read?: boolean
+          dedupe_key: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: string
+          title?: string
+          body?: string
+          link_path?: string | null
+          related_entity_type?: string | null
+          related_entity_id?: string | null
+          is_read?: boolean
+          dedupe_key?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       quotes: {
         Row: {
           id: string

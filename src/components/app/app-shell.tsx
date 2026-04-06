@@ -2,10 +2,11 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Bell, LayoutDashboard, Menu, Receipt, Settings, Users, FileText, MessagesSquare } from "lucide-react"
+import { LayoutDashboard, Menu, Receipt, Settings, Users, FileText, MessagesSquare } from "lucide-react"
 
 import { logoutAction } from "@/app/actions"
 import { AuthLegalLinks } from "@/components/app/auth-legal-links"
+import { NotificationCenter } from "@/components/app/notification-center"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
@@ -108,9 +109,13 @@ function SidebarContent({
 function AppHeader({
   businessName,
   sidebarSecondary,
+  sessionUserId,
+  isDemoSession,
 }: {
   businessName: string
   sidebarSecondary?: string
+  sessionUserId: string | null
+  isDemoSession: boolean
 }) {
   const pathname = usePathname()
   const { title, description } = headerForPath(pathname)
@@ -132,9 +137,7 @@ function AppHeader({
             <p className="truncate text-xs text-muted-foreground">{description}</p>
           </div>
         </div>
-        <Button variant="outline" size="icon-sm" aria-label="알림" className="shrink-0">
-          <Bell className="size-4" />
-        </Button>
+        <NotificationCenter userId={sessionUserId} isDemoSession={isDemoSession} />
       </div>
     </header>
   )
@@ -144,6 +147,7 @@ export function AppShell({
   businessName,
   sidebarSecondary,
   isDemoSession,
+  sessionUserId,
   children,
 }: {
   businessName: string
@@ -151,6 +155,8 @@ export function AppShell({
   sidebarSecondary?: string
   /** 외부 점검용 데모 쿠키 세션 (Supabase·운영 DB 미사용) */
   isDemoSession?: boolean
+  /** Supabase 로그인 사용자 id — 알림 Realtime·배지 */
+  sessionUserId?: string | null
   children: React.ReactNode
 }) {
   return (
@@ -168,7 +174,12 @@ export function AppShell({
               테스트용 데모 환경 · 샘플 데이터만 표시됩니다 (운영 DB·실사용자 데이터와 분리)
             </div>
           ) : null}
-          <AppHeader businessName={businessName} sidebarSecondary={sidebarSecondary} />
+          <AppHeader
+            businessName={businessName}
+            sidebarSecondary={sidebarSecondary}
+            sessionUserId={sessionUserId ?? null}
+            isDemoSession={Boolean(isDemoSession)}
+          />
           <main className="flex-1 px-4 py-5 md:px-6 md:py-7">{children}</main>
         </div>
       </div>

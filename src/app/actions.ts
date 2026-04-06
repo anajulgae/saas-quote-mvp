@@ -33,7 +33,10 @@ import {
   getInvoiceOutboundSnapshot,
   getQuoteOutboundSnapshot,
   logInquiryFormShareActionRecord,
+  markAllNotificationsReadRecord,
+  markNotificationReadRecord,
   saveBusinessSettingsRecord,
+  saveNotificationPreferencesRecord,
   savePublicInquiryFormRecord,
   saveTemplatesRecord,
   updateBusinessSealSettingsRecord,
@@ -1410,5 +1413,76 @@ export async function logInquiryFormShareAction(kind: string) {
     await logInquiryFormShareActionRecord(kind)
   } catch {
     return
+  }
+}
+
+const notificationPrefsSchema = z.object({
+  inquiryInApp: z.boolean(),
+  inquiryBrowser: z.boolean(),
+  inquiryEmail: z.boolean(),
+  quoteEventsInApp: z.boolean(),
+  quoteEventsBrowser: z.boolean(),
+  quoteEventsEmail: z.boolean(),
+  invoiceEventsInApp: z.boolean(),
+  invoiceEventsBrowser: z.boolean(),
+  invoiceEventsEmail: z.boolean(),
+  reminderEventsInApp: z.boolean(),
+  reminderEventsBrowser: z.boolean(),
+  reminderEventsEmail: z.boolean(),
+})
+
+export async function saveNotificationPreferencesAction(raw: z.infer<typeof notificationPrefsSchema>) {
+  const session = await getAppSession()
+  if (!session?.user?.id) {
+    return { ok: false as const, error: "로그인이 필요합니다." }
+  }
+  if (session.mode === "demo") {
+    return { ok: false as const, error: "데모 환경에서는 알림 설정을 저장할 수 없습니다." }
+  }
+  try {
+    const parsed = notificationPrefsSchema.parse(raw)
+    const prefs = await saveNotificationPreferencesRecord(parsed)
+    revalidatePath("/settings")
+    return { ok: true as const, preferences: prefs }
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      return { ok: false as const, error: e.issues[0]?.message ?? "입력값을 확인해 주세요." }
+    }
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(e, "알림 설정을 저장하지 못했습니다."),
+    }
+  }
+}
+
+export async function markNotificationReadAction(notificationId: string) {
+  const session = await getAppSession()
+  if (!session?.user?.id || session.mode === "demo") {
+    return { ok: false as const, error: "알림을 처리할 수 없습니다." }
+  }
+  try {
+    await markNotificationReadRecord(notificationId)
+    return { ok: true as const }
+  } catch (e) {
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(e, "읽음 처리에 실패했습니다."),
+    }
+  }
+}
+
+export async function markAllNotificationsReadAction() {
+  const session = await getAppSession()
+  if (!session?.user?.id || session.mode === "demo") {
+    return { ok: false as const, error: "알림을 처리할 수 없습니다." }
+  }
+  try {
+    await markAllNotificationsReadRecord()
+    return { ok: true as const }
+  } catch (e) {
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(e, "모두 읽음 처리에 실패했습니다."),
+    }
   }
 }

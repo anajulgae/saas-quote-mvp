@@ -3,6 +3,7 @@ import { z } from "zod"
 
 import { planAllowsFeature } from "@/lib/plan-features"
 import { reportServerError } from "@/lib/observability"
+import { sendNewInquiryEmailToOperator } from "@/lib/server/operator-email"
 import { OpenAiError, runInquiryStructureForPublicForm } from "@/lib/server/inquiry-structure-core"
 import { createAnonSupabaseClient } from "@/lib/supabase/anon"
 import type { BillingPlan } from "@/types/domain"
@@ -116,6 +117,7 @@ export async function POST(request: Request) {
     error?: string
     inquiryId?: string
     customerId?: string
+    ownerUserId?: string
     ownerPlan?: string
   }
 
@@ -131,7 +133,18 @@ export async function POST(request: Request) {
   }
 
   const inquiryId = result.inquiryId
+  const ownerUserId = result.ownerUserId
   const ownerPlan = (result.ownerPlan as BillingPlan | undefined) ?? "free"
+
+  if (ownerUserId && inquiryId) {
+    void sendNewInquiryEmailToOperator({
+      ownerUserId,
+      inquiryTitle: body.title,
+      submitterName: body.name,
+      submitterPhone: body.phone,
+      submitterEmail: body.email,
+    })
+  }
 
   if (inquiryId && planAllowsFeature(ownerPlan, "ai_assist")) {
     const rawForAi = [body.title, body.details, body.extraNotes].filter(Boolean).join("\n\n")

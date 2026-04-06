@@ -172,6 +172,38 @@ export interface BusinessSettings {
   publicInquiryCompletionMessage: string
 }
 
+/** 운영자 알림 센터 + Realtime */
+export interface BillNotification {
+  id: string
+  userId: string
+  type: string
+  title: string
+  body: string
+  linkPath: string | null
+  relatedEntityType: string | null
+  relatedEntityId: string | null
+  isRead: boolean
+  dedupeKey: string
+  createdAt: string
+}
+
+/** 설정 화면 — 채널별 on/off (DB notification_preferences) */
+export interface NotificationPreferences {
+  userId: string
+  inquiryInApp: boolean
+  inquiryBrowser: boolean
+  inquiryEmail: boolean
+  quoteEventsInApp: boolean
+  quoteEventsBrowser: boolean
+  quoteEventsEmail: boolean
+  invoiceEventsInApp: boolean
+  invoiceEventsBrowser: boolean
+  invoiceEventsEmail: boolean
+  reminderEventsInApp: boolean
+  reminderEventsBrowser: boolean
+  reminderEventsEmail: boolean
+}
+
 export type ActivityKind =
   | "inquiry"
   | "quote"

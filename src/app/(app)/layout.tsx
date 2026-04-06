@@ -22,6 +22,7 @@ export default async function AppLayout({
       businessName={businessName}
       sidebarSecondary={sidebarSecondary}
       isDemoSession={session.mode === "demo"}
+      sessionUserId={session.mode === "supabase" ? session.user.id : null}
     >
       {children}
     </AppShell>

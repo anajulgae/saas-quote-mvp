@@ -38,6 +38,7 @@ Vercel 프로젝트 **Settings → Environment Variables**에서 설정합니다
 | `NEXT_PUBLIC_SITE_URL` | 강력 권장 | 고정 도메인(슬래시 없음). 인증·재설정·공유 링크 기준. 미설정 시 `VERCEL_URL`에 의존해 Supabase Redirect와 어긋나기 쉬움 (`src/lib/site-url.ts`) |
 | `RESEND_API_KEY` | 견적 메일 발송 시 사실상 필수 | Resend API 키. 없으면 `sendQuoteEmailAction`이 사용자에게 명시적 오류를 반환 (`src/lib/send-resend.ts`) |
 | `RESEND_FROM` | 권장 | 인증된 발신 주소. 미설정 시 설정 화면 이메일 또는 테스트 주소 시도(403/422 가능) |
+| `RESEND_FROM_EMAIL` | 선택 | 새 문의 운영자 알림 메일 전용 발신 주소. 없으면 **`RESEND_FROM`** 과 동일 후보 사용 (`operator-email.ts`) |
 | `OPENAI_API_KEY` | AI 기능 사용 시 필수 | 모든 `/api/ai/*` 호출 |
 | `OPENAI_MODEL_INQUIRY_STRUCTURE` | AI 사용 시 필수 | `POST /api/ai/inquiry-structure` — 짧은 구조화용(권장 `gpt-5.4-nano`) |
 | `OPENAI_MODEL_COMPOSE_MESSAGE` | AI 사용 시 필수 | `POST /api/ai/compose-message` — 발송·리마인드 문구(권장 `gpt-5.4-nano`) |
@@ -59,9 +60,15 @@ Vercel 프로젝트 **Settings → Environment Variables**에서 설정합니다
 | `DEMO_LOGIN_EMAIL` | 데모용 이메일 (`src/app/actions.ts`의 데모 분기에서만 사용) |
 | `DEMO_LOGIN_PASSWORD` | 데모용 비밀번호 |
 
+**선택(서버 전용)**
+
+| 이름 | 설명 |
+|------|------|
+| `SUPABASE_SERVICE_ROLE_KEY` | **Vercel 서버 환경에만** 설정. 공개 문의 제출 후 **운영자 이메일 알림**에서 `notification_preferences`·`business_settings` 조회에 사용. 미설정 시 해당 이메일만 생략됩니다. |
+
 **이 프로젝트에 넣지 말 것**
 
-- **`service_role`** 키를 `NEXT_PUBLIC_*` 로 넣지 마세요. 이 앱은 **anon + RLS**만 사용합니다. (`.env.example` 주석 참고)
+- **`service_role`** 키를 `NEXT_PUBLIC_*` 로 넣지 마세요. (`.env.example` 주석 참고)
 
 **환경별 분리**
 
@@ -122,11 +129,24 @@ Supabase **SQL Editor**에서 저장소의 파일을 **아래 순서 그대로**
 4. `supabase/migrations/0003_quote_seal_share_document.sql` — 견적 공유·직인·문서 RPC 등  
 5. `supabase/migrations/0004_user_plan.sql` — `public.users.plan` (`free` / `pro`). **미적용 시** 앱은 `free`로 완화 동작하지만 설정 화면에 **플랜 컬럼 미적용** 안내가 뜹니다.  
 6. `supabase/migrations/0005_business_registration_number.sql` — `business_settings.business_registration_number` 및 공개 견적 RPC `get_quote_share_payload` 갱신.  
-7. `supabase/migrations/0006_invoice_public_share_and_link_opens.sql` — 청구 `public_share_token`·견적/청구 열람 카운트·RPC `get_invoice_share_payload`·`bump_*_share_open`(첫 열람 시 `activity_logs`).
+7. `supabase/migrations/0006_invoice_public_share_and_link_opens.sql` — 청구 `public_share_token`·견적/청구 열람 카운트·RPC `get_invoice_share_payload`·`bump_*_share_open`(첫 열람 시 `activity_logs`).  
+8. `supabase/migrations/0007_public_inquiry_form.sql` — 고객 공개 문의 폼·`submit_public_inquiry` RPC 등.  
+9. `supabase/migrations/0008_notifications.sql` — **`notifications`** / **`notification_preferences`** 테이블, 문의 INSERT 시 운영자 알림 트리거, `supabase_realtime` 에 `notifications` 추가, `submit_public_inquiry` 응답에 `ownerUserId` 포함.
 
 **설정 화면 저장**: `business_settings` 테이블은 **1번**에서 생성됩니다. **6번(0005)** 을 아직 안 돌렸더라도 앱은 기본 필드 upsert로 저장을 시도하고, 사업자등록번호만 DB에 컬럼이 있을 때 반영됩니다. 그래도 **견적서·공유 링크에 사업자번호**를 쓰려면 **0005** 를 반드시 적용하세요. **고객용 공개 청구 URL·열람 집계**는 **7번(0006)** 이 필요합니다.
 
 `0003_rls` 미적용 시 RLS가 `user_id`만 검사해 **타인의 `customer_id` 등을 조합하는** 위험이 남습니다. 오픈 전 **위 순서 전부** 적용했는지 확인하세요.
+
+### 4.1 알림(실시간·브라우저·이메일)
+
+- **DB**: `0008` 적용 후 `notifications` 행이 생기고, Supabase **Database → Replication** 에서 `notifications` 가 Realtime에 포함돼 있어야 합니다(마이그레이션에서 `supabase_realtime` 추가 시도; 실패 시 대시보드에서 수동 활성화).  
+- **앱 내**: 로그인 사용자는 헤더 종 아이콘으로 목록·읽음 처리·`모두 읽음`을 사용합니다. **데모 세션**에서는 알림이 비활성입니다.  
+- **브라우저 알림**: 사용자가 종 메뉴에서 「브라우저 알림」으로 권한을 허용해야 합니다. 설정의 **알림 설정**에서 이벤트별로 앱/브라우저/이메일 on/off 가능합니다.  
+- **이메일(새 문의)**: 공개 문의 폼 제출 직후 `POST /api/public/inquiry` 가 Resend로 운영자에게 메일을 보낼 수 있습니다.  
+  - **`RESEND_API_KEY`** 필수.  
+  - **`RESEND_FROM`** 또는 **`RESEND_FROM_EMAIL`** — 발신 주소.  
+  - **`SUPABASE_SERVICE_ROLE_KEY`** (서버 전용): `notification_preferences`·`business_settings` 를 조회해 수신 여부·주소를 결정합니다. **없으면 이메일 단계는 건너뜁니다**(앱·Realtime 알림은 동작).  
+- **문의로 이동**: 알림 `link_path` 는 `/inquiries?focus=<문의 id>` 형태이며, 열면 해당 행 하이라이트·모바일 카드 강조·시트가 열립니다.
 
 ---
 
@@ -172,10 +192,12 @@ Preview 환경에만 `ENABLE_DEMO_LOGIN=true` 를 추가하고, Production에는
 
 사람이 **배포 버튼 누르기 전**에 아래를 순서대로 확인합니다.
 
-- [ ] Supabase에 **§4 순서대로** 마이그레이션 **전부** 적용 (`0004_user_plan` 포함)  
+- [ ] Supabase에 **§4 순서대로** 마이그레이션 **전부** 적용 (**`0007_public_inquiry_form`**, **`0008_notifications`** 포함)  
+- [ ] Supabase **Realtime** 에 **`public.notifications`** 가 포함됐는지 확인 ([§4.1](#41-알림실시간브라우저이메일))  
 - [ ] Vercel에 **`NEXT_PUBLIC_SUPABASE_URL`**, **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** 입력 (사용하는 **Production·Preview** 모두)  
 - [ ] (권장) **`NEXT_PUBLIC_SITE_URL`** — 프로덕션 고정 도메인  
-- [ ] (견적 메일) **`RESEND_API_KEY`** 및 권장 **`RESEND_FROM`**  
+- [ ] (견적·메일) **`RESEND_API_KEY`** 및 권장 **`RESEND_FROM`** (새 문의 운영자 메일은 선택 **`RESEND_FROM_EMAIL`**)  
+- [ ] (선택) **`SUPABASE_SERVICE_ROLE_KEY`** — 공개 문의 후 **운영자 이메일** 경로용(서버 전용). 없으면 이메일만 생략  
 - [ ] (AI) **`OPENAI_API_KEY`** 및 기능별 **`OPENAI_MODEL_INQUIRY_STRUCTURE`**, **`OPENAI_MODEL_COMPOSE_MESSAGE`**, **`OPENAI_MODEL_QUOTE_DRAFT`** — AI 버튼 사용 시  
 - [ ] Supabase **Authentication → URL Configuration**: **Site URL**·**Redirect URLs**에 Vercel URL 반영 (`/auth/callback`, `/reset-password`)  
 - [ ] **Production**에서 데모 불필요 시 **`ENABLE_DEMO_LOGIN` 미설정 또는 `false`**  

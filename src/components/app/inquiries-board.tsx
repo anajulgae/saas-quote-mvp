@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
   ArrowRight,
   ExternalLink,
@@ -136,6 +136,8 @@ export function InquiriesBoard({
   isDemoWorkspace: boolean
 }) {
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const flowStepsRef = useRef<HTMLDivElement>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -151,7 +153,9 @@ export function InquiriesBoard({
   const [customerFilterId, setCustomerFilterId] = useState<string | "all">("all")
   const [structureBusy, setStructureBusy] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
+  const [flashHighlightInquiryId, setFlashHighlightInquiryId] = useState<string | null>(null)
   const deepLinkAppliedRef = useRef(false)
+  const focusHandledRef = useRef<string | null>(null)
 
   type InquiryOptimisticPatch = { type: "stage"; id: string; stage: InquiryStage }
 
@@ -191,6 +195,22 @@ export function InquiriesBoard({
       deepLinkAppliedRef.current = false
     }
   }, [initialCreateOpen, initialCustomerId])
+
+  useEffect(() => {
+    const fid = searchParams.get("focus")?.trim()
+    if (!fid || focusHandledRef.current === fid) {
+      return
+    }
+    focusHandledRef.current = fid
+    setDrawerInquiryId(fid)
+    setFlashHighlightInquiryId(fid)
+    const t = window.setTimeout(() => setFlashHighlightInquiryId(null), 6500)
+    const q = new URLSearchParams(searchParams.toString())
+    q.delete("focus")
+    const qs = q.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+    return () => window.clearTimeout(t)
+  }, [searchParams, router, pathname])
 
   const [form, setForm] = useState({
     title: "",
@@ -1033,12 +1053,24 @@ export function InquiriesBoard({
                 return (
                   <tr
                     key={inquiry.id}
-                    className={cn(opsTableRowClass, "cursor-pointer")}
+                    className={cn(
+                      opsTableRowClass,
+                      "cursor-pointer",
+                      flashHighlightInquiryId === inquiry.id &&
+                        "bg-primary/[0.07] ring-1 ring-primary/25 transition-colors duration-500"
+                    )}
                     data-state={drawerInquiryId === inquiry.id ? "selected" : undefined}
                     onClick={() => setDrawerInquiryId(inquiry.id)}
                   >
                       <td className={cn(opsTableCellClass, "max-w-[220px] font-medium")}>
-                        <span className="line-clamp-2">{inquiry.title}</span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="line-clamp-2">{inquiry.title}</span>
+                          {inquiry.channel === "웹폼" ? (
+                            <span className="shrink-0 rounded border border-primary/25 bg-primary/[0.08] px-1.5 py-px text-[10px] font-medium text-primary">
+                              웹폼
+                            </span>
+                          ) : null}
+                        </div>
                         <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground line-clamp-1">
                           {inquiry.serviceCategory}
                         </span>
@@ -1122,12 +1154,22 @@ export function InquiriesBoard({
               <button
                 key={inquiry.id}
                 type="button"
-                className="flex w-full flex-col gap-2 rounded-xl border border-border/60 bg-card p-3 text-left shadow-sm"
+                className={cn(
+                  "flex w-full flex-col gap-2 rounded-xl border border-border/60 bg-card p-3 text-left shadow-sm",
+                  flashHighlightInquiryId === inquiry.id && "ring-2 ring-primary/30"
+                )}
                 onClick={() => setDrawerInquiryId(inquiry.id)}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <InquiryStageBadge stage={inquiry.stage} />
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <InquiryStageBadge stage={inquiry.stage} />
+                      {inquiry.channel === "웹폼" ? (
+                        <span className="rounded border border-primary/25 bg-primary/[0.08] px-1.5 py-px text-[10px] font-medium text-primary">
+                          웹폼
+                        </span>
+                      ) : null}
+                    </div>
                     <p className="mt-1 font-medium leading-snug">{inquiry.title}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {customer?.companyName ?? customer?.name} · {inquiry.channel}

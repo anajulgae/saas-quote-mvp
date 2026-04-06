@@ -110,6 +110,14 @@ export async function ensureUserProfile(
     }
   }
 
+  const { error: notifPrefErr } = await supabase.from("notification_preferences").insert({
+    user_id: user.id,
+  })
+  if (notifPrefErr && notifPrefErr.code !== "23505") {
+    // 테이블 미마이그레이션 등은 로그인 흐름을 막지 않음
+    console.warn("[ensureUserProfile] notification_preferences insert:", notifPrefErr.message)
+  }
+
   return {
     fullName,
     businessName,

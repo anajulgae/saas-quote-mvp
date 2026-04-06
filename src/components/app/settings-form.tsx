@@ -10,6 +10,7 @@ import {
   saveSealSettingsAction,
   saveTemplatesSettingsAction,
 } from "@/app/actions"
+import { SettingsNotificationPreferencesCard } from "@/components/app/settings-notification-preferences-card"
 import { SettingsPublicInquiryCard } from "@/components/app/settings-public-inquiry-card"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { formatBusinessRegNoInput } from "@/lib/format"
 import { computeTemplatesSyncKey } from "@/lib/settings-form-key"
 import { cn } from "@/lib/utils"
-import type { BillingPlan, BusinessSettings, Template } from "@/types/domain"
+import type { BillingPlan, BusinessSettings, NotificationPreferences, Template } from "@/types/domain"
 
 function FieldHint({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
@@ -86,12 +87,14 @@ export function SettingsForm({
   currentPlan,
   planColumnMissing,
   siteOrigin,
+  initialNotificationPreferences,
 }: {
   initialSettings: BusinessSettings
   templates: Template[]
   currentPlan: BillingPlan
   planColumnMissing: boolean
   siteOrigin: string
+  initialNotificationPreferences: NotificationPreferences
 }) {
   const router = useRouter()
   const [isBizPending, startBizTransition] = useTransition()
@@ -465,6 +468,8 @@ export function SettingsForm({
       </Card>
 
       <SettingsPublicInquiryCard siteOrigin={siteOrigin} initialSettings={settings} />
+
+      <SettingsNotificationPreferencesCard initial={initialNotificationPreferences} />
 
       <div className="relative py-1">
         <div className="absolute inset-0 flex items-center" aria-hidden>
