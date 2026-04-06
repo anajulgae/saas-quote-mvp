@@ -29,9 +29,13 @@ function isValidPayload(p: unknown): p is Payload {
 export function PublicInquiryRequestPage({
   token,
   initialPayload,
+  landingSource,
+  landingSlug,
 }: {
   token: string
   initialPayload: unknown
+  landingSource?: string
+  landingSlug?: string
 }) {
   const router = useRouter()
   const payload = isValidPayload(initialPayload) ? initialPayload : { valid: false as const, reason: "invalid" }
@@ -98,6 +102,8 @@ export function PublicInquiryRequestPage({
           extraNotes,
           consent: true as const,
           companyWebsite: companyWebsite ?? "",
+          source: landingSource ?? "",
+          sourceSlug: landingSlug ?? "",
         }),
       })
       const data = (await res.json()) as { ok?: boolean; error?: string }
@@ -125,6 +131,11 @@ export function PublicInquiryRequestPage({
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-8 pb-16">
+        {landingSource === "landing_page" ? (
+          <p className="mb-3 rounded-lg border border-neutral-200 bg-white/80 px-3 py-2 text-xs text-neutral-600">
+            업체 소개 페이지에서 연결된 문의입니다. 접수 후 담당자가 확인하여 연락드립니다.
+          </p>
+        ) : null}
         {p.intro?.trim() ? (
           <p className="mb-6 whitespace-pre-wrap text-sm leading-relaxed text-neutral-700">{p.intro.trim()}</p>
         ) : (

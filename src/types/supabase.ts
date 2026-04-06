@@ -111,6 +111,90 @@ export interface Database {
         }
         Relationships: []
       }
+      business_public_pages: {
+        Row: {
+          id: string
+          user_id: string
+          slug: string
+          is_published: boolean
+          template: string
+          business_name: string
+          headline: string
+          intro_one_line: string
+          about: string
+          services: Json
+          contact_phone: string
+          contact_email: string
+          location: string
+          business_hours: string
+          social_links: Json
+          hero_image_url: string | null
+          seo_title: string
+          seo_description: string
+          faq: Json
+          trust_points: Json
+          cta_text: string
+          inquiry_cta_enabled: boolean
+          ai_generated_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          slug: string
+          is_published?: boolean
+          template?: string
+          business_name?: string
+          headline?: string
+          intro_one_line?: string
+          about?: string
+          services?: Json
+          contact_phone?: string
+          contact_email?: string
+          location?: string
+          business_hours?: string
+          social_links?: Json
+          hero_image_url?: string | null
+          seo_title?: string
+          seo_description?: string
+          faq?: Json
+          trust_points?: Json
+          cta_text?: string
+          inquiry_cta_enabled?: boolean
+          ai_generated_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          slug?: string
+          is_published?: boolean
+          template?: string
+          business_name?: string
+          headline?: string
+          intro_one_line?: string
+          about?: string
+          services?: Json
+          contact_phone?: string
+          contact_email?: string
+          location?: string
+          business_hours?: string
+          social_links?: Json
+          hero_image_url?: string | null
+          seo_title?: string
+          seo_description?: string
+          faq?: Json
+          trust_points?: Json
+          cta_text?: string
+          inquiry_cta_enabled?: boolean
+          ai_generated_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           id: string
@@ -581,6 +665,10 @@ export interface Database {
         Args: { p_token: string }
         Returns: Json
       }
+      get_public_business_landing: {
+        Args: { p_slug: string }
+        Returns: Json
+      }
       submit_public_inquiry: {
         Args: {
           p_token: string
@@ -596,6 +684,8 @@ export interface Database {
           p_extra_notes: string
           p_consent: boolean
           p_honeypot: string
+          p_source?: string | null
+          p_source_slug?: string | null
         }
         Returns: Json
       }

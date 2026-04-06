@@ -6,25 +6,32 @@
  * 잘못된 기능별 모델명으로 400/404가 나면 openai-chat에서 OPENAI_MODEL로 1회 재시도합니다.
  */
 
-export type AiFeatureKey = "inquiry_structure" | "compose_message" | "quote_draft"
+export type AiFeatureKey =
+  | "inquiry_structure"
+  | "compose_message"
+  | "quote_draft"
+  | "landing_draft"
 
 /** Vercel/서버 로그·비용 추적용 라벨 */
 export const AI_FEATURE_LOG_LABEL: Record<AiFeatureKey, string> = {
   inquiry_structure: "inquiry-structure",
   compose_message: "compose-message",
   quote_draft: "quote-draft",
+  landing_draft: "landing-draft",
 }
 
 const MODEL_ENV_NAME: Record<AiFeatureKey, string> = {
   inquiry_structure: "OPENAI_MODEL_INQUIRY_STRUCTURE",
   compose_message: "OPENAI_MODEL_COMPOSE_MESSAGE",
   quote_draft: "OPENAI_MODEL_QUOTE_DRAFT",
+  landing_draft: "OPENAI_MODEL_LANDING_DRAFT",
 }
 
 const MAX_TOKENS_ENV_NAME: Record<AiFeatureKey, string> = {
   inquiry_structure: "OPENAI_MAX_OUTPUT_TOKENS_INQUIRY",
   compose_message: "OPENAI_MAX_OUTPUT_TOKENS_MESSAGE",
   quote_draft: "OPENAI_MAX_OUTPUT_TOKENS_QUOTE",
+  landing_draft: "OPENAI_MAX_OUTPUT_TOKENS_LANDING",
 }
 
 /** 기본 max output (env 미설정 시) — 보수적 */
@@ -32,6 +39,7 @@ const DEFAULT_MAX_OUTPUT: Record<AiFeatureKey, number> = {
   inquiry_structure: 500,
   compose_message: 600,
   quote_draft: 1400,
+  landing_draft: 1800,
 }
 
 export type ResolvedModel = { model: string } | { missingEnv: string }

@@ -43,11 +43,13 @@ Vercel 프로젝트 **Settings → Environment Variables**에서 설정합니다
 | `OPENAI_MODEL_INQUIRY_STRUCTURE` | AI 사용 시 필수 | `POST /api/ai/inquiry-structure` — 짧은 구조화용(권장 `gpt-5.4-nano`) |
 | `OPENAI_MODEL_COMPOSE_MESSAGE` | AI 사용 시 필수 | `POST /api/ai/compose-message` — 발송·리마인드 문구(권장 `gpt-5.4-nano`) |
 | `OPENAI_MODEL_QUOTE_DRAFT` | AI 사용 시 필수 | `POST /api/ai/quote-draft` — 견적 초안(권장 `gpt-5.4-mini`) |
+| `OPENAI_MODEL_LANDING_DRAFT` | 선택 | Pro 업체 소개 페이지 **AI 초안** (`generateBusinessLandingDraftAction`). 비우면 **`OPENAI_MODEL`** 사용 |
 | `OPENAI_MODEL_FALLBACK` | 선택 | `OPENAI_QUOTE_DRAFT_FALLBACK` 활성 시 초안 재시도 모델(권장 `gpt-5.4-nano`) |
 | `OPENAI_QUOTE_DRAFT_FALLBACK` | 선택 | `true`/`1`/`yes` 이면 초안 API가 일부 실패 시 fallback 모델로 **1회** 재호출 |
 | `OPENAI_MAX_OUTPUT_TOKENS_INQUIRY` | 선택 | 문의 구조화 max output (미설정 시 **500**) |
 | `OPENAI_MAX_OUTPUT_TOKENS_MESSAGE` | 선택 | 문구 생성 max output (미설정 시 **600**) |
 | `OPENAI_MAX_OUTPUT_TOKENS_QUOTE` | 선택 | 견적 초안 max output (미설정 시 **1400**) |
+| `OPENAI_MAX_OUTPUT_TOKENS_LANDING` | 선택 | 업체 소개 AI 초안 max output (미설정 시 **1800**) |
 | `OPENAI_TIMEOUT_MS` | 선택 | 기본 `55000` (ms) |
 
 ### 선택
@@ -132,6 +134,7 @@ Supabase **SQL Editor**에서 저장소의 파일을 **아래 순서 그대로**
 7. `supabase/migrations/0006_invoice_public_share_and_link_opens.sql` — 청구 `public_share_token`·견적/청구 열람 카운트·RPC `get_invoice_share_payload`·`bump_*_share_open`(첫 열람 시 `activity_logs`).  
 8. `supabase/migrations/0007_public_inquiry_form.sql` — 고객 공개 문의 폼·`submit_public_inquiry` RPC 등.  
 9. `supabase/migrations/0008_notifications.sql` — **`notifications`** / **`notification_preferences`** 테이블, 문의 INSERT 시 운영자 알림 트리거, `supabase_realtime` 에 `notifications` 추가, `submit_public_inquiry` 응답에 `ownerUserId` 포함.
+10. `supabase/migrations/0009_business_public_landing.sql` — Pro 전용 **`business_public_pages`** 테이블, 공개 RPC **`get_public_business_landing`**, **`submit_public_inquiry`** 에 유입 출처 인자(`p_source`, `p_source_slug`) 추가.
 
 **설정 화면 저장**: `business_settings` 테이블은 **1번**에서 생성됩니다. **6번(0005)** 을 아직 안 돌렸더라도 앱은 기본 필드 upsert로 저장을 시도하고, 사업자등록번호만 DB에 컬럼이 있을 때 반영됩니다. 그래도 **견적서·공유 링크에 사업자번호**를 쓰려면 **0005** 를 반드시 적용하세요. **고객용 공개 청구 URL·열람 집계**는 **7번(0006)** 이 필요합니다.
 

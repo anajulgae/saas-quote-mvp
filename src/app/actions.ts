@@ -39,6 +39,7 @@ import {
   saveNotificationPreferencesRecord,
   savePublicInquiryFormRecord,
   saveTemplatesRecord,
+  upsertBusinessPublicPageRecord,
   updateBusinessSealSettingsRecord,
   updateInquiryRecord,
   updateInvoicePaymentStatusRecord,
@@ -46,7 +47,9 @@ import {
   updateQuoteRecord,
   updateQuoteStatusRecord,
 } from "@/lib/data"
+import { planAllowsFeature } from "@/lib/plan-features"
 import { isResendConfigured, sendHtmlEmailViaResend } from "@/lib/send-resend"
+import { OpenAiError, runLandingDraftAi } from "@/lib/server/landing-draft-core"
 import type {
   BusinessSettings,
   InquiryStage,
@@ -1483,6 +1486,192 @@ export async function markAllNotificationsReadAction() {
     return {
       ok: false as const,
       error: toUserFacingActionError(e, "모두 읽음 처리에 실패했습니다."),
+    }
+  }
+}
+
+const RESERVED_LANDING_SLUGS = new Set([
+  "api",
+  "admin",
+  "login",
+  "signup",
+  "settings",
+  "dashboard",
+  "billing",
+  "biz",
+  "request",
+  "quote-view",
+  "invoice-view",
+  "privacy",
+  "terms",
+  "auth",
+  "forgot-password",
+  "reset-password",
+  "inquiries",
+  "quotes",
+  "customers",
+  "invoices",
+  "public",
+  "manifest",
+  "robots",
+  "sitemap",
+])
+
+const landingServiceSchema = z.object({
+  title: z.string().trim().max(200),
+  description: z.string().trim().max(2000),
+})
+
+const landingSocialSchema = z.object({
+  label: z.string().trim().max(80),
+  url: z.string().trim().max(2000),
+})
+
+const landingFaqSchema = z.object({
+  question: z.string().trim().max(300),
+  answer: z.string().trim().max(2000),
+})
+
+const landingPageSaveSchema = z.object({
+  slug: z
+    .string()
+    .trim()
+    .min(2, "주소(slug)는 2자 이상으로 입력해 주세요.")
+    .max(48, "주소(slug)는 48자 이내로 입력해 주세요.")
+    .regex(
+      /^([a-z0-9]|[a-z0-9][a-z0-9-]*[a-z0-9])$/,
+      "영문 소문자, 숫자, 하이픈만 사용할 수 있으며 하이픈으로 시작하거나 끝날 수 없습니다."
+    ),
+  isPublished: z.boolean(),
+  template: z.enum(["default", "minimal"]),
+  businessName: z.string().trim().max(200),
+  headline: z.string().trim().max(300),
+  introOneLine: z.string().trim().max(300),
+  about: z.string().trim().max(12000),
+  services: z.array(landingServiceSchema).max(6),
+  contactPhone: z.string().trim().max(80),
+  contactEmail: z.string().trim().max(200),
+  location: z.string().trim().max(300),
+  businessHours: z.string().trim().max(500),
+  socialLinks: z.array(landingSocialSchema).max(8),
+  heroImageUrl: z.string().max(520_000).nullable().optional(),
+  seoTitle: z.string().trim().max(200),
+  seoDescription: z.string().trim().max(400),
+  faq: z.array(landingFaqSchema).max(6),
+  trustPoints: z.array(z.string().trim().max(300)).max(6),
+  ctaText: z.string().trim().max(120),
+  inquiryCtaEnabled: z.boolean(),
+  aiGeneratedAt: z.string().datetime().optional().nullable(),
+})
+
+export async function saveBusinessPublicPageAction(raw: z.infer<typeof landingPageSaveSchema>) {
+  const session = await getAppSession()
+  if (!session?.user?.id) {
+    return { ok: false as const, error: "로그인이 필요합니다." }
+  }
+  if (session.mode === "demo") {
+    return { ok: false as const, error: "데모 환경에서는 업체 소개 페이지를 저장할 수 없습니다." }
+  }
+  if (!planAllowsFeature(session.user.plan, "mini_landing")) {
+    return { ok: false as const, error: "업체 소개 페이지는 Pro 플랜에서 이용할 수 있습니다." }
+  }
+  try {
+    const parsed = landingPageSaveSchema.parse(raw)
+    const slugLower = parsed.slug.toLowerCase()
+    if (RESERVED_LANDING_SLUGS.has(slugLower)) {
+      return { ok: false as const, error: "사용할 수 없는 주소(slug)입니다. 다른 값을 입력해 주세요." }
+    }
+    const result = await upsertBusinessPublicPageRecord(session.user.id, {
+      slug: slugLower,
+      isPublished: parsed.isPublished,
+      template: parsed.template,
+      businessName: parsed.businessName,
+      headline: parsed.headline,
+      introOneLine: parsed.introOneLine,
+      about: parsed.about,
+      services: parsed.services,
+      contactPhone: parsed.contactPhone,
+      contactEmail: parsed.contactEmail,
+      location: parsed.location,
+      businessHours: parsed.businessHours,
+      socialLinks: parsed.socialLinks,
+      heroImageUrl: parsed.heroImageUrl?.trim() || undefined,
+      seoTitle: parsed.seoTitle,
+      seoDescription: parsed.seoDescription,
+      faq: parsed.faq,
+      trustPoints: parsed.trustPoints,
+      ctaText: parsed.ctaText,
+      inquiryCtaEnabled: parsed.inquiryCtaEnabled,
+      aiGeneratedAt: parsed.aiGeneratedAt ?? undefined,
+    })
+    if (!result.ok) {
+      return { ok: false as const, error: result.message }
+    }
+    revalidatePath("/settings")
+    revalidatePath("/settings/landing")
+    revalidatePath(`/biz/${result.page.slug}`)
+    return { ok: true as const, page: result.page }
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      return { ok: false as const, error: e.issues[0]?.message ?? "입력값을 확인해 주세요." }
+    }
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(e, "저장하지 못했습니다."),
+    }
+  }
+}
+
+const landingDraftInputSchema = z.object({
+  businessName: z.string().trim().min(1, "업체명을 입력해 주세요.").max(200),
+  industry: z.string().trim().max(200).optional().default(""),
+  region: z.string().trim().max(200).optional().default(""),
+  servicesHint: z.string().trim().max(2000).optional().default(""),
+  strengths: z.string().trim().max(2000).optional().default(""),
+  targetCustomers: z.string().trim().max(2000).optional().default(""),
+  tone: z.enum(["default", "friendly", "professional"]),
+})
+
+export async function generateBusinessLandingDraftAction(raw: z.infer<typeof landingDraftInputSchema>) {
+  const session = await getAppSession()
+  if (!session?.user?.id) {
+    return { ok: false as const, error: "로그인이 필요합니다." }
+  }
+  if (session.mode === "demo") {
+    return { ok: false as const, error: "데모 환경에서는 AI 초안을 사용할 수 없습니다." }
+  }
+  if (!planAllowsFeature(session.user.plan, "mini_landing")) {
+    return { ok: false as const, error: "AI 초안 생성은 Pro 플랜에서 이용할 수 있습니다." }
+  }
+  try {
+    const parsed = landingDraftInputSchema.parse(raw)
+    const draft = await runLandingDraftAi({
+      businessName: parsed.businessName,
+      industry: parsed.industry || "일반 서비스",
+      region: parsed.region || "미정",
+      servicesHint: parsed.servicesHint || "맞춤 서비스",
+      strengths: parsed.strengths || "",
+      targetCustomers: parsed.targetCustomers || "일반 고객",
+      tone: parsed.tone,
+    })
+    return {
+      ok: true as const,
+      draft,
+      generatedAt: new Date().toISOString(),
+    }
+  } catch (e) {
+    if (e instanceof OpenAiError) {
+      if (e.code === "NOT_CONFIGURED" || e.code === "MODEL_NOT_CONFIGURED") {
+        return {
+          ok: false as const,
+          error: "AI 기능이 아직 구성되지 않았습니다. OpenAI 환경 변수를 확인해 주세요.",
+        }
+      }
+      return { ok: false as const, error: e.message }
+    }
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(e, "초안을 만들지 못했습니다."),
     }
   }
 }

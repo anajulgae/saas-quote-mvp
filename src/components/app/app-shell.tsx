@@ -27,6 +27,7 @@ const HEADER_CONTEXT: { match: string; title: string; description: string }[] = 
   { match: "/invoices", title: "청구", description: "청구·입금·리마인드" },
   { match: "/customers", title: "고객", description: "거래처 정보와 이력" },
   { match: "/settings", title: "설정", description: "계정·사업장·연동" },
+  { match: "/settings/landing", title: "업체 소개 페이지", description: "공개 랜딩·문의 연결·공유" },
 ]
 
 function headerForPath(pathname: string | null) {

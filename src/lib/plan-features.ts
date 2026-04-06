@@ -22,6 +22,8 @@ export type PlanFeature =
   | "email_outbound"
   /** 공개 링크 열람 추적·활동 로그 심화 — 향후 Pro 전용 연결 지점 */
   | "public_share_tracking"
+  /** 업체 소개 미니 랜딩(`/biz/[slug]`) — Pro 전용 */
+  | "mini_landing"
 
 /**
  * 현재(무료 공개·PG 전): 핵심·AI·메일 흐름을 막지 않습니다.
@@ -32,6 +34,7 @@ export const FEATURE_GATES: Record<PlanFeature, BillingPlan[]> = {
   unlimited_quotes: ["free", "pro"],
   email_outbound: ["free", "pro"],
   public_share_tracking: ["free", "pro"],
+  mini_landing: ["pro"],
 }
 
 export function planAllowsFeature(plan: BillingPlan, feature: PlanFeature): boolean {

@@ -22,6 +22,8 @@ const bodySchema = z.object({
   extraNotes: z.string().trim().max(8000).optional().default(""),
   consent: z.literal(true),
   companyWebsite: z.string().optional().default(""),
+  source: z.string().trim().max(64).optional().default(""),
+  sourceSlug: z.string().trim().max(80).optional().default(""),
 })
 
 const rateBuckets = new Map<string, { n: number; reset: number }>()
@@ -90,6 +92,9 @@ export async function POST(request: Request) {
   const hopedDate =
     body.hopedDate && /^\d{4}-\d{2}-\d{2}$/.test(body.hopedDate) ? body.hopedDate : null
 
+  const src = body.source.trim().toLowerCase() || null
+  const srcSlug = body.sourceSlug.trim() || null
+
   const { data, error } = await supabase.rpc("submit_public_inquiry", {
     p_token: body.token,
     p_name: body.name,
@@ -104,6 +109,8 @@ export async function POST(request: Request) {
     p_extra_notes: body.extraNotes.trim() || "",
     p_consent: body.consent,
     p_honeypot: body.companyWebsite ?? "",
+    p_source: src,
+    p_source_slug: srcSlug,
   })
 
   if (error) {

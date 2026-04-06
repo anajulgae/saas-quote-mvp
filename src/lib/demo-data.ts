@@ -2,6 +2,7 @@ import type {
   ActivityKind,
   ActivityLog,
   AppUser,
+  BusinessPublicPage,
   BusinessSettings,
   Customer,
   Inquiry,
@@ -42,6 +43,40 @@ export const demoBusinessSettings: BusinessSettings = {
   publicInquiryConsentIntro: "",
   publicInquiryConsentRetention: "",
   publicInquiryCompletionMessage: "",
+}
+
+export const demoBusinessPublicPage: BusinessPublicPage = {
+  id: "landing-demo",
+  userId: demoUser.id,
+  slug: "minjun-studio",
+  isPublished: false,
+  template: "default",
+  businessName: "민준 스튜디오",
+  headline: "브랜드에 맞는 영상, 빠르게 제안부터 납품까지",
+  introOneLine: "서울·경기 출장 촬영 · 기업·소상공인 홍보 영상 전문",
+  about:
+    "짧은 러닝타임에 메시지가 담기도록 기획부터 편집까지 한 번에 진행합니다.\n문의를 남겨 주시면 반나절 이내 연락드립니다.",
+  services: [
+    { title: "기업 홍보 영상", description: "인터뷰·현장 촬영·자막·썸네일까지 패키지" },
+    { title: "숏폼·릴스 편집", description: "원본만 주셔도 플랫폼별 포맷으로 전달" },
+    { title: "행사 스케치", description: "당일 하이라이트 컷 위주 빠른 편집" },
+  ],
+  contactPhone: demoBusinessSettings.phone,
+  contactEmail: demoBusinessSettings.email,
+  location: "서울 · 경기 출장",
+  businessHours: "평일 10:00–18:00 (주말은 사전 협의)",
+  socialLinks: [{ label: "인스타그램", url: "https://instagram.com" }],
+  heroImageUrl: undefined,
+  seoTitle: "민준 스튜디오 | 홍보 영상 제작",
+  seoDescription: "기업·소상공인 대상 홍보 영상·릴스 편집. 서울·경기 출장.",
+  faq: [
+    { question: "견적은 얼마나 걸리나요?", answer: "내용 확인 후 영업일 기준 1–2일 내 견적을 드립니다." },
+    { question: "원본 파일도 받을 수 있나요?", answer: "계약 범위에 따라 제공 가능 여부를 안내드립니다." },
+  ],
+  trustPoints: ["현장 경험 다수", "긴급 일정 협의 가능", "수정 1회 기본 포함"],
+  ctaText: "무료 상담 문의",
+  inquiryCtaEnabled: true,
+  updatedAt: "2026-01-01T00:00:00.000Z",
 }
 
 export const demoCustomers: Customer[] = [

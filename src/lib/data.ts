@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { resolveActivityHeadline, resolveActivityKind } from "@/lib/activity-presentation"
 import {
   demoActivityLogs,
+  demoBusinessPublicPage,
   demoBusinessSettings,
   demoCustomers,
   demoInquiries,
@@ -49,6 +50,11 @@ import type {
   QuoteStatus,
   QuoteWithItems,
   NotificationPreferences,
+  BusinessPublicPage,
+  BusinessLandingTemplate,
+  BusinessLandingServiceItem,
+  BusinessLandingSocialLink,
+  BusinessLandingFaqItem,
   ReminderFormInput,
   Template,
   TimelineEvent,
@@ -65,6 +71,7 @@ type ActivityLogRow = Database["public"]["Tables"]["activity_logs"]["Row"]
 type BusinessSettingsRow = Database["public"]["Tables"]["business_settings"]["Row"]
 type TemplateRow = Database["public"]["Tables"]["templates"]["Row"]
 type NotificationPreferencesRow = Database["public"]["Tables"]["notification_preferences"]["Row"]
+type BusinessPublicPageRow = Database["public"]["Tables"]["business_public_pages"]["Row"]
 type QueryResult = {
   data: unknown
   error: Error | null
@@ -213,6 +220,130 @@ function mapBusinessSettings(row: BusinessSettingsRow): BusinessSettings {
     publicInquiryConsentIntro: row.public_inquiry_consent_intro ?? "",
     publicInquiryConsentRetention: row.public_inquiry_consent_retention ?? "",
     publicInquiryCompletionMessage: row.public_inquiry_completion_message ?? "",
+  }
+}
+
+function parseLandingServicesJson(raw: unknown): BusinessLandingServiceItem[] {
+  if (!Array.isArray(raw)) {
+    return []
+  }
+  const out: BusinessLandingServiceItem[] = []
+  for (const item of raw) {
+    if (!item || typeof item !== "object") {
+      continue
+    }
+    const o = item as Record<string, unknown>
+    const title = typeof o.title === "string" ? o.title.trim() : ""
+    const description = typeof o.description === "string" ? o.description.trim() : ""
+    if (title) {
+      out.push({ title, description })
+    }
+  }
+  return out.slice(0, 12)
+}
+
+function parseLandingSocialJson(raw: unknown): BusinessLandingSocialLink[] {
+  if (!Array.isArray(raw)) {
+    return []
+  }
+  const out: BusinessLandingSocialLink[] = []
+  for (const item of raw) {
+    if (!item || typeof item !== "object") {
+      continue
+    }
+    const o = item as Record<string, unknown>
+    const label = typeof o.label === "string" ? o.label.trim() : ""
+    const url = typeof o.url === "string" ? o.url.trim() : ""
+    if (label && url) {
+      out.push({ label, url })
+    }
+  }
+  return out.slice(0, 12)
+}
+
+function parseLandingFaqJson(raw: unknown): BusinessLandingFaqItem[] {
+  if (!Array.isArray(raw)) {
+    return []
+  }
+  const out: BusinessLandingFaqItem[] = []
+  for (const item of raw) {
+    if (!item || typeof item !== "object") {
+      continue
+    }
+    const o = item as Record<string, unknown>
+    const question = typeof o.question === "string" ? o.question.trim() : ""
+    const answer = typeof o.answer === "string" ? o.answer.trim() : ""
+    if (question && answer) {
+      out.push({ question, answer })
+    }
+  }
+  return out.slice(0, 8)
+}
+
+function parseLandingTrustJson(raw: unknown): string[] {
+  if (!Array.isArray(raw)) {
+    return []
+  }
+  return raw
+    .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+    .map((x) => x.trim())
+    .slice(0, 8)
+}
+
+function mapBusinessPublicPage(row: BusinessPublicPageRow): BusinessPublicPage {
+  const tpl = row.template === "minimal" ? "minimal" : "default"
+  return {
+    id: row.id,
+    userId: row.user_id,
+    slug: row.slug,
+    isPublished: Boolean(row.is_published),
+    template: tpl as BusinessLandingTemplate,
+    businessName: row.business_name ?? "",
+    headline: row.headline ?? "",
+    introOneLine: row.intro_one_line ?? "",
+    about: row.about ?? "",
+    services: parseLandingServicesJson(row.services),
+    contactPhone: row.contact_phone ?? "",
+    contactEmail: row.contact_email ?? "",
+    location: row.location ?? "",
+    businessHours: row.business_hours ?? "",
+    socialLinks: parseLandingSocialJson(row.social_links),
+    heroImageUrl: row.hero_image_url ?? undefined,
+    seoTitle: row.seo_title ?? "",
+    seoDescription: row.seo_description ?? "",
+    faq: parseLandingFaqJson(row.faq),
+    trustPoints: parseLandingTrustJson(row.trust_points),
+    ctaText: row.cta_text ?? "문의하기",
+    inquiryCtaEnabled: Boolean(row.inquiry_cta_enabled),
+    aiGeneratedAt: row.ai_generated_at ?? undefined,
+    updatedAt: row.updated_at,
+  }
+}
+
+export function emptyBusinessPublicPage(userId: string): BusinessPublicPage {
+  return {
+    id: "",
+    userId,
+    slug: "",
+    isPublished: false,
+    template: "default",
+    businessName: "",
+    headline: "",
+    introOneLine: "",
+    about: "",
+    services: [],
+    contactPhone: "",
+    contactEmail: "",
+    location: "",
+    businessHours: "",
+    socialLinks: [],
+    heroImageUrl: undefined,
+    seoTitle: "",
+    seoDescription: "",
+    faq: [],
+    trustPoints: [],
+    ctaText: "문의하기",
+    inquiryCtaEnabled: true,
   }
 }
 
@@ -3114,6 +3245,151 @@ export async function getSettingsPageData(): Promise<{
     planColumnMissing,
     notificationPreferences,
   }
+}
+
+export async function getLandingPageEditorData(): Promise<{
+  page: BusinessPublicPage
+  settings: BusinessSettings
+  currentPlan: BillingPlan
+  planColumnMissing: boolean
+}> {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return {
+      page: demoBusinessPublicPage,
+      settings: demoBusinessSettings,
+      currentPlan: demoUser.plan,
+      planColumnMissing: false,
+    }
+  }
+
+  const [{ data: pageRow, error: pageError }, { data: settingsRow, error: settingsError }] =
+    await Promise.all([
+      context.supabase.from("business_public_pages").select("*").eq("user_id", context.userId).maybeSingle(),
+      context.supabase.from("business_settings").select("*").eq("user_id", context.userId).maybeSingle(),
+    ])
+
+  if (pageError) {
+    throw pageError
+  }
+  if (settingsError) {
+    throw settingsError
+  }
+
+  const { plan: currentPlan, columnMissing: planColumnMissing } = await fetchUserPlanRow(
+    context.supabase as unknown as SupabaseClient<Database>,
+    context.userId
+  )
+
+  const page = pageRow
+    ? mapBusinessPublicPage(pageRow as BusinessPublicPageRow)
+    : emptyBusinessPublicPage(context.userId)
+
+  const safeSettings = settingsRow
+    ? mapBusinessSettings(settingsRow as BusinessSettingsRow)
+    : {
+        ...mapBusinessSettings({
+          id: "",
+          user_id: context.userId,
+          business_name: "",
+          owner_name: "",
+          business_registration_number: "",
+          email: "",
+          phone: "",
+          default_currency: "KRW",
+          payment_terms: "",
+          bank_account: "",
+          reminder_message: "",
+          seal_image_url: null,
+          seal_enabled: false,
+          public_inquiry_form_enabled: false,
+          public_inquiry_form_token: null,
+          public_inquiry_intro: "",
+          public_inquiry_consent_intro: "",
+          public_inquiry_consent_retention: "",
+          public_inquiry_completion_message: "",
+          created_at: "",
+          updated_at: "",
+        } as BusinessSettingsRow),
+      }
+
+  return {
+    page,
+    settings: safeSettings,
+    currentPlan,
+    planColumnMissing,
+  }
+}
+
+export type UpsertBusinessPublicPageInput = Omit<
+  BusinessPublicPage,
+  "id" | "userId" | "aiGeneratedAt" | "updatedAt"
+> & { aiGeneratedAt?: string | null }
+
+export async function upsertBusinessPublicPageRecord(
+  userId: string,
+  input: UpsertBusinessPublicPageInput
+): Promise<{ ok: true; page: BusinessPublicPage } | { ok: false; code: "slug_taken" | "db"; message: string }> {
+  const supabase = await createServerSupabaseClient()
+  if (!supabase) {
+    return { ok: false, code: "db", message: "Supabase가 구성되지 않았습니다." }
+  }
+
+  const services = input.services.slice(0, 6).map((s) => ({
+    title: s.title.slice(0, 200),
+    description: s.description.slice(0, 2000),
+  }))
+  const socialLinks = input.socialLinks.slice(0, 8).map((s) => ({
+    label: s.label.slice(0, 80),
+    url: s.url.slice(0, 2000),
+  }))
+  const faq = input.faq.slice(0, 6).map((f) => ({
+    question: f.question.slice(0, 300),
+    answer: f.answer.slice(0, 2000),
+  }))
+  const trustPoints = input.trustPoints.slice(0, 6).map((t) => t.slice(0, 300))
+
+  const row = {
+    user_id: userId,
+    slug: input.slug.trim().toLowerCase(),
+    is_published: input.isPublished,
+    template: input.template === "minimal" ? "minimal" : "default",
+    business_name: input.businessName.slice(0, 200),
+    headline: input.headline.slice(0, 300),
+    intro_one_line: input.introOneLine.slice(0, 300),
+    about: input.about.slice(0, 12000),
+    services,
+    contact_phone: input.contactPhone.slice(0, 80),
+    contact_email: input.contactEmail.slice(0, 200),
+    location: input.location.slice(0, 300),
+    business_hours: input.businessHours.slice(0, 500),
+    social_links: socialLinks,
+    hero_image_url: input.heroImageUrl?.trim() ? input.heroImageUrl.trim().slice(0, 520_000) : null,
+    seo_title: input.seoTitle.slice(0, 200),
+    seo_description: input.seoDescription.slice(0, 400),
+    faq,
+    trust_points: trustPoints,
+    cta_text: input.ctaText.slice(0, 120),
+    inquiry_cta_enabled: input.inquiryCtaEnabled,
+    ai_generated_at: input.aiGeneratedAt ?? null,
+  }
+
+  const { data, error } = await supabase
+    .from("business_public_pages")
+    .upsert(row, { onConflict: "user_id" })
+    .select("*")
+    .single()
+
+  if (error) {
+    const msg = error.message ?? ""
+    if (error.code === "23505" || msg.includes("duplicate") || msg.includes("unique")) {
+      return { ok: false, code: "slug_taken", message: "이미 사용 중인 주소(slug)입니다. 다른 값을 입력해 주세요." }
+    }
+    return { ok: false, code: "db", message: msg || "저장에 실패했습니다." }
+  }
+
+  return { ok: true, page: mapBusinessPublicPage(data as BusinessPublicPageRow) }
 }
 
 export async function getDashboardPageData(): Promise<{

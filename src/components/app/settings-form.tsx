@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState, useTransition } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Loader2, Save } from "lucide-react"
 import { toast } from "sonner"
@@ -13,10 +14,12 @@ import {
 import { SettingsNotificationPreferencesCard } from "@/components/app/settings-notification-preferences-card"
 import { SettingsPublicInquiryCard } from "@/components/app/settings-public-inquiry-card"
 import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { formatBusinessRegNoInput } from "@/lib/format"
+import { planAllowsFeature } from "@/lib/plan-features"
 import { computeTemplatesSyncKey } from "@/lib/settings-form-key"
 import { cn } from "@/lib/utils"
 import type { BillingPlan, BusinessSettings, NotificationPreferences, Template } from "@/types/domain"
@@ -467,7 +470,41 @@ export function SettingsForm({
         </CardContent>
       </Card>
 
-      <SettingsPublicInquiryCard siteOrigin={siteOrigin} initialSettings={settings} />
+      <Card className="border-border/70" id="mini-landing">
+        <CardHeader className="space-y-1 pb-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle className="text-base font-semibold">업체 소개 페이지</CardTitle>
+            <SectionBadge>Pro</SectionBadge>
+          </div>
+          <CardDescription className="text-xs leading-relaxed">
+            고객에게 보여 줄 단일 소개 랜딩입니다. 공개 문의 폼과 연결해 온라인 문의를 받을 수 있습니다.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center gap-2">
+          {planAllowsFeature(currentPlan, "mini_landing") ? (
+            <Link
+              href="/settings/landing"
+              className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
+            >
+              편집·공개 설정
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/billing?plan=pro"
+                className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
+              >
+                Pro로 업그레이드
+              </Link>
+              <p className="text-xs text-muted-foreground">무료 플랜에서는 이 기능을 사용할 수 없습니다.</p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <section id="public-inquiry">
+        <SettingsPublicInquiryCard siteOrigin={siteOrigin} initialSettings={settings} />
+      </section>
 
       <SettingsNotificationPreferencesCard initial={initialNotificationPreferences} />
 

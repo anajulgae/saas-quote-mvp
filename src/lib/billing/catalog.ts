@@ -25,6 +25,8 @@ export const FEATURE_GATES_AFTER_PAYMENT: Record<PlanFeature, BillingPlan[]> = {
   email_outbound: ["pro"],
   /** 제안: Pro 전용 — 공개 링크 열람 로그·추적 */
   public_share_tracking: ["pro"],
+  /** 업체 소개 미니 랜딩 — Pro 전용 (현재 `FEATURE_GATES`와 동일) */
+  mini_landing: ["pro"],
 }
 
 export const BILLING_UPGRADE_CONTACT_COPY =

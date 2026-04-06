@@ -335,6 +335,7 @@ export function LandingPricing() {
         "Starter 전체",
         "미수·후속 정리 강화",
         "리마인드·템플릿",
+        "업체 소개 공개 랜딩(`/biz/…`)·AI 초안",
         "이메일 지원",
       ],
       cta: "Pro 안내·가입",

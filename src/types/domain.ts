@@ -144,6 +144,51 @@ export interface Template {
   updatedAt?: string
 }
 
+/** Pro 전용 공개 업체 소개 랜딩 (`/biz/[slug]`) */
+export type BusinessLandingTemplate = "default" | "minimal"
+
+export interface BusinessLandingServiceItem {
+  title: string
+  description: string
+}
+
+export interface BusinessLandingSocialLink {
+  label: string
+  url: string
+}
+
+export interface BusinessLandingFaqItem {
+  question: string
+  answer: string
+}
+
+export interface BusinessPublicPage {
+  id: string
+  userId: string
+  slug: string
+  isPublished: boolean
+  template: BusinessLandingTemplate
+  businessName: string
+  headline: string
+  introOneLine: string
+  about: string
+  services: BusinessLandingServiceItem[]
+  contactPhone: string
+  contactEmail: string
+  location: string
+  businessHours: string
+  socialLinks: BusinessLandingSocialLink[]
+  heroImageUrl?: string
+  seoTitle: string
+  seoDescription: string
+  faq: BusinessLandingFaqItem[]
+  trustPoints: string[]
+  ctaText: string
+  inquiryCtaEnabled: boolean
+  aiGeneratedAt?: string
+  updatedAt?: string
+}
+
 export interface BusinessSettings {
   id: string
   userId: string
