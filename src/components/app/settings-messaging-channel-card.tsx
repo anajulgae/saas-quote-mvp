@@ -1,11 +1,13 @@
 "use client"
 
+import Link from "next/link"
 import { useState, useTransition } from "react"
-import { Loader2, Save } from "lucide-react"
+import { BookOpen, ExternalLink, Loader2, Save } from "lucide-react"
 import { toast } from "sonner"
 
 import { saveMessagingChannelConfigAction } from "@/app/actions"
 import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { planAllowsFeature } from "@/lib/plan-features"
@@ -62,6 +64,54 @@ export function SettingsMessagingChannelCard({
           엔드포인트는 <strong className="font-medium text-foreground/90">귀하의 프록시</strong>를 가리키게
           설정합니다. 프록시가 Bill-IO가 보내는 JSON을 실제 공급사 API 형식으로 변환합니다.
         </CardDescription>
+        <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:flex-wrap sm:items-center">
+          <Link
+            href="/settings/kakao-alimtalk-guide"
+            className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "h-8 w-fit gap-1.5 inline-flex")}
+          >
+            <BookOpen className="size-3.5" aria-hidden />
+            알림톡 설정 가이드 (전체)
+          </Link>
+          <span className="hidden text-[10px] text-muted-foreground sm:inline">·</span>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
+            <a
+              href="https://business.kakao.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-0.5 font-medium text-primary underline-offset-4 hover:underline"
+            >
+              카카오 비즈니스
+              <ExternalLink className="size-3 opacity-70" aria-hidden />
+            </a>
+            <a
+              href="https://kakaobusiness.gitbook.io/main/ad/infotalk.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-0.5 font-medium text-primary underline-offset-4 hover:underline"
+            >
+              알림톡 가이드
+              <ExternalLink className="size-3 opacity-70" aria-hidden />
+            </a>
+            <a
+              href="https://developers.solapi.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-0.5 font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Solapi 개발자
+              <ExternalLink className="size-3 opacity-70" aria-hidden />
+            </a>
+            <a
+              href="https://docs.nhncloud.com/ko/Notification/KakaoTalk%20Bizmessage/ko/Overview/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-0.5 font-medium text-primary underline-offset-4 hover:underline"
+            >
+              NHN 알림톡 문서
+              <ExternalLink className="size-3 opacity-70" aria-hidden />
+            </a>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4 pb-4">
         {!allowed ? (
