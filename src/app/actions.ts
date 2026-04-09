@@ -658,16 +658,17 @@ export async function createInquiryAction(input: {
   budgetMax: string
   stage: InquiryStage
   followUpAt: string
-}) {
+}): Promise<{ ok: true; inquiryId?: string } | { ok: false; error: string }> {
   try {
     const parsed = normalizeInquiryInput(input)
-    await createInquiryRecord(parsed)
+    const created = await createInquiryRecord(parsed)
     revalidatePath("/dashboard")
     revalidatePath("/inquiries")
     revalidatePath("/customers")
     revalidatePath(`/customers/${parsed.customerId}`)
 
-    return { ok: true as const }
+    const inquiryId = created.mode === "supabase" ? created.inquiry.id : undefined
+    return { ok: true as const, inquiryId }
   } catch (error) {
     if (error instanceof z.ZodError) {
       return { ok: false as const, error: error.issues[0]?.message ?? "입력값을 확인해 주세요." }

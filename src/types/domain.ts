@@ -51,6 +51,46 @@ export interface Customer {
   taxAddress?: string
 }
 
+/** AI 문의 트리아지 — DB `inquiries.ai_analysis` JSON과 동일 구조 */
+export type InquiryAiRequestType =
+  | "new_quote_request"
+  | "general_inquiry"
+  | "schedule_coordination"
+  | "re_inquiry"
+  | "as_revision"
+  | "other"
+
+export type InquiryAiUrgency = "high" | "medium" | "low"
+
+export type InquiryAiNextActionKind =
+  | "convert_quote"
+  | "complete_customer_info"
+  | "confirm_schedule"
+  | "confirm_budget"
+  | "followup_call"
+  | "internal_review"
+  | "other"
+
+export interface InquiryAiAnalysis {
+  requestType: InquiryAiRequestType
+  /** 화면 표시용 한글 라벨 */
+  requestTypeLabel: string
+  urgency: InquiryAiUrgency
+  summary: string
+  suggestedQuestions: string[]
+  nextActions: Array<{
+    kind: InquiryAiNextActionKind
+    label: string
+    reason: string
+    priority: number
+  }>
+  followupPriority: InquiryAiUrgency
+  quoteConversionReady: boolean
+  quoteConversionHint: string
+  /** 업종·서비스 맥락 메모 (내부 참고) */
+  industryContextNote?: string
+}
+
 export interface Inquiry {
   id: string
   userId: string
@@ -66,6 +106,8 @@ export interface Inquiry {
   followUpAt?: string
   createdAt: string
   updatedAt?: string
+  aiAnalysis?: InquiryAiAnalysis
+  aiAnalysisUpdatedAt?: string
 }
 
 export interface QuoteItem {
@@ -102,6 +144,25 @@ export interface Quote {
 }
 
 export type CollectionToneHint = "polite" | "neutral" | "firm"
+
+/** AI 추심 보조 → compose-message kind 와 동기화 */
+export type CollectionComposeKind =
+  | "invoice_notice"
+  | "invoice_balance_request"
+  | "overdue_reminder"
+  | "overdue_reminder_second"
+  | "post_promise_nudge"
+  | "followup_due_nudge"
+
+export interface InvoiceCollectionAdvice {
+  headline: string
+  reason: string
+  suggestedTone: CollectionToneHint
+  messageKind: CollectionComposeKind
+  draftSubject?: string
+  draftBody: string
+  checklist: string[]
+}
 
 export interface Invoice {
   id: string

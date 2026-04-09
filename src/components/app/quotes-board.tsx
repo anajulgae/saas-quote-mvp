@@ -44,7 +44,7 @@ import { PageHeader } from "@/components/app/page-header"
 import { QuoteDraftAssistantForm } from "@/components/app/quote-draft-assistant"
 import { QuoteSendDialog } from "@/components/app/quote-send-dialog"
 import { OpsTimeHintChip, OpsToolbarFilterButton } from "@/components/app/ops-status-chip"
-import { PaymentStatusBadge, QuoteStatusBadge } from "@/components/app/status-badge"
+import { PaymentStatusBadge } from "@/components/app/status-badge"
 import { resolveActivityHeadline } from "@/lib/activity-presentation"
 import { OpsDetailSheet } from "@/components/operations/ops-detail-sheet"
 import { OpsAgendaList } from "@/components/operations/ops-agenda-list"
@@ -91,6 +91,7 @@ import {
 } from "@/lib/constants"
 import { mapQuotesToCalendarEvents } from "@/lib/calendar-events"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
+import { getQuoteStatusMeta, opsStatusSelectTriggerClass } from "@/lib/ops-status-meta"
 import { planAllowsFeature } from "@/lib/plan-features"
 import {
   customerPrimaryLabel,
@@ -630,6 +631,8 @@ function QuotesBoardPanel({
     }
     return invoicesByQuoteId[drawerQuoteId] ?? []
   }, [drawerQuoteId, invoicesByQuoteId])
+
+  const drawerQuoteStatusMeta = drawerQuote ? getQuoteStatusMeta(drawerQuote.status) : null
 
   const openQuoteDetail = (quoteId: string) => {
     setDraftAssistantOpen(false)
@@ -1847,6 +1850,7 @@ function QuotesBoardPanel({
                 {processedQuotes.map((quote) => {
                   const customer = quote.customer
                   const validityHint = getQuoteValidityHint(quote.validUntil, quote.status)
+                  const statusMeta = getQuoteStatusMeta(quote.status)
                   return (
                     <tr
                       key={quote.id}
@@ -1880,7 +1884,6 @@ function QuotesBoardPanel({
                       </td>
                       <td className={opsTableCellClass} onClick={(e) => e.stopPropagation()}>
                         <div className="flex max-w-[8.5rem] flex-col gap-1.5">
-                          <QuoteStatusBadge status={quote.status} className="w-fit" />
                           <Select
                             value={quote.status}
                             items={quoteStatusSelectItems}
@@ -1892,7 +1895,12 @@ function QuotesBoardPanel({
                               setStatusConfirm({ quote, next })
                             }}
                           >
-                            <SelectTrigger className="h-8 w-full min-w-0 max-w-[8rem] text-xs">
+                            <SelectTrigger
+                              className={cn(
+                                "h-8 w-full min-w-0 max-w-[8rem] text-xs font-medium",
+                                opsStatusSelectTriggerClass(statusMeta.tone, statusMeta.emphasis)
+                              )}
+                            >
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -1966,6 +1974,7 @@ function QuotesBoardPanel({
             {processedQuotes.map((quote) => {
               const customer = quote.customer
               const validityHint = getQuoteValidityHint(quote.validUntil, quote.status)
+              const mobStatusMeta = getQuoteStatusMeta(quote.status)
               return (
                 <button
                   key={quote.id}
@@ -1992,7 +2001,35 @@ function QuotesBoardPanel({
                         ) : null}
                       </div>
                     </div>
-                    <QuoteStatusBadge status={quote.status} />
+                    <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <Select
+                        value={quote.status}
+                        items={quoteStatusSelectItems}
+                        onValueChange={(value) => {
+                          const next = (value as QuoteStatus | null) ?? quote.status
+                          if (next === quote.status) {
+                            return
+                          }
+                          setStatusConfirm({ quote, next })
+                        }}
+                      >
+                        <SelectTrigger
+                          className={cn(
+                            "h-8 w-[7.25rem] text-xs font-medium",
+                            opsStatusSelectTriggerClass(mobStatusMeta.tone, mobStatusMeta.emphasis)
+                          )}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {quoteStatusOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div className="flex flex-wrap items-end justify-between gap-2">
                     <p className="text-sm font-semibold tabular-nums text-primary">{formatCurrency(quote.total)}</p>
@@ -2083,7 +2120,6 @@ function QuotesBoardPanel({
             </div>
             <div className="space-y-2 rounded-lg border border-border/50 bg-muted/10 p-3">
               <p className="text-xs font-semibold text-muted-foreground">견적 상태</p>
-              <QuoteStatusBadge status={drawerQuote.status} className="w-fit" />
               <Select
                 value={drawerQuote.status}
                 items={quoteStatusSelectItems}
@@ -2095,7 +2131,16 @@ function QuotesBoardPanel({
                   setStatusConfirm({ quote: drawerQuote, next })
                 }}
               >
-                <SelectTrigger className="h-9 w-full max-w-xs">
+                <SelectTrigger
+                  className={cn(
+                    "h-9 w-full max-w-xs font-medium",
+                    drawerQuoteStatusMeta &&
+                      opsStatusSelectTriggerClass(
+                        drawerQuoteStatusMeta.tone,
+                        drawerQuoteStatusMeta.emphasis
+                      )
+                  )}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

@@ -38,6 +38,7 @@ import { getSiteOrigin } from "@/lib/site-url"
 export { defaultNotificationPreferences }
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { fetchUserPlanRow } from "@/lib/user-plan"
+import { parseInquiryAiAnalysisFromJson } from "@/lib/inquiry-ai-analysis-parse"
 import type {
   ActivityLog,
   BillingPlan,
@@ -48,6 +49,7 @@ import type {
   DashboardMetrics,
   MessagingChannelConfig,
   Inquiry,
+  InquiryAiAnalysis,
   InquiryStage,
   InquiryWithCustomer,
   Invoice,
@@ -150,6 +152,8 @@ function mapInquiry(row: InquiryRow): Inquiry {
     followUpAt: row.follow_up_at ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    aiAnalysis: parseInquiryAiAnalysisFromJson(row.ai_analysis) ?? undefined,
+    aiAnalysisUpdatedAt: row.ai_analysis_updated_at ?? undefined,
   }
 }
 
@@ -767,6 +771,29 @@ export async function createInquiryRecord(input: {
     mode: "supabase" as const,
     inquiry: mapInquiry(data),
   }
+}
+
+export async function updateInquiryAiAnalysisForOwner(
+  inquiryId: string,
+  analysis: InquiryAiAnalysis
+): Promise<{ ok: boolean; error?: string }> {
+  const context = await getDataContext()
+  if (context.mode === "demo") {
+    return { ok: false, error: "데모에서는 저장되지 않습니다." }
+  }
+  const now = new Date().toISOString()
+  const { error } = await context.supabase
+    .from("inquiries")
+    .update({
+      ai_analysis: analysis as unknown as Json,
+      ai_analysis_updated_at: now,
+    })
+    .eq("id", inquiryId)
+    .eq("user_id", context.userId)
+  if (error) {
+    return { ok: false, error: error.message }
+  }
+  return { ok: true }
 }
 
 const CUSTOMER_INQUIRY_RECENT_DAYS = 14
@@ -2916,6 +2943,7 @@ export async function getInquiriesPageData(): Promise<{
   stageSummary: Record<"new" | "qualified" | "quoted", number>
   publicInquiryForm: PublicInquiryFormSnippet | null
   isDemoWorkspace: boolean
+  currentPlan: BillingPlan
 }> {
   const context = await getDataContext()
 
@@ -2935,6 +2963,7 @@ export async function getInquiriesPageData(): Promise<{
         publicInquiryCompletionMessage: demoBusinessSettings.publicInquiryCompletionMessage,
       },
       isDemoWorkspace: true,
+      currentPlan: demoUser.plan,
     }
   }
 
@@ -3006,6 +3035,11 @@ export async function getInquiriesPageData(): Promise<{
       }
     : null
 
+  const { plan: currentPlan } = await fetchUserPlanRow(
+    context.supabase as unknown as SupabaseClient<Database>,
+    context.userId
+  )
+
   return {
     inquiries,
     customers,
@@ -3016,6 +3050,7 @@ export async function getInquiriesPageData(): Promise<{
     },
     publicInquiryForm,
     isDemoWorkspace: false,
+    currentPlan,
   }
 }
 

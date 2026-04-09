@@ -278,6 +278,8 @@ export interface Database {
           budget_max: number | null
           stage: Database["public"]["Enums"]["inquiry_stage"]
           follow_up_at: string | null
+          ai_analysis: Json | null
+          ai_analysis_updated_at: string | null
           created_at: string
           updated_at: string
         }
@@ -294,6 +296,8 @@ export interface Database {
           budget_max?: number | null
           stage?: Database["public"]["Enums"]["inquiry_stage"]
           follow_up_at?: string | null
+          ai_analysis?: Json | null
+          ai_analysis_updated_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -310,6 +314,8 @@ export interface Database {
           budget_max?: number | null
           stage?: Database["public"]["Enums"]["inquiry_stage"]
           follow_up_at?: string | null
+          ai_analysis?: Json | null
+          ai_analysis_updated_at?: string | null
           created_at?: string
           updated_at?: string
         }

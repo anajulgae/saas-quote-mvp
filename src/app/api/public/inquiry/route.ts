@@ -7,6 +7,8 @@ import {
   sendNewInquiryEmailToOperator,
   type NewInquiryEmailSource,
 } from "@/lib/server/operator-email"
+import { runInquiryAiAnalysis } from "@/lib/server/inquiry-analyze-core"
+import { persistInquiryAiAnalysisAsOwner } from "@/lib/server/inquiry-ai-admin-persist"
 import { OpenAiError, runInquiryStructureForPublicForm } from "@/lib/server/inquiry-structure-core"
 import { createAnonSupabaseClient } from "@/lib/supabase/anon"
 import type { BillingPlan } from "@/types/domain"
@@ -228,6 +230,42 @@ export async function POST(request: Request) {
           p_service_category: structured.scopeSummary || "일반",
           p_details: mergedDetails,
         })
+
+        if (ownerUserId) {
+          try {
+            const analysis = await runInquiryAiAnalysis({
+              title: structured.title,
+              details: mergedDetails,
+              serviceCategory: structured.scopeSummary || body.serviceCategory.trim() || "일반",
+              channel:
+                submissionSourceLower === "customer_portal"
+                  ? "고객 포털"
+                  : "웹폼",
+              stage: "new",
+              budgetMin: body.budgetMin,
+              budgetMax: body.budgetMax,
+              industryHint: body.serviceCategory.trim() || structured.scopeSummary || "",
+            })
+            await persistInquiryAiAnalysisAsOwner({
+              inquiryId,
+              ownerUserId,
+              analysis,
+            })
+          } catch (triErr) {
+            if (triErr instanceof OpenAiError) {
+              if (triErr.code !== "NOT_CONFIGURED" && triErr.code !== "MODEL_NOT_CONFIGURED") {
+                reportServerError(triErr.message, {
+                  route: "public/inquiry-triage",
+                  code: triErr.code,
+                })
+              }
+            } else {
+              reportServerError(triErr instanceof Error ? triErr.message : "triage", {
+                route: "public/inquiry-triage",
+              })
+            }
+          }
+        }
       } catch (e) {
         if (e instanceof OpenAiError) {
           if (e.code !== "NOT_CONFIGURED" && e.code !== "MODEL_NOT_CONFIGURED") {

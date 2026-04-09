@@ -6,7 +6,14 @@ import { getAuthenticatedUserForApi } from "@/lib/server/api-auth"
 import { completeJsonChatForFeature, OpenAiError } from "@/lib/server/openai-chat"
 import { openAiErrorUserPayload } from "@/lib/server/openai-user-errors"
 
-type Kind = "quote_send" | "invoice_notice" | "overdue_reminder"
+type Kind =
+  | "quote_send"
+  | "invoice_notice"
+  | "invoice_balance_request"
+  | "overdue_reminder"
+  | "overdue_reminder_second"
+  | "post_promise_nudge"
+  | "followup_due_nudge"
 
 type Tone = "polite" | "neutral" | "firm"
 
@@ -35,8 +42,12 @@ const toneLabel: Record<Tone, string> = {
 /** 한 줄 지시 — 토큰 절약 */
 const kindLine: Record<Kind, string> = {
   quote_send: "견적 메일: 인사+본문+맺음. URL 있으면 1회만 포함.",
-  invoice_notice: "청구·입금 안내: 금액·기한·계좌 맥락 반영, 과장 없음.",
-  overdue_reminder: "연체 리마인드: 납부 재확인, 짧게.",
+  invoice_notice: "첫 청구·입금 안내: 금액·기한·계좌 맥락 반영, 과장 없음.",
+  invoice_balance_request: "부분 입금 확인 후 잔금 요청: 이미 납부된 부분 언급, 잔액·기한 명확히.",
+  overdue_reminder: "연체 1차 안내: 납부 재확인, 짧고 사실 위주.",
+  overdue_reminder_second: "연체 2차 안내: 재촉이지만 무례 금지, 다음 조치·기한 제시.",
+  post_promise_nudge: "약속 입금일 이후 재안내: 약속일 상기, 확인 요청.",
+  followup_due_nudge: "예정된 후속 연락 시점: 정중히 입금·일정 확인.",
 }
 
 const SYSTEM_PREFIX = `한국어 비즈니스 문구. JSON만. 키: subject(선택,≤80자), body(필수,≤1200자, 이메일·문자용). 장황한 마케팅 금지.`
@@ -63,7 +74,16 @@ export async function POST(req: Request) {
     kind = body.kind as Kind
     tone = (body.tone as Tone) || "neutral"
     context = body.context ?? {}
-    if (!["quote_send", "invoice_notice", "overdue_reminder"].includes(kind)) {
+    const allowed: Kind[] = [
+      "quote_send",
+      "invoice_notice",
+      "invoice_balance_request",
+      "overdue_reminder",
+      "overdue_reminder_second",
+      "post_promise_nudge",
+      "followup_due_nudge",
+    ]
+    if (!allowed.includes(kind)) {
       throw new Error("kind")
     }
     if (!["polite", "neutral", "firm"].includes(tone)) {

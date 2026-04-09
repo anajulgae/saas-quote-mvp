@@ -19,12 +19,12 @@ import {
 import { toast } from "sonner"
 
 import { createInquiryAction, updateInquiryAction } from "@/app/actions"
+import { InquiryAiAnalysisPanel } from "@/components/app/inquiry-ai-analysis-panel"
 import { CoreCapabilityStrip } from "@/components/app/core-capability-strip"
 import { EmptyState } from "@/components/app/empty-state"
 import { InquiryFormShareDialog } from "@/components/app/inquiry-form-share-dialog"
 import { PageHeader } from "@/components/app/page-header"
 import { OpsToolbarFilterButton } from "@/components/app/ops-status-chip"
-import { InquiryStageBadge } from "@/components/app/status-badge"
 import { OpsCollapsibleFilters } from "@/components/operations/ops-collapsible-filters"
 import { OpsDetailSheet } from "@/components/operations/ops-detail-sheet"
 import { OpsSearchField } from "@/components/operations/ops-search-field"
@@ -69,8 +69,10 @@ import { inquiryStageOptions } from "@/lib/constants"
 import { mapInquiriesToCalendarEvents } from "@/lib/calendar-events"
 import type { PublicInquiryFormSnippet } from "@/lib/data"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
+import { planAllowsFeature } from "@/lib/plan-features"
+import { getInquiryStageMeta, opsStatusSelectTriggerClass } from "@/lib/ops-status-meta"
 import { cn } from "@/lib/utils"
-import type { Customer, InquiryWithCustomer, InquiryStage } from "@/types/domain"
+import type { BillingPlan, Customer, InquiryWithCustomer, InquiryStage } from "@/types/domain"
 
 function toLocalDateTimeValue(value?: string) {
   if (!value) {
@@ -129,6 +131,7 @@ export function InquiriesBoard({
   publicInquiryForm,
   siteOrigin,
   isDemoWorkspace,
+  currentPlan,
 }: {
   inquiries: InquiryWithCustomer[]
   customers: Customer[]
@@ -139,6 +142,7 @@ export function InquiriesBoard({
   publicInquiryForm: PublicInquiryFormSnippet | null
   siteOrigin: string
   isDemoWorkspace: boolean
+  currentPlan: BillingPlan
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -162,6 +166,7 @@ export function InquiriesBoard({
   const [viewMode, setViewMode] = useState<InquiryViewMode>("list")
   const deepLinkAppliedRef = useRef(false)
   const focusHandledRef = useRef<string | null>(null)
+  const aiAssistEnabled = planAllowsFeature(currentPlan, "ai_assist")
 
   type InquiryOptimisticPatch = { type: "stage"; id: string; stage: InquiryStage }
 
@@ -250,6 +255,8 @@ export function InquiriesBoard({
     () => optimisticInquiries.find((item) => item.id === drawerInquiryId) ?? null,
     [drawerInquiryId, optimisticInquiries]
   )
+
+  const drawerInquiryStageMeta = drawerInquiry ? getInquiryStageMeta(drawerInquiry.stage) : null
 
   const channelOptions = useMemo(() => {
     const set = new Set<string>(["웹폼"])
@@ -413,6 +420,17 @@ export function InquiriesBoard({
       resetForm()
       setIsCreateOpen(false)
       router.refresh()
+
+      if (result.ok && result.inquiryId && aiAssistEnabled) {
+        void fetch("/api/ai/inquiry-analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ inquiryId: result.inquiryId, force: true }),
+        })
+          .then(() => router.refresh())
+          .catch(() => {})
+      }
     })
   }
 
@@ -1138,6 +1156,7 @@ export function InquiriesBoard({
                 const customer = inquiry.customer
                 const overdue =
                   inquiry.followUpAt && new Date(inquiry.followUpAt).getTime() < Date.now()
+                const stageMeta = getInquiryStageMeta(inquiry.stage)
                 return (
                   <tr
                     key={inquiry.id}
@@ -1170,7 +1189,33 @@ export function InquiriesBoard({
                         {inquiry.channel}
                       </td>
                       <td className={opsTableCellClass} onClick={(e) => e.stopPropagation()}>
-                        <InquiryStageBadge stage={inquiry.stage} />
+                        <Select
+                          value={inquiry.stage}
+                          items={inquiryStageSelectItems}
+                          onValueChange={(value) => {
+                            const next = (value as InquiryStage | null) ?? inquiry.stage
+                            if (next === inquiry.stage) {
+                              return
+                            }
+                            quickUpdateStage(inquiry, next)
+                          }}
+                        >
+                          <SelectTrigger
+                            className={cn(
+                              "h-8 w-full min-w-0 max-w-[8.5rem] text-xs font-medium",
+                              opsStatusSelectTriggerClass(stageMeta.tone, stageMeta.emphasis)
+                            )}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {inquiryStageOptions.map((o) => (
+                              <SelectItem key={o.value} value={o.value}>
+                                {o.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </td>
                       <td
                         className={cn(
@@ -1238,6 +1283,7 @@ export function InquiriesBoard({
         <div className="space-y-2 md:hidden">
           {filteredInquiries.map((inquiry) => {
             const customer = inquiry.customer
+            const mobStageMeta = getInquiryStageMeta(inquiry.stage)
             return (
               <button
                 key={inquiry.id}
@@ -1250,18 +1296,48 @@ export function InquiriesBoard({
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <InquiryStageBadge stage={inquiry.stage} />
-                      {inquiry.channel === "웹폼" ? (
+                    {inquiry.channel === "웹폼" ? (
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <span className="rounded border border-primary/25 bg-primary/[0.08] px-1.5 py-px text-[10px] font-medium text-primary">
                           웹폼
                         </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-1 font-medium leading-snug">{inquiry.title}</p>
+                      </div>
+                    ) : null}
+                    <p className={cn("font-medium leading-snug", inquiry.channel === "웹폼" ? "mt-1" : "")}>
+                      {inquiry.title}
+                    </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {customer?.companyName ?? customer?.name} · {inquiry.channel}
                     </p>
+                  </div>
+                  <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <Select
+                      value={inquiry.stage}
+                      items={inquiryStageSelectItems}
+                      onValueChange={(value) => {
+                        const next = (value as InquiryStage | null) ?? inquiry.stage
+                        if (next === inquiry.stage) {
+                          return
+                        }
+                        quickUpdateStage(inquiry, next)
+                      }}
+                    >
+                      <SelectTrigger
+                        className={cn(
+                          "h-8 w-[7.25rem] text-xs font-medium",
+                          opsStatusSelectTriggerClass(mobStageMeta.tone, mobStageMeta.emphasis)
+                        )}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {inquiryStageOptions.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <p className="line-clamp-2 text-xs text-muted-foreground">{inquiry.details}</p>
@@ -1278,7 +1354,9 @@ export function InquiriesBoard({
         description={
           drawerInquiry ? (
             <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <InquiryStageBadge stage={drawerInquiry.stage} />
+              <span className="text-xs font-medium text-foreground/85">
+                {getInquiryStageMeta(drawerInquiry.stage).label}
+              </span>
               <span className="text-muted-foreground">
                 {drawerInquiry.customer?.companyName ?? drawerInquiry.customer?.name ?? "고객"} ·{" "}
                 {formatDate(drawerInquiry.createdAt)} 등록
@@ -1346,9 +1424,9 @@ export function InquiriesBoard({
                 {drawerInquiry.details?.trim() || "내용 없음"}
               </p>
             </div>
+            <InquiryAiAnalysisPanel inquiry={drawerInquiry} aiAssistEnabled={aiAssistEnabled} />
             <div className="space-y-2 rounded-lg border border-border/50 bg-muted/10 p-3">
               <p className="text-xs font-semibold text-muted-foreground">문의 단계</p>
-              <InquiryStageBadge stage={drawerInquiry.stage} className="w-fit" />
               <Select
                 value={drawerInquiry.stage}
                 items={inquiryStageSelectItems}
@@ -1360,7 +1438,16 @@ export function InquiriesBoard({
                   quickUpdateStage(drawerInquiry, next)
                 }}
               >
-                <SelectTrigger className="h-9 w-full">
+                <SelectTrigger
+                  className={cn(
+                    "h-9 w-full font-medium",
+                    drawerInquiryStageMeta &&
+                      opsStatusSelectTriggerClass(
+                        drawerInquiryStageMeta.tone,
+                        drawerInquiryStageMeta.emphasis
+                      )
+                  )}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

@@ -41,12 +41,16 @@ Vercel 프로젝트 **Settings → Environment Variables**에서 설정합니다
 | `RESEND_FROM_EMAIL` | 선택 | 새 문의 운영자 알림 메일 전용 발신 주소. 없으면 **`RESEND_FROM`** 과 동일 후보 사용 (`operator-email.ts`) |
 | `OPENAI_API_KEY` | AI 기능 사용 시 필수 | 모든 `/api/ai/*` 호출 |
 | `OPENAI_MODEL_INQUIRY_STRUCTURE` | AI 사용 시 필수 | `POST /api/ai/inquiry-structure` — 짧은 구조화용(권장 `gpt-5.4-nano`) |
+| `OPENAI_MODEL_INQUIRY_ANALYZE` | 선택 | `POST /api/ai/inquiry-analyze` · `POST /api/ai/customer-insight` — 비우면 **`OPENAI_MODEL`** |
+| `OPENAI_MODEL_COLLECTION_ADVICE` | 선택 | `POST /api/ai/collection-advice` — 비우면 **`OPENAI_MODEL`** |
 | `OPENAI_MODEL_COMPOSE_MESSAGE` | AI 사용 시 필수 | `POST /api/ai/compose-message` — 발송·리마인드 문구(권장 `gpt-5.4-nano`) |
 | `OPENAI_MODEL_QUOTE_DRAFT` | AI 사용 시 필수 | `POST /api/ai/quote-draft` — 견적 초안(권장 `gpt-5.4-mini`) |
 | `OPENAI_MODEL_LANDING_DRAFT` | 선택 | Pro 업체 소개 페이지 **AI 초안** (`generateBusinessLandingDraftAction`). 비우면 **`OPENAI_MODEL`** 사용 |
 | `OPENAI_MODEL_FALLBACK` | 선택 | `OPENAI_QUOTE_DRAFT_FALLBACK` 활성 시 초안 재시도 모델(권장 `gpt-5.4-nano`) |
 | `OPENAI_QUOTE_DRAFT_FALLBACK` | 선택 | `true`/`1`/`yes` 이면 초안 API가 일부 실패 시 fallback 모델로 **1회** 재호출 |
 | `OPENAI_MAX_OUTPUT_TOKENS_INQUIRY` | 선택 | 문의 구조화 max output (미설정 시 **500**) |
+| `OPENAI_MAX_OUTPUT_TOKENS_INQUIRY_ANALYZE` | 선택 | 문의 트리아지·고객 인사이트 max output (미설정 시 **900**) |
+| `OPENAI_MAX_OUTPUT_TOKENS_COLLECTION_ADVICE` | 선택 | 청구 추심 보조 max output (미설정 시 **900**) |
 | `OPENAI_MAX_OUTPUT_TOKENS_MESSAGE` | 선택 | 문구 생성 max output (미설정 시 **600**) |
 | `OPENAI_MAX_OUTPUT_TOKENS_QUOTE` | 선택 | 견적 초안 max output (미설정 시 **1400**) |
 | `OPENAI_MAX_OUTPUT_TOKENS_LANDING` | 선택 | 업체 소개 AI 초안 max output (미설정 시 **1800**) |

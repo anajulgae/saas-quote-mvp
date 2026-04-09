@@ -8,6 +8,8 @@
 
 export type AiFeatureKey =
   | "inquiry_structure"
+  | "inquiry_analyze"
+  | "collection_advice"
   | "compose_message"
   | "quote_draft"
   | "landing_draft"
@@ -15,6 +17,8 @@ export type AiFeatureKey =
 /** Vercel/서버 로그·비용 추적용 라벨 */
 export const AI_FEATURE_LOG_LABEL: Record<AiFeatureKey, string> = {
   inquiry_structure: "inquiry-structure",
+  inquiry_analyze: "inquiry-analyze",
+  collection_advice: "collection-advice",
   compose_message: "compose-message",
   quote_draft: "quote-draft",
   landing_draft: "landing-draft",
@@ -22,6 +26,8 @@ export const AI_FEATURE_LOG_LABEL: Record<AiFeatureKey, string> = {
 
 const MODEL_ENV_NAME: Record<AiFeatureKey, string> = {
   inquiry_structure: "OPENAI_MODEL_INQUIRY_STRUCTURE",
+  inquiry_analyze: "OPENAI_MODEL_INQUIRY_ANALYZE",
+  collection_advice: "OPENAI_MODEL_COLLECTION_ADVICE",
   compose_message: "OPENAI_MODEL_COMPOSE_MESSAGE",
   quote_draft: "OPENAI_MODEL_QUOTE_DRAFT",
   landing_draft: "OPENAI_MODEL_LANDING_DRAFT",
@@ -29,6 +35,8 @@ const MODEL_ENV_NAME: Record<AiFeatureKey, string> = {
 
 const MAX_TOKENS_ENV_NAME: Record<AiFeatureKey, string> = {
   inquiry_structure: "OPENAI_MAX_OUTPUT_TOKENS_INQUIRY",
+  inquiry_analyze: "OPENAI_MAX_OUTPUT_TOKENS_INQUIRY_ANALYZE",
+  collection_advice: "OPENAI_MAX_OUTPUT_TOKENS_COLLECTION_ADVICE",
   compose_message: "OPENAI_MAX_OUTPUT_TOKENS_MESSAGE",
   quote_draft: "OPENAI_MAX_OUTPUT_TOKENS_QUOTE",
   landing_draft: "OPENAI_MAX_OUTPUT_TOKENS_LANDING",
@@ -37,6 +45,8 @@ const MAX_TOKENS_ENV_NAME: Record<AiFeatureKey, string> = {
 /** 기본 max output (env 미설정 시) — 보수적 */
 const DEFAULT_MAX_OUTPUT: Record<AiFeatureKey, number> = {
   inquiry_structure: 500,
+  inquiry_analyze: 900,
+  collection_advice: 900,
   compose_message: 600,
   quote_draft: 1400,
   landing_draft: 1800,

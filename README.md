@@ -54,6 +54,8 @@ npm run build
 | `SUPABASE_SERVICE_ROLE_KEY` | 선택 | 서버 전용. 운영자 이메일 알림 시 설정 조회(없으면 이메일만 생략) |
 | `OPENAI_API_KEY` | AI 사용 시 필수 | `/api/ai/*` |
 | `OPENAI_MODEL_INQUIRY_STRUCTURE` | AI 사용 시 필수 | 문의 구조화 → 기본 `gpt-5.4-nano` (`.env.example` 참고) |
+| `OPENAI_MODEL_INQUIRY_ANALYZE` | 선택 | 문의 트리아지·다음 액션(미설정 시 공용 `OPENAI_MODEL`) |
+| `OPENAI_MODEL_COLLECTION_ADVICE` | 선택 | 청구 추심·리마인드 추천(미설정 시 공용 `OPENAI_MODEL`) |
 | `OPENAI_MODEL_COMPOSE_MESSAGE` | AI 사용 시 필수 | 발송·리마인드 문구 → 기본 `gpt-5.4-nano` |
 | `OPENAI_MODEL_QUOTE_DRAFT` | AI 사용 시 필수 | 견적 초안 → 기본 `gpt-5.4-mini` |
 | `OPENAI_MODEL_FALLBACK` | 선택 | 견적 초안 실패 시 재시도 모델 (`OPENAI_QUOTE_DRAFT_FALLBACK=true`일 때) |
@@ -71,8 +73,11 @@ npm run build
 | API | 환경 변수 | 권장 기본값(예시) | 역할 |
 |-----|-----------|-------------------|------|
 | `/api/ai/inquiry-structure` | `OPENAI_MODEL_INQUIRY_STRUCTURE` | `gpt-5.4-nano` | 짧은 구조화·채널·요약 |
-| `/api/ai/compose-message` | `OPENAI_MODEL_COMPOSE_MESSAGE` | `gpt-5.4-nano` | 발송·청구·리마인드 문구 |
-| `/api/ai/quote-draft` | `OPENAI_MODEL_QUOTE_DRAFT` | `gpt-5.4-mini` | 견적 초안(항목·결제·안내) |
+| `/api/ai/inquiry-analyze` | `OPENAI_MODEL_INQUIRY_ANALYZE` | `gpt-5.4-nano` | 문의 유형·긴급도·다음 액션·추천 질문(JSON 저장) |
+| `/api/ai/customer-insight` | *(동일 스택)* | 위와 동일 키 재사용 | 고객 이력 요약 인사이트 |
+| `/api/ai/collection-advice` | `OPENAI_MODEL_COLLECTION_ADVICE` | `gpt-5.4-nano` | 청구 상태 기반 추천 액션·문구 초안 |
+| `/api/ai/compose-message` | `OPENAI_MODEL_COMPOSE_MESSAGE` | `gpt-5.4-nano` | 발송·청구·리마인드 문구(종류 확장) |
+| `/api/ai/quote-draft` | `OPENAI_MODEL_QUOTE_DRAFT` | `gpt-5.4-mini` | 견적 초안(기본·옵션 항목·납기·업종 유의) |
 
 - **모델명은 코드에 없음.** 바꿀 때는 배포 환경 변수만 수정 후 재배포. 설정 집약지: `src/lib/server/openai-config.ts`, 호출: `src/lib/server/openai-chat.ts`.
 - **비용**: 짧은 작업은 nano, 초안만 mini. `OPENAI_MAX_OUTPUT_TOKENS_INQUIRY` / `_MESSAGE` / `_QUOTE` 로 출력 상한 조절.
@@ -122,7 +127,8 @@ npm run build
 8. `0007_public_inquiry_form.sql` — 공개 문의 폼·`submit_public_inquiry`  
 9. `0008_notifications.sql` — `notifications` / `notification_preferences`, 문의 INSERT 시 알림, Realtime  
 10. `0009_business_public_landing.sql` — Pro 전용 업체 소개 랜딩(`business_public_pages`, `get_public_business_landing`, 문의 유입 `source`/`sourceSlug`)
-11. `0012_tax_invoice_asp.sql` — 청구 연동 전자세금계산서(`tax_invoices`)·ASP 설정(`business_settings`)·고객/청구 세금 필드
+11. `0012_tax_invoice_asp.sql` — 청구 연동 전자세금계산서(`tax_invoices`)·ASP 설정(`business_settings`)·고객/청구 세금 필드  
+12. `0013_inquiry_ai_analysis.sql` — 문의 AI 트리아지 저장(`inquiries.ai_analysis`, `ai_analysis_updated_at`)
 
 `0003_rls` 미적용 시 보안 공격면이 남습니다. `0004` 미적용 시 앱은 동작하지만 설정에 **플랜 마이그레이션 안내**가 표시됩니다. **공개 청구 링크·열람 추적**은 **0006** 이 필요합니다. **앱 내·브라우저·이메일 알림**은 **0008** 과 Supabase Realtime(`notifications`) 전제를 확인하세요. 상세는 **[docs/deployment.md §4.1](./docs/deployment.md#41-알림실시간브라우저이메일)**.
 

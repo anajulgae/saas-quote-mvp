@@ -10,7 +10,7 @@ export default async function InquiriesPage({
   searchParams: Promise<{ customer?: string; new?: string }>
 }) {
   const sp = await searchParams
-  const { inquiries, customers, stageSummary, publicInquiryForm, isDemoWorkspace } =
+  const { inquiries, customers, stageSummary, publicInquiryForm, isDemoWorkspace, currentPlan } =
     await getInquiriesPageData()
 
   const initialCreateOpen = sp.new === "1" || sp.new === "true"
@@ -26,6 +26,7 @@ export default async function InquiriesPage({
         publicInquiryForm={publicInquiryForm}
         siteOrigin={getSiteOrigin()}
         isDemoWorkspace={isDemoWorkspace}
+        currentPlan={currentPlan}
       />
     </Suspense>
   )

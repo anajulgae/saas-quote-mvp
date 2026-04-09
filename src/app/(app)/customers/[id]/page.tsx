@@ -19,6 +19,7 @@ import { PageHeader } from "@/components/app/page-header"
 import { InquiryStageBadge, PaymentStatusBadge, QuoteStatusBadge } from "@/components/app/status-badge"
 import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { CustomerAiInsightSection } from "@/components/app/customer-ai-insight-section"
 import { CustomerPortalLinkBlock } from "@/components/app/customer-portal-link-block"
 import { CustomerTaxInvoiceSidebarCard } from "@/components/app/customer-tax-invoice-sidebar-card"
 import { invoiceTypeOptions } from "@/lib/constants"
@@ -183,6 +184,11 @@ export default async function CustomerDetailPage({
         customer={customer}
         taxInvoiceSummary={taxInvoiceSummary}
         currentPlan={currentPlan}
+      />
+
+      <CustomerAiInsightSection
+        customerId={customer.id}
+        aiAssistEnabled={planAllowsFeature(currentPlan, "ai_assist")}
       />
 
       <Card className="border-border/70 shadow-sm">

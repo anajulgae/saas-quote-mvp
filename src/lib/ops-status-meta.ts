@@ -1,5 +1,6 @@
 import { cva, type VariantProps } from "class-variance-authority"
 
+import { cn } from "@/lib/utils"
 import type { InquiryStage, PaymentStatus, QuoteStatus } from "@/types/domain"
 
 /** 상태칩·필터 톤 — 제품 전역 동일 규칙 */
@@ -153,6 +154,30 @@ export function getOpsStatusMeta(
     return getQuoteStatusMeta(value)
   }
   return getPaymentStatusMeta(value)
+}
+
+/** 상태칩(`get*Meta`)과 동일 톤 — 테이블·시트의 상태 SelectTrigger에 사용 */
+const opsSelectTriggerToneBase: Record<OpsStatusTone, string> = {
+  neutral:
+    "border-border/70 bg-card text-foreground hover:bg-muted/35 dark:bg-input/25 dark:hover:bg-input/40",
+  muted:
+    "border-border/55 bg-muted/50 text-muted-foreground hover:bg-muted/65",
+  info: "border-sky-500/35 bg-sky-500/10 text-sky-950 hover:bg-sky-500/[0.18] dark:text-sky-100",
+  brand:
+    "border-primary/40 bg-primary/10 text-primary hover:bg-primary/[0.18]",
+  success:
+    "border-emerald-500/40 bg-emerald-500/12 text-emerald-950 hover:bg-emerald-500/[0.18] dark:text-emerald-100",
+  warning:
+    "border-amber-500/45 bg-amber-500/12 text-amber-950 hover:bg-amber-500/[0.18] dark:text-amber-50",
+  danger:
+    "border-destructive/45 bg-destructive/10 text-destructive hover:bg-destructive/[0.16]",
+}
+
+export function opsStatusSelectTriggerClass(tone: OpsStatusTone, emphasis: boolean): string {
+  return cn(
+    opsSelectTriggerToneBase[tone],
+    emphasis && "font-semibold shadow-sm ring-2 ring-current/12"
+  )
 }
 
 export function getPaymentStatusMeta(status: PaymentStatus): OpsStatusMeta {

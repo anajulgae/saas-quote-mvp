@@ -17,6 +17,8 @@ type Body = {
   scope?: string
   tone?: string
   paymentTermsHint?: string
+  /** 업종·서비스 맥락 힌트(문의 service_category 등) */
+  industryHint?: string
 }
 
 /** 클라이언트(견적 폼)가 기대하는 형태 — lineItems·결제·안내는 서버에서 summary로 합침 */
@@ -24,6 +26,12 @@ export type QuoteDraftClientPayload = {
   title: string
   summary: string
   items: QuoteLineItem[]
+  /** 옵션·부가 항목(견적서에 선택 반영) */
+  optionalItems: QuoteLineItem[]
+  /** 납기·작업 범위·수정 횟수 등 (요약 본문에 포함) */
+  deliveryScopeNotes?: string
+  /** 업종별 유의 문구 (요약 본문에 포함) */
+  industryCaveats?: string
 }
 
 function parseLineItemRow(row: unknown): QuoteLineItem | null {
@@ -70,6 +78,20 @@ function parseDraft(obj: unknown): QuoteDraftClientPayload {
         ? o.guidanceNote.trim()
         : ""
 
+  const deliveryScopeNotes =
+    typeof o.deliveryScopeNotes === "string"
+      ? o.deliveryScopeNotes.trim()
+      : typeof o.scopeDeliveryNotes === "string"
+        ? o.scopeDeliveryNotes.trim()
+        : ""
+
+  const industryCaveats =
+    typeof o.industryCaveats === "string"
+      ? o.industryCaveats.trim()
+      : typeof o.industryNotes === "string"
+        ? o.industryNotes.trim()
+        : ""
+
   const itemsRaw = o.lineItems ?? o.items
   const items: QuoteLineItem[] = []
   if (Array.isArray(itemsRaw)) {
@@ -77,6 +99,17 @@ function parseDraft(obj: unknown): QuoteDraftClientPayload {
       const it = parseLineItemRow(row)
       if (it) {
         items.push(it)
+      }
+    }
+  }
+
+  const optRaw = o.optionalLineItems ?? o.optionLineItems ?? o.options
+  const optionalItems: QuoteLineItem[] = []
+  if (Array.isArray(optRaw)) {
+    for (const row of optRaw) {
+      const it = parseLineItemRow(row)
+      if (it) {
+        optionalItems.push(it)
       }
     }
   }
@@ -92,23 +125,52 @@ function parseDraft(obj: unknown): QuoteDraftClientPayload {
   }
 
   const parts = [summary]
+  if (deliveryScopeNotes) {
+    parts.push("", "■ 납기·작업 범위", deliveryScopeNotes)
+  }
   if (paymentTerms) {
     parts.push("", "■ 결제 조건", paymentTerms)
   }
   if (noteToCustomer) {
     parts.push("", "■ 고객 안내", noteToCustomer)
   }
+  if (industryCaveats) {
+    parts.push("", "■ 업종·유의사항", industryCaveats)
+  }
   summary = parts.join("\n")
 
-  return { title, summary, items }
+  return {
+    title,
+    summary,
+    items,
+    optionalItems,
+    deliveryScopeNotes: deliveryScopeNotes || undefined,
+    industryCaveats: industryCaveats || undefined,
+  }
 }
 
-const SYSTEM_PROMPT = `한국 소사업자 견적 초안. JSON만. 장문 설명 금지.
-키: title(짧게), summary(범위·산출물·일정 2~4문장), lineItems[{name,description,quantity,unitPrice}](1~8개, 금액 불명시 unitPrice "0"), paymentTerms(한 문단), noteToCustomer(한 문단 이하).`
+const SYSTEM_PROMPT = `한국 소사업자 견적서 초안(실제 발송 가능한 수준). JSON만. 에세이·마케팅 과장 금지.
+키:
+- title: 견적 제목(짧고 구체적으로)
+- summary: 범위·산출물·일정·검수 흐름 2~5문장
+- lineItems: [{name,description,quantity,unitPrice}] 필수 포함 항목 1~6개 (금액 불명시 unitPrice "0")
+- optionalLineItems: 옵션·부가 항목 0~4개 (같은 스키마)
+- paymentTerms: 선금/잔금·세금계산서 등 한 문단
+- noteToCustomer: 고객 안내·연락 방법 한 문단 이하
+- deliveryScopeNotes: 납기, 수정 횟수, 범위 변경 시 조건 등 한 문단
+- industryCaveats: 업종별 주의(없으면 빈 문자열)
+업종 힌트가 있으면 industryCaveats·deliveryScopeNotes에 반영.`
 
-function buildUserMessage(serviceCategory: string, scope: string, tone: string, paymentTermsHint: string): string {
+function buildUserMessage(
+  serviceCategory: string,
+  scope: string,
+  tone: string,
+  paymentTermsHint: string,
+  industryHint: string
+): string {
   return [
-    `유형: ${serviceCategory}`,
+    `유형(서비스): ${serviceCategory}`,
+    industryHint ? `업종·맥락 힌트: ${industryHint}` : "",
     `범위:\n${scope || "(일반 제안)"}`,
     `톤: ${tone}`,
     paymentTermsHint ? `기본 결제 힌트: ${paymentTermsHint}` : "",
@@ -145,8 +207,9 @@ export async function POST(req: Request) {
   const scope = String(body.scope ?? "").trim()
   const tone = String(body.tone ?? "").trim() || "전문적이고 신뢰감 있는"
   const paymentTermsHint = String(body.paymentTermsHint ?? "").trim()
+  const industryHint = String(body.industryHint ?? "").trim()
 
-  const userMsg = buildUserMessage(serviceCategory, scope, tone, paymentTermsHint)
+  const userMsg = buildUserMessage(serviceCategory, scope, tone, paymentTermsHint, industryHint)
 
   const messages = [
     { role: "system" as const, content: SYSTEM_PROMPT },

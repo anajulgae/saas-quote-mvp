@@ -36,11 +36,11 @@ import {
 } from "@/app/actions"
 import { InvoiceTaxInvoiceSection } from "@/components/app/invoice-tax-invoice-section"
 import { CoreCapabilityStrip } from "@/components/app/core-capability-strip"
+import { InvoiceCollectionAiPanel } from "@/components/app/invoice-collection-ai-panel"
 import { EmptyState } from "@/components/app/empty-state"
 import { InvoiceSendDialog } from "@/components/app/invoice-send-dialog"
 import { PageHeader } from "@/components/app/page-header"
 import { OpsTimeHintChip, OpsToolbarFilterButton } from "@/components/app/ops-status-chip"
-import { PaymentStatusBadge } from "@/components/app/status-badge"
 import { OpsCollapsibleFilters } from "@/components/operations/ops-collapsible-filters"
 import { OpsDetailSheet } from "@/components/operations/ops-detail-sheet"
 import { OpsSearchField } from "@/components/operations/ops-search-field"
@@ -89,7 +89,11 @@ import {
 import { mapInvoicesToCalendarEvents } from "@/lib/calendar-events"
 import { resolveActivityHeadline } from "@/lib/activity-presentation"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
-import { opsStatusChipVariants } from "@/lib/ops-status-meta"
+import {
+  getPaymentStatusMeta,
+  opsStatusChipVariants,
+  opsStatusSelectTriggerClass,
+} from "@/lib/ops-status-meta"
 import {
   getTaxInvoiceListChipMeta,
   matchesTaxInvoiceListFilter,
@@ -817,6 +821,10 @@ function InvoicesBoardPanel({
     () => optimisticInvoices.find((i) => i.id === drawerInvoiceId) ?? null,
     [drawerInvoiceId, optimisticInvoices]
   )
+
+  const drawerInvoicePaymentMeta = drawerInvoice
+    ? getPaymentStatusMeta(drawerInvoice.paymentStatus)
+    : null
 
   const drawerInvoiceActivities = useMemo(() => {
     if (!drawerInvoiceId) {
@@ -2084,6 +2092,7 @@ function InvoicesBoardPanel({
                 {displayInvoices.map((invoice) => {
                   const customer = invoice.customer
                   const recvHint = invoiceRowReceivableHint(invoice)
+                  const paymentMeta = getPaymentStatusMeta(invoice.paymentStatus)
                   return (
                     <tr
                       key={invoice.id}
@@ -2125,7 +2134,6 @@ function InvoicesBoardPanel({
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="flex max-w-[148px] flex-col gap-1.5">
-                          <PaymentStatusBadge status={invoice.paymentStatus} className="w-fit" />
                           <Select
                             value={invoice.paymentStatus}
                             items={paymentStatusSelectItemsRecord}
@@ -2137,7 +2145,12 @@ function InvoicesBoardPanel({
                               )
                             }
                           >
-                            <SelectTrigger className="h-8 w-full max-w-[148px] text-xs">
+                            <SelectTrigger
+                              className={cn(
+                                "h-8 w-full max-w-[148px] text-xs font-medium",
+                                opsStatusSelectTriggerClass(paymentMeta.tone, paymentMeta.emphasis)
+                              )}
+                            >
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -2233,6 +2246,7 @@ function InvoicesBoardPanel({
             {displayInvoices.map((invoice) => {
               const customer = invoice.customer
               const recvHint = invoiceRowReceivableHint(invoice)
+              const mobPaymentMeta = getPaymentStatusMeta(invoice.paymentStatus)
               return (
                 <button
                   key={invoice.id}
@@ -2264,7 +2278,35 @@ function InvoicesBoardPanel({
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <PaymentStatusBadge status={invoice.paymentStatus} />
+                      <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <Select
+                          value={invoice.paymentStatus}
+                          items={paymentStatusSelectItemsRecord}
+                          onValueChange={(value) =>
+                            updatePaymentStatus(
+                              invoice.id,
+                              (value as PaymentStatus | null) ?? invoice.paymentStatus,
+                              invoice.customerId
+                            )
+                          }
+                        >
+                          <SelectTrigger
+                            className={cn(
+                              "h-8 w-[7.25rem] text-xs font-medium",
+                              opsStatusSelectTriggerClass(mobPaymentMeta.tone, mobPaymentMeta.emphasis)
+                            )}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {paymentStatusOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       {(() => {
                         const tm = getTaxInvoiceListChipMeta(invoice)
                         return (
@@ -2376,6 +2418,11 @@ function InvoicesBoardPanel({
                 {collectionNextStepHint(drawerInvoice)}
               </p>
             </div>
+            <InvoiceCollectionAiPanel
+              invoiceId={drawerInvoice.id}
+              aiAssistEnabled={planAllowsFeature(currentPlan, "ai_assist")}
+              onSuggestedTone={(tone) => setCollTone(tone)}
+            />
             <InvoiceTaxInvoiceSection
               invoice={drawerInvoice}
               businessSettings={businessSettingsSnapshot}
@@ -2436,7 +2483,6 @@ function InvoicesBoardPanel({
             </div>
             <div className="space-y-2">
               <p className="text-xs font-semibold text-muted-foreground">결제 상태 변경</p>
-              <PaymentStatusBadge status={drawerInvoice.paymentStatus} className="w-fit" />
               <Select
                 value={drawerInvoice.paymentStatus}
                 items={paymentStatusSelectItemsRecord}
@@ -2448,7 +2494,16 @@ function InvoicesBoardPanel({
                   )
                 }
               >
-                <SelectTrigger className="h-9 w-full max-w-xs">
+                <SelectTrigger
+                  className={cn(
+                    "h-9 w-full max-w-xs font-medium",
+                    drawerInvoicePaymentMeta &&
+                      opsStatusSelectTriggerClass(
+                        drawerInvoicePaymentMeta.tone,
+                        drawerInvoicePaymentMeta.emphasis
+                      )
+                  )}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
