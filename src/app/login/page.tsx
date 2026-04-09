@@ -13,11 +13,11 @@ import { cn } from "@/lib/utils"
 export const metadata: Metadata = {
   title: "로그인",
   description:
-    "Bill-IO 계정으로 로그인해 대시보드에서 문의·견적·청구·알림을 이어서 관리하세요.",
+    "Bill-IO 계정으로 로그인해 대시보드에서 문의·견적·청구·알림과 AI 운영 보조를 이어서 관리하세요.",
   alternates: { canonical: "/login" },
   openGraph: {
     title: "Bill-IO 로그인",
-    description: "견적·청구·수금 관리를 한곳에서 이어서 진행합니다.",
+    description: "견적·청구·수금·AI 보조를 한곳에서 이어서 진행합니다.",
     type: "website",
   },
   robots: { index: true, follow: true },

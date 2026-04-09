@@ -691,13 +691,13 @@ export function InquiriesBoard({
     <div className="space-y-4 md:space-y-5">
       <PageHeader
         title="문의 관리"
-        description="웹폼·고객 포털에서 들어온 요청을 단계·팔로업·캘린더로 묶고, 상세에서 AI로 정리한 뒤 견적으로 넘깁니다."
+        description="웹폼·고객 포털에서 들어온 요청을 단계·팔로업·캘린더로 묶고, 상세에서 AI 운영 분석·정리 후 견적으로 넘깁니다."
         capabilityStrip={
           <CoreCapabilityStrip
             items={[
               { label: "공개 문의 폼", href: "/settings#public-inquiry", emphasis: true },
               { label: "고객 포털 링크", href: "/customers" },
-              { label: "AI 문의 정리", href: undefined },
+              { label: "AI 문의·운영 분석", href: undefined },
               { label: "캘린더·알림", href: "/settings#notifications-prefs" },
             ]}
           />

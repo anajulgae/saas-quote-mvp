@@ -172,7 +172,7 @@ export function DashboardMockPreview({ className }: { className?: string }) {
                   {[
                     { t: "영상 제작 견적", s: "선금 대기", c: "amber" as const },
                     { t: "인테리어 잔금", s: "연체 · 재안내", c: "rose" as const },
-                    { t: "디자인 문의", s: "AI 초안 작성됨", c: "slate" as const },
+                    { t: "디자인 문의", s: "AI 운영 분석됨", c: "slate" as const },
                   ].map((row) => (
                     <div
                       key={row.t}

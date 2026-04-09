@@ -2840,12 +2840,13 @@ export function InvoicesWorkspace({
     <div className="space-y-3 md:space-y-4">
       <PageHeader
         title="청구 및 수금"
-        description="공개 청구 링크로 요청하고, 입금 단계·리마인드·(필요 시) 추심 메모까지 한 화면에서 이어갑니다. 캘린더로 기한을 같이 봅니다."
+        description="공개 청구 링크로 요청하고, 입금 단계·리마인드·추심 메모·AI 추천·문구 초안까지 한 화면에서 이어갑니다. 캘린더로 기한을 같이 봅니다."
         capabilityStrip={
           <CoreCapabilityStrip
             items={[
               { label: "리마인드·메일·알림", href: "/settings#notifications-prefs", emphasis: true },
               { label: "공개 청구 URL" },
+              { label: "AI 추천·문구" },
               { label: "입금 약속·추심" },
               { label: "캘린더 뷰", href: undefined },
             ]}

@@ -11,14 +11,14 @@ export function LandingFlowMock({ className }: { className?: string }) {
     },
     {
       k: "정리",
-      v: "AI 요약 · 단계",
-      scene: "문의 내용이 카드로 정리됨",
+      v: "AI 분석 · 단계",
+      scene: "요약·유형·다음 액션이 카드에 붙음",
       tone: "muted" as const,
     },
     {
       k: "견적",
-      v: "템플릿 · 초안",
-      scene: "항목·금액을 빠르게 채움",
+      v: "템플릿 · 풀 초안",
+      scene: "옵션·납기까지 초안 후 검토",
       tone: "muted" as const,
     },
     {
@@ -35,8 +35,8 @@ export function LandingFlowMock({ className }: { className?: string }) {
     },
     {
       k: "수금",
-      v: "입금 · 리마인드",
-      scene: "연체 시 다음 연락 안 잊음",
+      v: "추천 문구 · 리마인드",
+      scene: "입금 단계별 안내·다음 연락",
       tone: "primary" as const,
     },
   ]

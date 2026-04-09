@@ -11,11 +11,12 @@ import { cn } from "@/lib/utils"
 export const metadata: Metadata = {
   title: "요금제·업그레이드",
   description:
-    "Bill-IO Starter(무료)·Pro·Business 플랜 비교. 공개 문의 폼, 고객 포털, AI, 문서 발송 등 Pro 혜택을 한눈에 확인하세요.",
+    "Bill-IO Starter(무료)·Pro·Business 플랜 비교. Pro에서는 문의·견적·청구·고객 AI 보조, 공개 문의 폼, 고객 포털, 문서 발송 등을 한눈에 확인하세요.",
   alternates: { canonical: "/billing" },
   openGraph: {
     title: "Bill-IO 요금제",
-    description: "무료로 시작하고, Pro에서 공개 문의·포털·AI·발송 기능을 활용하세요.",
+    description:
+      "무료로 시작하고, Pro에서 공개 문의·포털·향상된 AI(운영 분석·풀 견적·수금 문구)·발송을 활용하세요.",
     type: "website",
   },
   robots: { index: true, follow: true },
@@ -46,8 +47,9 @@ export default async function BillingPage({
             <p className="mt-2">
               무료로도 고객·문의·견적·청구 코어는 동작합니다. Pro에서는{" "}
               <strong className="font-medium text-foreground">업체 소개 랜딩</strong>,{" "}
-              <strong className="font-medium text-foreground">고객 미니 포털</strong>, 일부{" "}
-              <strong className="font-medium text-foreground">AI·메시징</strong> 게이트가 열리도록 설계해 두었습니다.
+              <strong className="font-medium text-foreground">고객 미니 포털</strong>,{" "}
+              <strong className="font-medium text-foreground">향상된 AI·메시징</strong>(문의 분석·견적·수금·발송 문구
+              등) 게이트가 열리도록 설계해 두었습니다.
               (코드: <code className="rounded bg-background px-1 text-xs">plan-features</code> ·{" "}
               <code className="rounded bg-background px-1 text-xs">billing/catalog</code>)
             </p>
@@ -92,7 +94,10 @@ export default async function BillingPage({
               <span className="font-medium text-foreground">AI 보조</span>
               <span className="text-muted-foreground"> — </span>
               <code className="text-xs">ai_assist</code>
-              <span className="text-muted-foreground"> → Pro만 (호출 할당량·비용 통제)</span>
+              <span className="text-muted-foreground">
+                {" "}
+                → Pro만 (문의·견적·청구·고객·발송 문구 — 호출 할당량·비용 통제)
+              </span>
             </li>
             <li>
               <span className="font-medium text-foreground">견적·고객 상한 확장</span>

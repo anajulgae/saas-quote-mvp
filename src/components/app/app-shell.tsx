@@ -29,22 +29,22 @@ const HEADER_CONTEXT: { match: string; title: string; description: string }[] = 
   {
     match: "/inquiries",
     title: "문의",
-    description: "웹폼·포털 접수 → 단계·캘린더 → AI 정리 → 견적 연결",
+    description: "웹폼·포털 접수 → 단계·캘린더 → AI 운영 분석·정리 → 견적 연결",
   },
   {
     match: "/quotes",
     title: "견적",
-    description: "AI 초안·문서·공개 링크·메일 발송·청구까지",
+    description: "AI 풀 초안·문서·공개 링크·메일 발송·청구까지",
   },
   {
     match: "/invoices",
     title: "청구",
-    description: "공개 청구·입금·리마인드·추심·캘린더",
+    description: "공개 청구·입금·AI 추천·리마인드·추심·캘린더",
   },
   {
     match: "/customers",
     title: "고객",
-    description: "거래처·미니 포털·문의·견적·청구 맥락",
+    description: "거래처·미니 포털·문의·견적·청구·AI 인사이트 맥락",
   },
   {
     match: "/settings",

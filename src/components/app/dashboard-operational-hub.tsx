@@ -46,7 +46,8 @@ export function DashboardOperationalHub({
             운영 허브
           </h2>
           <p className="mt-0.5 max-w-2xl text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
-            메뉴는 고객·문의·견적·청구 네 가지로 단순하게 두고, 유입·발송·알림·AI는 여기서 한눈에 이어집니다.
+            메뉴는 고객·문의·견적·청구 네 가지로 단순하게 두고, 유입·발송·알림·AI(문의 분석·풀 견적·수금 문구)는
+            여기서 한눈에 이어집니다.
           </p>
         </div>
         <Link
@@ -155,12 +156,12 @@ export function DashboardOperationalHub({
               <CardTitle className="text-sm font-semibold">발송·AI</CardTitle>
             </div>
             <CardDescription className="text-[11px] leading-snug">
-              견적 초안·문의 정리·리마인드 문구를 AI로 줄이고, 공개 링크·PDF·메일로 발송합니다.
+              문의 운영 분석·풀 견적 초안·청구 추심·발송 문구를 AI로 줄이고, 공개 링크·PDF·메일로 발송합니다.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-1.5 pt-0">
             <Link href="/quotes" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8 text-xs")}>
-              견적·AI 초안
+              견적·AI
             </Link>
             <Link href="/settings" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8 text-xs")}>
               템플릿·문구

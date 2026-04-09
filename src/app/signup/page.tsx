@@ -11,11 +11,12 @@ import { isDemoLoginEnabled } from "@/lib/demo-flags"
 export const metadata: Metadata = {
   title: "무료 회원가입",
   description:
-    "Bill-IO에 가입하고 문의·견적·청구·수금을 한 흐름으로 시작하세요. 메일 인증 후 바로 로그인할 수 있습니다.",
+    "Bill-IO에 가입하고 문의·견적·청구·수금을 한 흐름으로 시작하세요. Pro에서 AI 운영 분석·풀 견적·수금 문구까지 이어집니다. 메일 인증 후 바로 로그인할 수 있습니다.",
   alternates: { canonical: "/signup" },
   openGraph: {
     title: "Bill-IO 무료 회원가입",
-    description: "소규모 사업자용 운영 플랫폼. 몇 분 만에 계정을 만들고 바로 시작합니다.",
+    description:
+      "소규모 사업자용 운영 플랫폼. 몇 분 만에 계정을 만들고, Pro에서 AI 운영·견적·수금 보조까지 이어집니다.",
     type: "website",
   },
   robots: { index: true, follow: true },

@@ -14,7 +14,7 @@ const STORAGE_KEY = "billio-onboarding-checklist-dismissed"
 const steps = [
   { title: "고객 등록", body: "거래처를 두고 문의·견적·청구를 같은 맥락에" },
   { title: "문의·유입", body: "내부 등록 또는 공개 문의 폼·포털(Pro) 접수" },
-  { title: "견적 발송", body: "AI 초안·공개 링크·PDF·메일로 전달" },
+  { title: "견적 발송", body: "AI 풀 초안·공개 링크·PDF·메일로 전달" },
   { title: "청구·수금", body: "공개 청구·리마인드·추심 메모까지 한곳에서" },
 ] as const
 
@@ -62,7 +62,8 @@ export function BetaOnboardingBanner() {
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-foreground">처음이신가요? 순서만 기억하세요</p>
               <p className="text-xs text-muted-foreground sm:text-[13px]">
-                네 단계만 기억하면 됩니다. 공개 문의·알림·랜딩·AI는 설정·대시보드 허브에서 같이 켜 두세요.
+                네 단계만 기억하면 됩니다. 공개 문의·알림·랜딩·향상된 AI(문의·견적·수금)는 설정·대시보드 허브에서 같이
+                켜 두세요.
               </p>
             </div>
           </div>

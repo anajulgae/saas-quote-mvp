@@ -49,7 +49,7 @@ export default async function SettingsLandingPage() {
         <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-4 text-sm text-foreground">
           <p className="font-medium">Pro 플랜에서 이용할 수 있습니다</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            소개 랜딩·AI 초안·공개 링크는 Pro 전용입니다. 업그레이드 후 다시 방문해 주세요.
+            소개 랜딩·AI 소개 초안·공개 링크는 Pro 전용입니다. 업그레이드 후 다시 방문해 주세요.
             {planColumnMissing ? " (`users.plan` 컬럼이 없으면 무료로 처리됩니다. 마이그레이션을 확인해 주세요.)" : ""}
           </p>
           <Link href="/billing?plan=pro" className={cn(buttonVariants({ size: "sm" }), "mt-3 inline-flex h-9")}>

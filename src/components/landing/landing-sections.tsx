@@ -27,7 +27,7 @@ export function LandingHero() {
   const trust = [
     "공개 링크만 걸면 문의가 쌓입니다 — 카톡·인스타 바이오에 그대로",
     "견적·청구·미수 상태를 한 화면에서 — 다시 헤매지 않음",
-    "AI 초안으로 ‘빈 견적서’에서 시작하는 시간을 줄입니다",
+    "AI가 문의·견적·청구까지 ‘빈 화면’ 시간을 줄입니다 — 운영 분석·풀 초안·수금 문구",
   ]
 
   return (
@@ -56,8 +56,9 @@ export function LandingHero() {
               </h1>
               <p className="max-w-xl text-pretty text-[15px] font-semibold leading-relaxed text-muted-foreground sm:text-[1.05rem] sm:leading-relaxed">
                 접수 → 정리 → 견적 발송 → 청구 → 수금·리마인드까지{" "}
-                <span className="font-bold text-foreground">끊기지 않게</span> 이어집니다. 카톡·전화에 흩어진 걸
-                다시 찾느라 쓰던 시간을 줄입니다.
+                <span className="font-bold text-foreground">끊기지 않게</span> 이어집니다. AI는 문의 유형·다음 액션,
+                견적 항목·옵션·납기, 입금 상황별 안내 문구까지 보조합니다. 카톡·전화에 흩어진 걸 다시 찾느라 쓰던
+                시간을 줄입니다.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
@@ -220,13 +221,13 @@ export function LandingDifferentiators() {
     },
     {
       badge: "속도 · 수금",
-      title: "AI가 초안을 올리고, 입금이 늦어도 다음 연락을 놓치지 않습니다",
+      title: "AI가 운영 흐름을 보조하고, 입금이 늦어도 다음 연락을 놓치지 않습니다",
       lead:
-        "매번 빈 견적서부터 쓰는 시간, 연체 건을 머리로만 기억하는 리스크를 줄입니다. 알림·캘린더·리마인드·추심 메모가 같은 고객 맥락에 붙습니다.",
+        "문의는 유형·긴급도·추천 질문·다음 액션까지, 견적은 기본·옵션·납기·고객 안내까지 초안을 올립니다. 청구는 입금 단계별 추천·메시지 초안, 고객 상세에서는 이력 인사이트까지(플랜·설정에 따름). 알림·캘린더·리마인드가 같은 맥락에 붙습니다.",
       bullets: [
-        "AI 문의 정리·견적 초안 — 반복 타이핑 감소",
-        "청구 후 입금 단계·리마인드·추심 보조",
-        "브라우저·앱 알림으로 새 접수·후속을 놓치지 않음",
+        "문의 AI — 요약·구조화에 더해 운영 분석·견적 전환 힌트",
+        "견적 AI — 항목·옵션·결제·납기까지 발송 직전 수준 초안",
+        "청구·수금 AI — 다음 액션·리마인드·추심 본문 초안",
       ],
       icon: Zap,
     },
@@ -241,7 +242,7 @@ export function LandingDifferentiators() {
     {
       icon: Wallet,
       title: "청구 URL · 미수 추적",
-      benefit: "공개 청구와 입금 상태를 한곳에서 보고 다음 액션을 남깁니다.",
+      benefit: "공개 청구·입금 단계를 한곳에서 보고, AI 추천·문구로 다음 연락을 정리합니다.",
     },
     {
       icon: CalendarDays,
@@ -330,7 +331,7 @@ export function LandingDifferentiators() {
           <Link href="/signup" className="font-bold text-primary underline-offset-4 hover:underline">
             무료로 시작
           </Link>
-          해 흐름을 먼저 밟아 보세요. Pro에서 랜딩·포털·AI 게이트가 열립니다.
+          해 흐름을 먼저 밟아 보세요. Pro에서 랜딩·포털·향상된 AI 운영 보조가 열립니다.
         </p>
       </div>
     </section>
@@ -371,7 +372,7 @@ export function LandingIndustries() {
       title: "청소 · 케어",
       inquiry: "평수·정기/입주 견적 문의가 반복됨",
       docs: "템플릿 견적 → 계약 후 선금 청구 → 정기 청구",
-      flow: "같은 패턴은 초안으로 빠르게, 미수 건만 리마인드로",
+      flow: "반복 패턴은 AI 견적·문의 초안으로 빠르게, 미수는 추천 문구·리마인드로",
     },
     {
       icon: CalendarDays,
@@ -456,13 +457,13 @@ export function LandingHowItWorks() {
       step: "2",
       title: "Bill-IO가 문의로 정리",
       scene: "카드에 단계·메모·첨부",
-      desc: "흩어진 내용을 한 카드로 묶고, AI로 요약·구조화를 돕습니다.",
+      desc: "흩어진 내용을 한 카드로 묶고, AI로 요약·구조화와 운영 분석(유형·긴급도·다음 액션)을 지원합니다.",
     },
     {
       step: "3",
       title: "견적 생성",
-      scene: "템플릿 + AI 초안",
-      desc: "항목·금액을 빠르게 올린 뒤 검토만 하면 됩니다.",
+      scene: "템플릿 + 풀 초안",
+      desc: "기본·옵션 항목, 납기·결제·고객 안내까지 초안을 올린 뒤 검토·발송합니다.",
     },
     {
       step: "4",
@@ -480,7 +481,7 @@ export function LandingHowItWorks() {
       step: "6",
       title: "수금 · 리마인드",
       scene: "연체 시 다음 연락일",
-      desc: "미수·추심 메모·알림으로 ‘언제 다시 말할지’를 놓치지 않습니다.",
+      desc: "입금 단계별 AI 추천·문구 초안과 미수·추심 메모·알림으로 다음 연락을 놓치지 않습니다.",
     },
   ]
 
@@ -558,7 +559,7 @@ export function LandingPricing() {
     "Starter 전부 포함",
     "공개 문의·유입 정식 활용 + 업체 소개 랜딩(`/biz`)",
     "고객 미니 포털 — 로그인 없이 견적·청구 확인",
-    "AI 문의 정리·견적·문구 초안(플랜 정책에 따름)",
+    "문의·견적·청구·고객 AI 보조 — 운영 분석·풀 견적 초안·수금 문구·인사이트(플랜 정책에 따름)",
     "문서 발송·PDF·직인 흐름 정착",
     "리마인드·추심 보조·고급 알림",
   ]
@@ -732,7 +733,7 @@ const faqItems = [
   },
   {
     q: "AI는 어떤 일을 도와주나요?",
-    a: "문의 내용 정리·견적 항목 초안·발송·리마인드 문구 초안 등 ‘빈 화면에서 시작’하는 시간을 줄이는 보조입니다. 플랜·설정에 따라 범위가 달라질 수 있습니다.",
+    a: "문의는 요약·구조화에 더해 유형·긴급도·추천 질문·다음 액션·견적 전환 힌트까지, 견적은 항목·옵션·납기·결제·고객 안내까지 초안을, 청구는 입금 상황별 추천·리마인드·추심 본문을, 고객 상세는 이력 기반 인사이트를 제안합니다. 발송 메일·카톡용 제목·본문 초안도 이어집니다. 모두 검토 후 사용하는 운영 보조이며, 플랜·설정에 따라 범위가 달라질 수 있습니다.",
   },
   {
     q: "견적서와 청구서는 고객에게 어떻게 내나요?",
@@ -744,7 +745,7 @@ const faqItems = [
   },
   {
     q: "무료 플랜으로 어디까지 가능한가요?",
-    a: "고객·문의·견적·청구 코어, 대시보드, 공개 문의 폼, 기본 알림으로 ‘한 흐름’을 충분히 검증할 수 있습니다. 랜딩·고객 포털·일부 AI·고급 알림 등은 Pro에서 열립니다.",
+    a: "고객·문의·견적·청구 코어, 대시보드, 공개 문의 폼, 기본 알림으로 ‘한 흐름’을 충분히 검증할 수 있습니다. 업체 랜딩·고객 포털·향상된 AI 운영 보조·고급 알림 등은 Pro에서 열립니다.",
   },
 ]
 
@@ -815,7 +816,7 @@ export function LandingFinalCta() {
         </h2>
         <p className="mx-auto mt-4 max-w-lg text-sm font-semibold leading-relaxed text-primary-foreground/92 sm:text-base">
           <strong className="font-extrabold text-primary-foreground">무료로 시작</strong>하고 첫 문의를 받아 보세요.
-          문의부터 청구·입금 추적까지 같은 화면에 쌓이는지, 몇 분 안에 확인할 수 있습니다.
+          문의·견적·청구가 한 줄로 이어지고, Pro에서는 AI 운영 분석·풀 초안·수금 문구까지 같은 맥락에서 켜집니다.
         </p>
         <div className="mt-10 flex flex-col items-stretch gap-3 sm:items-center">
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-center sm:gap-4">
@@ -881,7 +882,8 @@ export function LandingFooter() {
             Bill-IO
           </div>
           <p className="mt-3 text-sm font-medium leading-relaxed text-muted-foreground">
-            문의 접수부터 견적·청구·수금·리마인드까지. 소규모 사업자가 놓치기 쉬운 흐름을 한 제품에서 잇습니다.
+            문의 접수부터 견적·청구·수금·리마인드까지. AI 운영 보조로 빈 화면 시간을 줄이고, 소규모 사업자가 놓치기
+            쉬운 흐름을 한 제품에서 잇습니다.
           </p>
         </div>
         <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label="푸터 링크">
