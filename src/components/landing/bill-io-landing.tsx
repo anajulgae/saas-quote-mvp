@@ -1,11 +1,13 @@
 import { LandingHeader } from "./landing-header"
+import { LandingJsonLd } from "./landing-json-ld"
 import {
+  LandingDifferentiators,
   LandingFaq,
-  LandingFeatures,
   LandingFinalCta,
   LandingFooter,
   LandingHero,
   LandingHowItWorks,
+  LandingIndustries,
   LandingPricing,
   LandingProblemSolution,
 } from "./landing-sections"
@@ -23,13 +25,15 @@ export function BillIoLanding() {
       <main id="main-content" tabIndex={-1}>
         <LandingHero />
         <LandingProblemSolution />
-        <LandingFeatures />
+        <LandingDifferentiators />
         <LandingHowItWorks />
+        <LandingIndustries />
         <LandingPricing />
         <LandingFaq />
         <LandingFinalCta />
       </main>
       <LandingFooter />
+      <LandingJsonLd />
     </div>
   )
 }

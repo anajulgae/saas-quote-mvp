@@ -14,6 +14,7 @@ import {
 import { SettingsNotificationPreferencesCard } from "@/components/app/settings-notification-preferences-card"
 import { SettingsMessagingChannelCard } from "@/components/app/settings-messaging-channel-card"
 import { SettingsPublicInquiryCard } from "@/components/app/settings-public-inquiry-card"
+import { SettingsTaxInvoiceAspCard } from "@/components/app/settings-tax-invoice-aspcard"
 import { Button } from "@/components/ui/button"
 import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -479,6 +480,8 @@ export function SettingsForm({
         </CardContent>
       </Card>
 
+      <SettingsTaxInvoiceAspCard currentPlan={currentPlan} initialSettings={settings} />
+
       <Card className="border-border/70" id="mini-landing">
         <CardHeader className="space-y-1 pb-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -517,7 +520,9 @@ export function SettingsForm({
         <SettingsPublicInquiryCard siteOrigin={siteOrigin} initialSettings={settings} />
       </section>
 
-      <SettingsNotificationPreferencesCard initial={initialNotificationPreferences} />
+      <section id="notifications-prefs">
+        <SettingsNotificationPreferencesCard initial={initialNotificationPreferences} />
+      </section>
 
       <div className="relative py-1">
         <div className="absolute inset-0 flex items-center" aria-hidden>

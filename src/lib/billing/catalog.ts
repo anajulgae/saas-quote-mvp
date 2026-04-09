@@ -29,6 +29,7 @@ export const FEATURE_GATES_AFTER_PAYMENT: Record<PlanFeature, BillingPlan[]> = {
   mini_landing: ["pro"],
   kakao_byoa_messaging: ["pro"],
   customer_mini_portal: ["pro"],
+  e_tax_invoice_asp: ["pro"],
 }
 
 export const BILLING_UPGRADE_CONTACT_COPY =

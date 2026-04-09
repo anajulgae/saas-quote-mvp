@@ -6,7 +6,9 @@ import { cn } from "@/lib/utils"
 
 export const metadata: Metadata = {
   title: "개인정보처리방침",
-  description: "Bill-IO 개인정보처리방침",
+  description:
+    "Bill-IO 서비스의 개인정보 수집·이용·보관 및 이용자 권리 안내. 관련 법령을 준수합니다.",
+  alternates: { canonical: "/privacy" },
   robots: { index: true, follow: true },
 }
 

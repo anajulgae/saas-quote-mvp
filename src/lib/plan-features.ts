@@ -28,6 +28,8 @@ export type PlanFeature =
   | "kakao_byoa_messaging"
   /** 고객 미니 포털(`/c/[token]`) — Pro 전용 */
   | "customer_mini_portal"
+  /** 전자세금계산서 발행 관리 + 사용자 ASP(발급대행) 연동 — Pro 전용 */
+  | "e_tax_invoice_asp"
 
 /**
  * 현재(무료 공개·PG 전): 핵심·AI·메일 흐름을 막지 않습니다.
@@ -41,6 +43,7 @@ export const FEATURE_GATES: Record<PlanFeature, BillingPlan[]> = {
   mini_landing: ["pro"],
   kakao_byoa_messaging: ["pro"],
   customer_mini_portal: ["pro"],
+  e_tax_invoice_asp: ["pro"],
 }
 
 export function planAllowsFeature(plan: BillingPlan, feature: PlanFeature): boolean {

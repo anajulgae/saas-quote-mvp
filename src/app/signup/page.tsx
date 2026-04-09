@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { CheckCircle2, CircleDot } from "lucide-react"
 
@@ -6,6 +7,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { authSplitOuterClass } from "@/lib/auth-ui"
 import { isSupabaseConfigured } from "@/lib/auth"
 import { isDemoLoginEnabled } from "@/lib/demo-flags"
+
+export const metadata: Metadata = {
+  title: "무료 회원가입",
+  description:
+    "Bill-IO에 가입하고 문의·견적·청구·수금을 한 흐름으로 시작하세요. 메일 인증 후 바로 로그인할 수 있습니다.",
+  alternates: { canonical: "/signup" },
+  openGraph: {
+    title: "Bill-IO 무료 회원가입",
+    description: "소규모 사업자용 운영 플랫폼. 몇 분 만에 계정을 만들고 바로 시작합니다.",
+    type: "website",
+  },
+  robots: { index: true, follow: true },
+}
 
 const bullets = [
   "가입 후 받은 메일에서 인증만 마치면 바로 로그인할 수 있습니다.",

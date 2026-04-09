@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
@@ -30,11 +30,13 @@ export function PublicInquiryRequestPage({
   token,
   initialPayload,
   landingSource,
+  submissionSource,
   landingSlug,
 }: {
   token: string
   initialPayload: unknown
   landingSource?: string
+  submissionSource?: string
   landingSlug?: string
 }) {
   const router = useRouter()
@@ -53,6 +55,7 @@ export function PublicInquiryRequestPage({
   const [consent, setConsent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
+  const botTrapRef = useRef<HTMLInputElement>(null)
 
   if (!payload.valid) {
     const biz = "businessName" in payload ? payload.businessName : undefined
@@ -81,10 +84,6 @@ export function PublicInquiryRequestPage({
     }
     setBusy(true)
     try {
-      const companyWebsite = (
-        e.target as HTMLFormElement & { elements: HTMLFormControlsCollection & { company_website?: HTMLInputElement } }
-      ).company_website?.value
-
       const res = await fetch("/api/public/inquiry", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -101,14 +100,18 @@ export function PublicInquiryRequestPage({
           budgetMax: budgetMax.trim() ? Number(budgetMax.replace(/[^\d]/g, "")) : undefined,
           extraNotes,
           consent: true as const,
-          companyWebsite: companyWebsite ?? "",
-          source: landingSource ?? "",
+          botTrap: botTrapRef.current?.checked === true,
+          source: submissionSource ?? landingSource ?? "",
           sourceSlug: landingSlug ?? "",
         }),
       })
-      const data = (await res.json()) as { ok?: boolean; error?: string }
+      const data = (await res.json()) as { ok?: boolean; error?: string; skipped?: boolean }
       if (!res.ok || !data.ok) {
         setError(data.error ?? "접수에 실패했습니다.")
+        return
+      }
+      if (data.skipped) {
+        setError("접수가 반영되지 않았습니다. 브라우저 자동완성·확장 프로그램을 잠시 끄고 다시 시도해 주세요.")
         return
       }
       router.push(`/request/${encodeURIComponent(token)}/thanks`)
@@ -136,6 +139,11 @@ export function PublicInquiryRequestPage({
             업체 소개 페이지에서 연결된 문의입니다. 접수 후 담당자가 확인하여 연락드립니다.
           </p>
         ) : null}
+        {submissionSource === "customer_portal" ? (
+          <p className="mb-3 rounded-lg border border-neutral-200 bg-white/80 px-3 py-2 text-xs text-neutral-600">
+            거래 안내(고객 포털)에서 연결된 문의입니다. 접수 후 담당자가 확인하여 연락드립니다.
+          </p>
+        ) : null}
         {p.intro?.trim() ? (
           <p className="mb-6 whitespace-pre-wrap text-sm leading-relaxed text-neutral-700">{p.intro.trim()}</p>
         ) : (
@@ -148,9 +156,21 @@ export function PublicInquiryRequestPage({
           onSubmit={onSubmit}
           className="relative space-y-5 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm sm:p-7"
         >
-          <div className="pointer-events-none absolute -left-[9999px] h-px w-px overflow-hidden opacity-0" aria-hidden>
-            <label htmlFor="company_website">웹사이트</label>
-            <input id="company_website" name="company_website" type="text" tabIndex={-1} autoComplete="off" />
+          {/*
+            텍스트 허니팟(name=website 등)은 자동완성이 채워 조용히 스킵되는 사례가 있어 제거함.
+            숨김 체크박스만 사용(사람은 보지 못해 체크하지 않음).
+          */}
+          <div
+            className="pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden opacity-0"
+            aria-hidden
+          >
+            <input
+              ref={botTrapRef}
+              type="checkbox"
+              tabIndex={-1}
+              autoComplete="off"
+              defaultChecked={false}
+            />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

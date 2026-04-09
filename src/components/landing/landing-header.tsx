@@ -10,8 +10,11 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { cn } from "@/lib/utils"
 
 const nav = [
-  { href: "#features", label: "기능" },
-  { href: "#pricing", label: "요금제" },
+  { href: "#pain", label: "공감" },
+  { href: "#why", label: "차별점" },
+  { href: "#how", label: "흐름" },
+  { href: "#industries", label: "업종" },
+  { href: "#pricing", label: "요금" },
   { href: "#faq", label: "FAQ" },
 ] as const
 
@@ -23,10 +26,10 @@ export function LandingHeader() {
       className="sticky top-0 z-50 border-b border-border/60 bg-background/90 backdrop-blur-md supports-backdrop-filter:bg-background/80"
       role="banner"
     >
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:h-16 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:h-16 sm:px-6 lg:px-8">
         <Link
           href="/"
-          className="flex items-center gap-2 font-semibold tracking-tight text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
+          className="flex shrink-0 items-center gap-2 font-bold tracking-tight text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
         >
           <span
             className="flex size-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground shadow-sm"
@@ -37,15 +40,12 @@ export function LandingHeader() {
           <span className="text-base sm:text-lg">Bill-IO</span>
         </Link>
 
-        <nav
-          className="hidden items-center gap-8 md:flex"
-          aria-label="주요 메뉴"
-        >
+        <nav className="hidden items-center gap-5 lg:flex" aria-label="주요 메뉴">
           {nav.map((item) => (
             <a
               key={item.href}
               href={item.href}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+              className="text-[13px] font-semibold text-muted-foreground transition-colors hover:text-primary"
             >
               {item.label}
             </a>
@@ -57,7 +57,7 @@ export function LandingHeader() {
             href="/login"
             className={cn(
               buttonVariants({ variant: "ghost", size: "default" }),
-              "hidden h-9 px-3 text-sm font-medium sm:inline-flex"
+              "hidden h-9 px-3 text-sm font-semibold sm:inline-flex"
             )}
           >
             로그인
@@ -66,10 +66,10 @@ export function LandingHeader() {
             href="/signup"
             className={cn(
               buttonVariants({ variant: "default", size: "default" }),
-              "hidden h-9 bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm ring-1 ring-primary/30 hover:bg-primary/90 sm:inline-flex"
+              "hidden h-9 bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm ring-1 ring-primary/30 hover:bg-primary/90 sm:inline-flex"
             )}
           >
-            무료로 시작하기
+            무료로 시작
           </Link>
 
           <Sheet open={open} onOpenChange={setOpen}>
@@ -78,7 +78,7 @@ export function LandingHeader() {
                 <Button
                   variant="outline"
                   size="icon-sm"
-                  className="md:hidden"
+                  className="lg:hidden"
                   aria-label="메뉴 열기"
                 />
               }
@@ -94,7 +94,7 @@ export function LandingHeader() {
                   <a
                     key={item.href}
                     href={item.href}
-                    className="rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                    className="rounded-lg px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-muted"
                     onClick={() => setOpen(false)}
                   >
                     {item.label}
@@ -103,17 +103,17 @@ export function LandingHeader() {
                 <hr className="my-2 border-border/70" />
                 <Link
                   href="/login"
-                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                  className="rounded-lg px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-muted"
                   onClick={() => setOpen(false)}
                 >
                   로그인
                 </Link>
                 <Link
                   href="/signup"
-                  className="mx-3 mt-1 flex h-10 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground shadow-sm ring-1 ring-primary/30 hover:bg-primary/90"
+                  className="mx-3 mt-1 flex h-11 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground shadow-sm ring-1 ring-primary/30 hover:bg-primary/90"
                   onClick={() => setOpen(false)}
                 >
-                  무료로 시작하기
+                  무료로 시작
                 </Link>
               </nav>
             </SheetContent>

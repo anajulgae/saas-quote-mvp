@@ -60,6 +60,9 @@ export interface Database {
           public_inquiry_consent_intro: string | null
           public_inquiry_consent_retention: string | null
           public_inquiry_completion_message: string | null
+          tax_invoice_provider: string | null
+          tax_invoice_provider_config: Json
+          tax_invoice_supplier_address: string | null
           created_at: string
           updated_at: string
         }
@@ -83,6 +86,9 @@ export interface Database {
           public_inquiry_consent_intro?: string | null
           public_inquiry_consent_retention?: string | null
           public_inquiry_completion_message?: string | null
+          tax_invoice_provider?: string | null
+          tax_invoice_provider_config?: Json
+          tax_invoice_supplier_address?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -106,6 +112,9 @@ export interface Database {
           public_inquiry_consent_intro?: string | null
           public_inquiry_consent_retention?: string | null
           public_inquiry_completion_message?: string | null
+          tax_invoice_provider?: string | null
+          tax_invoice_provider_config?: Json
+          tax_invoice_supplier_address?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -206,6 +215,12 @@ export interface Database {
           notes: string | null
           tags: string[]
           portal_token: string | null
+          tax_business_name: string | null
+          tax_business_registration_number: string | null
+          tax_ceo_name: string | null
+          tax_invoice_email: string | null
+          tax_contact_name: string | null
+          tax_address: string | null
           created_at: string
           updated_at: string
         }
@@ -219,6 +234,12 @@ export interface Database {
           notes?: string | null
           tags?: string[]
           portal_token?: string | null
+          tax_business_name?: string | null
+          tax_business_registration_number?: string | null
+          tax_ceo_name?: string | null
+          tax_invoice_email?: string | null
+          tax_contact_name?: string | null
+          tax_address?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -232,6 +253,12 @@ export interface Database {
           notes?: string | null
           tags?: string[]
           portal_token?: string | null
+          tax_business_name?: string | null
+          tax_business_registration_number?: string | null
+          tax_ceo_name?: string | null
+          tax_invoice_email?: string | null
+          tax_contact_name?: string | null
+          tax_address?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -503,6 +530,10 @@ export interface Database {
           promised_payment_date: string | null
           next_collection_followup_at: string | null
           collection_tone: string
+          e_tax_invoice_target: boolean
+          e_tax_invoice_need_issue: boolean
+          e_tax_invoice_supply_date: string | null
+          e_tax_invoice_issue_due_date: string | null
           created_at: string
           updated_at: string
         }
@@ -525,6 +556,10 @@ export interface Database {
           promised_payment_date?: string | null
           next_collection_followup_at?: string | null
           collection_tone?: string
+          e_tax_invoice_target?: boolean
+          e_tax_invoice_need_issue?: boolean
+          e_tax_invoice_supply_date?: string | null
+          e_tax_invoice_issue_due_date?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -547,6 +582,10 @@ export interface Database {
           promised_payment_date?: string | null
           next_collection_followup_at?: string | null
           collection_tone?: string
+          e_tax_invoice_target?: boolean
+          e_tax_invoice_need_issue?: boolean
+          e_tax_invoice_supply_date?: string | null
+          e_tax_invoice_issue_due_date?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -705,6 +744,105 @@ export interface Database {
           description?: string
           metadata?: Json
           created_at?: string
+        }
+        Relationships: []
+      }
+      tax_invoices: {
+        Row: {
+          id: string
+          user_id: string
+          customer_id: string
+          invoice_id: string
+          quote_id: string | null
+          issue_type: string
+          status: string
+          tax_type: string
+          supply_date: string | null
+          issue_due_date: string | null
+          issue_date: string | null
+          approval_number: string | null
+          total_supply_amount: number
+          vat_amount: number
+          total_amount: number
+          recipient_business_name: string | null
+          recipient_business_number: string | null
+          recipient_email: string | null
+          recipient_ceo_name: string | null
+          sender_business_name: string | null
+          sender_business_number: string | null
+          sender_email: string | null
+          sender_ceo_name: string | null
+          sender_address: string | null
+          asp_provider: string | null
+          asp_document_id: string | null
+          asp_response_log: Json
+          failure_reason: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          customer_id: string
+          invoice_id: string
+          quote_id?: string | null
+          issue_type?: string
+          status?: string
+          tax_type?: string
+          supply_date?: string | null
+          issue_due_date?: string | null
+          issue_date?: string | null
+          approval_number?: string | null
+          total_supply_amount?: number
+          vat_amount?: number
+          total_amount?: number
+          recipient_business_name?: string | null
+          recipient_business_number?: string | null
+          recipient_email?: string | null
+          recipient_ceo_name?: string | null
+          sender_business_name?: string | null
+          sender_business_number?: string | null
+          sender_email?: string | null
+          sender_ceo_name?: string | null
+          sender_address?: string | null
+          asp_provider?: string | null
+          asp_document_id?: string | null
+          asp_response_log?: Json
+          failure_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          customer_id?: string
+          invoice_id?: string
+          quote_id?: string | null
+          issue_type?: string
+          status?: string
+          tax_type?: string
+          supply_date?: string | null
+          issue_due_date?: string | null
+          issue_date?: string | null
+          approval_number?: string | null
+          total_supply_amount?: number
+          vat_amount?: number
+          total_amount?: number
+          recipient_business_name?: string | null
+          recipient_business_number?: string | null
+          recipient_email?: string | null
+          recipient_ceo_name?: string | null
+          sender_business_name?: string | null
+          sender_business_number?: string | null
+          sender_email?: string | null
+          sender_ceo_name?: string | null
+          sender_address?: string | null
+          asp_provider?: string | null
+          asp_document_id?: string | null
+          asp_response_log?: Json
+          failure_reason?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }

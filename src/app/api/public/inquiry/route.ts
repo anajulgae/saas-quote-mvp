@@ -3,7 +3,10 @@ import { z } from "zod"
 
 import { planAllowsFeature } from "@/lib/plan-features"
 import { reportServerError } from "@/lib/observability"
-import { sendNewInquiryEmailToOperator } from "@/lib/server/operator-email"
+import {
+  sendNewInquiryEmailToOperator,
+  type NewInquiryEmailSource,
+} from "@/lib/server/operator-email"
 import { OpenAiError, runInquiryStructureForPublicForm } from "@/lib/server/inquiry-structure-core"
 import { createAnonSupabaseClient } from "@/lib/supabase/anon"
 import type { BillingPlan } from "@/types/domain"
@@ -21,7 +24,10 @@ const bodySchema = z.object({
   budgetMax: z.number().int().nonnegative().max(1_000_000_000).optional(),
   extraNotes: z.string().trim().max(8000).optional().default(""),
   consent: z.literal(true),
+  /** @deprecated 텍스트 허니팟은 자동완성 오탐이 많아 사용하지 않음. 빈 문자열만 기대 */
   companyWebsite: z.string().optional().default(""),
+  /** 숨김 체크박스가 체크되면 봇으로 간주(사람은 보이지 않아 체크하지 않음) */
+  botTrap: z.boolean().optional().default(false),
   source: z.string().trim().max(64).optional().default(""),
   sourceSlug: z.string().trim().max(80).optional().default(""),
 })
@@ -89,6 +95,11 @@ export async function POST(request: Request) {
   }
 
   const body = parsed.data
+
+  if (body.botTrap) {
+    return NextResponse.json({ ok: true, skipped: true })
+  }
+
   const ip = clientIp(request)
   const rateKey = `${ip}:${body.token}`
   if (!allowRate(rateKey, 24, 3_600_000)) {
@@ -119,7 +130,7 @@ export async function POST(request: Request) {
     p_budget_max: body.budgetMax ?? null,
     p_extra_notes: body.extraNotes.trim() || "",
     p_consent: body.consent,
-    p_honeypot: body.companyWebsite ?? "",
+    p_honeypot: "",
     p_source: src,
     p_source_slug: srcSlug,
   }
@@ -145,7 +156,7 @@ export async function POST(request: Request) {
       p_budget_max: body.budgetMax ?? null,
       p_extra_notes: body.extraNotes.trim() || "",
       p_consent: body.consent,
-      p_honeypot: body.companyWebsite ?? "",
+      p_honeypot: "",
     }))
   }
 
@@ -165,7 +176,7 @@ export async function POST(request: Request) {
   }
 
   if (result?.skipped) {
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true, skipped: true })
   }
 
   if (!result?.ok) {
@@ -178,14 +189,19 @@ export async function POST(request: Request) {
   const inquiryId = result.inquiryId
   const ownerUserId = result.ownerUserId
   const ownerPlan = (result.ownerPlan as BillingPlan | undefined) ?? "free"
+  const submissionSourceLower = (src ?? "").toLowerCase()
 
   if (ownerUserId && inquiryId) {
+    const emailSource: NewInquiryEmailSource =
+      submissionSourceLower === "customer_portal" ? "customer_portal" : "public_form"
     void sendNewInquiryEmailToOperator({
       ownerUserId,
+      inquiryId,
       inquiryTitle: body.title,
       submitterName: body.name,
       submitterPhone: body.phone,
       submitterEmail: body.email,
+      source: emailSource,
     })
   }
 
@@ -198,7 +214,9 @@ export async function POST(request: Request) {
           structured.structuredSummary,
           structured.followUpNote ? `■ 팔로업\n${structured.followUpNote}` : "",
           "",
-          "— 공개 문의 폼(웹)에서 제출됨 · AI로 요약·정리됨",
+          submissionSourceLower === "customer_portal"
+            ? "— 고객 포털에서 제출됨 · AI로 요약·정리됨"
+            : "— 공개 문의 폼(웹)에서 제출됨 · AI로 요약·정리됨",
         ]
           .filter(Boolean)
           .join("\n\n")

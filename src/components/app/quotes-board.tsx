@@ -38,6 +38,7 @@ import {
   updateQuoteAction,
   updateQuoteStatusAction,
 } from "@/app/actions"
+import { CoreCapabilityStrip } from "@/components/app/core-capability-strip"
 import { EmptyState } from "@/components/app/empty-state"
 import { PageHeader } from "@/components/app/page-header"
 import { QuoteDraftAssistantForm } from "@/components/app/quote-draft-assistant"
@@ -1786,8 +1787,8 @@ function QuotesBoardPanel({
             <p className="text-sm font-medium text-foreground">아직 생성된 견적이 없습니다</p>
             <p className="text-[11px] leading-snug text-muted-foreground">
               {hasInquiries
-                ? "견적을 저장하면 이 영역에 카드가 쌓이고, 상태·금액을 한눈에 관리할 수 있어요."
-                : "문의를 등록하면 위에서 바로 견적 작성을 시작할 수 있어요."}
+                ? "저장한 견적에 공개 링크·PDF·직인·메일 발송을 붙이고, AI 초안으로 첫 작성 시간을 줄일 수 있어요. 승인 후 청구 화면에서 이어갑니다."
+                : "먼저 문의를 등록하면 위 카드에서 견적을 시작할 수 있어요. 설정의 템플릿·AI는 반복 작성을 줄여 줍니다."}
             </p>
           </div>
         </div>
@@ -2433,7 +2434,17 @@ export function QuotesWorkspace({
     <div className="space-y-4 md:space-y-5">
       <PageHeader
         title="견적 관리"
-        description="견적서를 만들고, 상태·금액·유효기한을 추적하며 고객에게 발송까지 연결합니다."
+        description="AI로 초안을 올린 뒤 항목을 다듬고, 공개 링크·PDF·직인·이메일로 발송합니다. 승인 후 같은 흐름에서 청구를 만듭니다."
+        capabilityStrip={
+          <CoreCapabilityStrip
+            items={[
+              { label: "AI 견적 초안", href: undefined, emphasis: true },
+              { label: "공개 링크·PDF·직인" },
+              { label: "이메일·템플릿", href: "/settings" },
+              { label: "청구 연결", href: "/invoices" },
+            ]}
+          />
+        }
         action={
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
             {hasInquiries ? (

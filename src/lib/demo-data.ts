@@ -43,6 +43,14 @@ export const demoBusinessSettings: BusinessSettings = {
   publicInquiryConsentIntro: "",
   publicInquiryConsentRetention: "",
   publicInquiryCompletionMessage: "",
+  taxInvoiceProvider: "mock",
+  taxInvoiceProviderConfig: {
+    enabled: true,
+    apiKey: "demo-mock-key",
+    apiSecret: "",
+    companyCode: "",
+  },
+  taxInvoiceSupplierAddress: "서울특별시 (데모)",
 }
 
 export const demoBusinessPublicPage: BusinessPublicPage = {

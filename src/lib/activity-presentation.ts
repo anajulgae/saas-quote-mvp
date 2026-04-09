@@ -46,6 +46,16 @@ const headlineByAction: Record<string, string> = {
   "invoice.messaging_kakao_sent": "알림톡 발송",
   "quote.messaging_kakao_sent": "알림톡 발송",
   "customer.portal_token_issued": "고객 포털 링크",
+  "public_inquiry.submitted": "공개·포털 문의 접수",
+  "notification.operator_email_sent": "운영자 알림 메일",
+  "tax_invoice.management_updated": "세금계산서 발행 설정",
+  "tax_invoice.prepared": "세금계산서 발행 준비",
+  "tax_invoice.issued": "세금계산서 발행 완료",
+  "tax_invoice.issue_failed": "세금계산서 발행 실패",
+  "tax_invoice.status_refreshed": "세금계산서 상태 동기화",
+  "tax_invoice.asp_settings_saved": "전자세금계산서 연동 저장",
+  "tax_invoice.asp_connection_tested": "전자세금계산서 연결 테스트",
+  "customer.tax_invoice_profile_updated": "세금계산서용 고객 정보",
 }
 
 export function resolveActivityKind(action: string): ActivityKind {
@@ -64,7 +74,13 @@ export function resolveActivityKind(action: string): ActivityKind {
   if (action.startsWith("invoice.")) {
     return "invoice"
   }
+  if (action.startsWith("tax_invoice.")) {
+    return "invoice"
+  }
   if (action.startsWith("inquiry_form.")) {
+    return "inquiry"
+  }
+  if (action === "public_inquiry.submitted" || action === "notification.operator_email_sent") {
     return "inquiry"
   }
   return "other"

@@ -135,6 +135,9 @@ Supabase **SQL Editor**에서 저장소의 파일을 **아래 순서 그대로**
 8. `supabase/migrations/0007_public_inquiry_form.sql` — 고객 공개 문의 폼·`submit_public_inquiry` RPC 등.  
 9. `supabase/migrations/0008_notifications.sql` — **`notifications`** / **`notification_preferences`** 테이블, 문의 INSERT 시 운영자 알림 트리거, `supabase_realtime` 에 `notifications` 추가, `submit_public_inquiry` 응답에 `ownerUserId` 포함.
 10. `supabase/migrations/0009_business_public_landing.sql` — Pro 전용 **`business_public_pages`** 테이블, 공개 RPC **`get_public_business_landing`**, **`submit_public_inquiry`** 에 유입 출처 인자(`p_source`, `p_source_slug`) 추가.
+11. `supabase/migrations/0010_messaging_portal_collections.sql` — (해당 릴리스에 포함된 경우) 메시징·포털 관련 스키마.
+12. `supabase/migrations/0011_inquiry_notification_types_portal_channel.sql` — 문의 **`channel`** 이 **고객 포털**이면 알림 타입 **`new_inquiry_customer_portal`**, 공개 웹폼이면 **`new_inquiry_public_form`**(그 외 **`new_inquiry`**), 제목·본문·`link_path` 정리. `submit_public_inquiry` 에 `p_source = 'customer_portal'` 시 채널·본문 푸터 분기.
+13. `supabase/migrations/0012_tax_invoice_asp.sql` — 청구 연동 **`tax_invoices`**, **`invoices`/`customers`/`business_settings`** 세금·ASP 필드, RLS.
 
 **설정 화면 저장**: `business_settings` 테이블은 **1번**에서 생성됩니다. **6번(0005)** 을 아직 안 돌렸더라도 앱은 기본 필드 upsert로 저장을 시도하고, 사업자등록번호만 DB에 컬럼이 있을 때 반영됩니다. 그래도 **견적서·공유 링크에 사업자번호**를 쓰려면 **0005** 를 반드시 적용하세요. **고객용 공개 청구 URL·열람 집계**는 **7번(0006)** 이 필요합니다.
 
@@ -142,14 +145,15 @@ Supabase **SQL Editor**에서 저장소의 파일을 **아래 순서 그대로**
 
 ### 4.1 알림(실시간·브라우저·이메일)
 
-- **DB**: `0008` 적용 후 `notifications` 행이 생기고, Supabase **Database → Replication** 에서 `notifications` 가 Realtime에 포함돼 있어야 합니다(마이그레이션에서 `supabase_realtime` 추가 시도; 실패 시 대시보드에서 수동 활성화).  
-- **앱 내**: 로그인 사용자는 헤더 종 아이콘으로 목록·읽음 처리·`모두 읽음`을 사용합니다. **데모 세션**에서는 알림이 비활성입니다.  
-- **브라우저 알림**: 사용자가 종 메뉴에서 「브라우저 알림」으로 권한을 허용해야 합니다. 설정의 **알림 설정**에서 이벤트별로 앱/브라우저/이메일 on/off 가능합니다.  
-- **이메일(새 문의)**: 공개 문의 폼 제출 직후 `POST /api/public/inquiry` 가 Resend로 운영자에게 메일을 보낼 수 있습니다.  
+- **DB**: `0008` 적용 후 `notifications` 행이 생기고, Supabase **Database → Replication** 에서 `notifications` 가 Realtime에 포함돼 있어야 합니다(마이그레이션에서 `supabase_realtime` 추가 시도; 실패 시 대시보드에서 수동 활성화). **`0011`** 을 적용하면 공개 폼·고객 포털 경로에 따라 알림 **타입**과 문의 **채널**이 구분됩니다.  
+- **흐름(요약)**: 고객이 공개 문의 폼 또는 거래 안내 링크의 문의 페이지에서 제출 → `submit_public_inquiry` 로 문의 행 생성 → DB 트리거가 업주 `user_id`에 **`notifications`** 행 삽입(동일 문의에 대해 **`dedupe_key`** 로 중복 방지) → 운영자 브라우저는 Realtime으로 목록·배지 갱신, 설정이 켜져 있으면 토스트·브라우저 알림·Resend 이메일.  
+- **앱 내**: 로그인 사용자는 헤더 종 아이콘으로 목록·읽음 처리·`모두 읽음`을 사용합니다. **데모 세션**에서는 알림이 비활성입니다. **설정 → 알림 설정**에서 새 문의의 앱 내 / 브라우저 / 이메일을 각각 끄거나 켤 수 있습니다.  
+- **브라우저 알림**: 사용자가 종 메뉴에서 「브라우저 허용」 등으로 **권한을 허용**해야 표시됩니다. 권한 거부·미지원 브라우저에서는 앱 내 알림만 의존합니다.  
+- **이메일(새 문의)**: 공개 문의·포털 제출 직후 `POST /api/public/inquiry` 가 Resend로 운영자에게 메일을 보낼 수 있습니다. **문의 생성은 메일 실패와 무관하게 성공**하며, 실패는 서버 로그로 남깁니다.  
   - **`RESEND_API_KEY`** 필수.  
   - **`RESEND_FROM`** 또는 **`RESEND_FROM_EMAIL`** — 발신 주소.  
   - **`SUPABASE_SERVICE_ROLE_KEY`** (서버 전용): `notification_preferences`·`business_settings` 를 조회해 수신 여부·주소를 결정합니다. **없으면 이메일 단계는 건너뜁니다**(앱·Realtime 알림은 동작).  
-- **문의로 이동**: 알림 `link_path` 는 `/inquiries?focus=<문의 id>` 형태이며, 열면 해당 행 하이라이트·모바일 카드 강조·시트가 열립니다.
+- **문의로 이동**: 알림 `link_path` 는 `/inquiries?focus=<문의 id>` 형태이며, 열면 해당 행 하이라이트·모바일 카드 강조·시트가 열립니다. 알림 센터 목록에서 **고객 포털** / **공개 폼** 배지로 유입 경로를 구분할 수 있습니다.
 
 ---
 
@@ -195,7 +199,7 @@ Preview 환경에만 `ENABLE_DEMO_LOGIN=true` 를 추가하고, Production에는
 
 사람이 **배포 버튼 누르기 전**에 아래를 순서대로 확인합니다.
 
-- [ ] Supabase에 **§4 순서대로** 마이그레이션 **전부** 적용 (**`0007_public_inquiry_form`**, **`0008_notifications`** 포함)  
+- [ ] Supabase에 **§4 순서대로** 마이그레이션 **전부** 적용 (**`0007_public_inquiry_form`**, **`0008_notifications`**, **`0011_inquiry_notification_types_portal_channel`** 등 포함)  
 - [ ] Supabase **Realtime** 에 **`public.notifications`** 가 포함됐는지 확인 ([§4.1](#41-알림실시간브라우저이메일))  
 - [ ] Vercel에 **`NEXT_PUBLIC_SUPABASE_URL`**, **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** 입력 (사용하는 **Production·Preview** 모두)  
 - [ ] (권장) **`NEXT_PUBLIC_SITE_URL`** — 프로덕션 고정 도메인  

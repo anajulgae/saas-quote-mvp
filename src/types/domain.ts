@@ -42,6 +42,13 @@ export interface Customer {
   updatedAt?: string
   /** Pro 고객 미니 포털 링크용(내부 전용) */
   portalToken?: string
+  /** 세금계산서 공급받는자 정보(선택) */
+  taxBusinessName?: string
+  taxBusinessRegistrationNumber?: string
+  taxCeoName?: string
+  taxInvoiceEmail?: string
+  taxContactName?: string
+  taxAddress?: string
 }
 
 export interface Inquiry {
@@ -121,6 +128,48 @@ export interface Invoice {
   nextCollectionFollowupAt?: string
   /** 리마인드 톤 힌트 */
   collectionTone?: CollectionToneHint
+  /** 세금계산서(전자) 발행 대상 청구 */
+  eTaxInvoiceTarget?: boolean
+  /** 사용자가 표시한 발행 필요(자동 발행 아님) */
+  eTaxInvoiceNeedIssue?: boolean
+  eTaxInvoiceSupplyDate?: string
+  eTaxInvoiceIssueDueDate?: string
+}
+
+export type TaxInvoiceStatus = "draft" | "ready" | "issuing" | "issued" | "failed" | "canceled"
+
+/** 청구에 연결된 전자세금계산서 발행 관리 행 — 실제 발행은 ASP */
+export interface TaxInvoice {
+  id: string
+  userId: string
+  customerId: string
+  invoiceId: string
+  quoteId?: string
+  issueType: string
+  status: TaxInvoiceStatus
+  taxType: string
+  supplyDate?: string
+  issueDueDate?: string
+  issueDate?: string
+  approvalNumber?: string
+  totalSupplyAmount: number
+  vatAmount: number
+  totalAmount: number
+  recipientBusinessName?: string
+  recipientBusinessNumber?: string
+  recipientEmail?: string
+  recipientCeoName?: string
+  senderBusinessName?: string
+  senderBusinessNumber?: string
+  senderEmail?: string
+  senderCeoName?: string
+  senderAddress?: string
+  aspProvider?: string
+  aspDocumentId?: string
+  aspResponseLog: Record<string, unknown>
+  failureReason?: string
+  createdAt: string
+  updatedAt: string
 }
 
 /** 설정 화면 — BYOA 카카오 알림톡(또는 동일 페이로드를 받는 프록시) */
@@ -241,6 +290,22 @@ export interface BusinessSettings {
   publicInquiryConsentIntro: string
   publicInquiryConsentRetention: string
   publicInquiryCompletionMessage: string
+  /** ASP 식별자 — 사용자 연동 계정으로 발행 */
+  taxInvoiceProvider?: string
+  /** 없으면 빈 객체로 매핑 */
+  taxInvoiceProviderConfig?: TaxInvoiceAspProviderConfig
+  taxInvoiceSupplierAddress?: string
+}
+
+/** 설정에 저장되는 ASP 연동(JSON). 운영 시 서버 암호화·Vault 권장 */
+export type TaxInvoiceAspProviderConfig = {
+  enabled?: boolean
+  apiKey?: string
+  apiSecret?: string
+  companyCode?: string
+  lastTestAt?: string
+  lastTestOk?: boolean
+  lastTestError?: string
 }
 
 /** 운영자 알림 센터 + Realtime */
@@ -358,6 +423,17 @@ export interface QuoteWithItems extends Quote {
 export interface InvoiceWithReminders extends Invoice {
   customer?: Customer
   reminders: Reminder[]
+  /** 해당 청구의 세금계산서 발행 행(없으면 미작성) */
+  taxInvoice?: TaxInvoice | null
+}
+
+/** 고객 상세 — 세금계산서 보조 요약 */
+export interface CustomerTaxInvoiceSummary {
+  lastStatus?: TaxInvoiceStatus
+  lastIssueDate?: string
+  lastApprovalNumber?: string
+  linkedInvoiceId?: string
+  linkedInvoiceNumber?: string
 }
 
 export interface DashboardMetrics {

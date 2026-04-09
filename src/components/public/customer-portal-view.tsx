@@ -159,7 +159,7 @@ export function CustomerPortalView({
 }) {
   const inquiryHref =
     payload.publicInquiryFormOn && payload.publicInquiryFormToken?.trim()
-      ? `${siteOrigin}/request/${encodeURIComponent(payload.publicInquiryFormToken.trim())}`
+      ? `${siteOrigin}/request/${encodeURIComponent(payload.publicInquiryFormToken.trim())}?source=customer_portal`
       : null
 
   const business = payload.businessName.trim() || "거래처"

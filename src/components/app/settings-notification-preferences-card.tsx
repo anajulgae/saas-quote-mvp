@@ -78,6 +78,10 @@ export function SettingsNotificationPreferencesCard({
       <CardContent className="space-y-4">
         <section className="space-y-2">
           <p className="text-xs font-semibold text-muted-foreground">새 문의</p>
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            공개 문의 폼·고객 포털(거래 안내 링크)에서 접수된 문의에 공통 적용됩니다. 브라우저 알림은 탭을 보고 있지 않을 때도
+            도움이 됩니다(권한 허용 필요).
+          </p>
           <ToggleRow label="앱 내 알림 센터" checked={p.inquiryInApp} onChange={(v) => setP((x) => ({ ...x, inquiryInApp: v }))} />
           <ToggleRow
             label="브라우저 알림"

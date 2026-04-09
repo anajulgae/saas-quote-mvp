@@ -24,7 +24,7 @@ export default async function SettingsPage() {
     <div className="space-y-5 md:space-y-6">
       <PageHeader
         title="설정"
-        description="사업자·결제 안내는 위 카드에서, 견적·리마인드 초안은 아래 템플릿에서 각각 저장합니다."
+        description="사업자·직인·문서, 공개 문의·업체 랜딩, 알림·메시징, AI·템플릿, 플랜까지 — 메뉴 밖에 숨겨 둔 운영 기능의 통합 진입점입니다."
       />
       <SettingsForm
         key={businessFormKey}

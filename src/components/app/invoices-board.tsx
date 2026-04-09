@@ -34,6 +34,8 @@ import {
   updateInvoiceCollectionFieldsAction,
   updateInvoicePaymentStatusAction,
 } from "@/app/actions"
+import { InvoiceTaxInvoiceSection } from "@/components/app/invoice-tax-invoice-section"
+import { CoreCapabilityStrip } from "@/components/app/core-capability-strip"
 import { EmptyState } from "@/components/app/empty-state"
 import { InvoiceSendDialog } from "@/components/app/invoice-send-dialog"
 import { PageHeader } from "@/components/app/page-header"
@@ -87,11 +89,18 @@ import {
 import { mapInvoicesToCalendarEvents } from "@/lib/calendar-events"
 import { resolveActivityHeadline } from "@/lib/activity-presentation"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
+import { opsStatusChipVariants } from "@/lib/ops-status-meta"
+import {
+  getTaxInvoiceListChipMeta,
+  matchesTaxInvoiceListFilter,
+  type TaxInvoiceListFilter,
+} from "@/lib/tax-invoice/list-ui"
 import { cn } from "@/lib/utils"
 import { planAllowsFeature } from "@/lib/plan-features"
 import type {
   ActivityLog,
   BillingPlan,
+  BusinessSettings,
   Customer,
   CollectionToneHint,
   InvoiceFormInput,
@@ -395,12 +404,14 @@ function InvoicesBoardPanel({
   bankAccount,
   paymentTerms,
   currentPlan,
+  businessSettingsSnapshot,
   isCreateOpen,
   onOpenChange,
   createOpenSourceRef,
   deepLinkQuoteId,
   deepLinkOpenCreate,
   initialCustomerFilterId,
+  initialTaxInvoiceFilter,
 }: {
   invoices: InvoiceWithReminders[]
   customers: Customer[]
@@ -411,6 +422,7 @@ function InvoicesBoardPanel({
   bankAccount: string
   paymentTerms: string
   currentPlan: BillingPlan
+  businessSettingsSnapshot: BusinessSettings | null
   isCreateOpen: boolean
   onOpenChange: (open: boolean) => void
   createOpenSourceRef: MutableRefObject<"header" | null>
@@ -418,12 +430,15 @@ function InvoicesBoardPanel({
   deepLinkOpenCreate?: boolean
   /** `/invoices?customer=uuid` — 고객별 청구만 표시 (`quote`+`new` 딥링크와 동시 사용 안 함) */
   initialCustomerFilterId?: string
+  /** `/invoices?tax=need` 등 대시보드에서 전달 */
+  initialTaxInvoiceFilter?: TaxInvoiceListFilter
 }) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const deepLinkConsumedRef = useRef(false)
   const customerFilterDeepLinkRef = useRef(false)
+  const taxFilterDeepLinkConsumedRef = useRef(false)
   const focusHandledRef = useRef<string | null>(null)
   const flowRef = useRef<HTMLDivElement>(null)
 
@@ -438,6 +453,12 @@ function InvoicesBoardPanel({
       customerFilterDeepLinkRef.current = false
     }
   }, [initialCustomerFilterId])
+
+  useEffect(() => {
+    if (!initialTaxInvoiceFilter || initialTaxInvoiceFilter === "all") {
+      taxFilterDeepLinkConsumedRef.current = false
+    }
+  }, [initialTaxInvoiceFilter])
 
   useEffect(() => {
     const quoteDeep = Boolean(deepLinkQuoteId?.trim() && deepLinkOpenCreate)
@@ -464,6 +485,22 @@ function InvoicesBoardPanel({
     deepLinkQuoteId,
     deepLinkOpenCreate,
   ])
+
+  useEffect(() => {
+    const quoteDeep = Boolean(deepLinkQuoteId?.trim() && deepLinkOpenCreate)
+    if (quoteDeep || customerFilterDeepLinkRef.current) {
+      return
+    }
+    const tf = initialTaxInvoiceFilter
+    if (!tf || tf === "all" || taxFilterDeepLinkConsumedRef.current) {
+      return
+    }
+    taxFilterDeepLinkConsumedRef.current = true
+    setTaxInvoiceFilter(tf)
+    toast.message("세금계산서 조건으로 청구 목록을 좁혔습니다.", { duration: 2600 })
+    router.replace("/invoices")
+  }, [initialTaxInvoiceFilter, router, deepLinkQuoteId, deepLinkOpenCreate])
+
   const [isPending, startTransition] = useTransition()
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null)
   const [reminderInvoiceId, setReminderInvoiceId] = useState<string | null>(null)
@@ -477,6 +514,7 @@ function InvoicesBoardPanel({
   const [invoiceTypeFilter, setInvoiceTypeFilter] = useState<InvoiceType | "all">("all")
   const [invoiceSort, setInvoiceSort] = useState<InvoiceListSort>("requested_desc")
   const [customerFilterId, setCustomerFilterId] = useState<string | "all">("all")
+  const [taxInvoiceFilter, setTaxInvoiceFilter] = useState<TaxInvoiceListFilter>("all")
   const [extraInvoiceFiltersOpen, setExtraInvoiceFiltersOpen] = useState(false)
   const [viewMode, setViewMode] = useState<InvoiceViewMode>("list")
   const [drawerInvoiceId, setDrawerInvoiceId] = useState<string | null>(null)
@@ -721,6 +759,9 @@ function InvoicesBoardPanel({
       if (paymentStatusFilter !== "all" && inv.paymentStatus !== paymentStatusFilter) {
         return false
       }
+      if (!matchesTaxInvoiceListFilter(inv, taxInvoiceFilter)) {
+        return false
+      }
       return true
     })
   }, [
@@ -730,6 +771,7 @@ function InvoicesBoardPanel({
     customerFilterId,
     paymentQuickFilter,
     paymentStatusFilter,
+    taxInvoiceFilter,
   ])
 
   const displayInvoices = useMemo(() => {
@@ -1744,6 +1786,29 @@ function InvoicesBoardPanel({
               </SelectContent>
             </Select>
           </div>
+          <div className="flex w-full flex-col gap-2 border-t border-border/40 pt-2 sm:flex-row sm:flex-wrap sm:items-center sm:border-t-0 sm:pt-0">
+            <span className="text-xs font-medium text-muted-foreground">세금계산서</span>
+            <div className="flex flex-wrap gap-1.5">
+              {(
+                [
+                  { key: "all" as const, label: "전체", accent: "default" as const },
+                  { key: "need" as const, label: "발행 필요", accent: "default" as const },
+                  { key: "failed" as const, label: "실패", accent: "danger" as const },
+                  { key: "issued" as const, label: "발행 완료", accent: "default" as const },
+                  { key: "target" as const, label: "대상만", accent: "default" as const },
+                ] as const
+              ).map(({ key, label, accent }) => (
+                <OpsToolbarFilterButton
+                  key={key}
+                  selected={taxInvoiceFilter === key}
+                  accent={accent}
+                  onClick={() => setTaxInvoiceFilter(key)}
+                >
+                  {label}
+                </OpsToolbarFilterButton>
+              ))}
+            </div>
+          </div>
           <OpsCollapsibleFilters
             open={extraInvoiceFiltersOpen}
             onOpenChange={setExtraInvoiceFiltersOpen}
@@ -1955,8 +2020,8 @@ function InvoicesBoardPanel({
                 <p className="text-sm font-semibold text-foreground">아직 생성된 청구가 없습니다</p>
                 <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
                   {hasQuotes
-                    ? "저장한 청구가 여기에 쌓이며, 입금·리마인드를 같은 화면에서 다룹니다."
-                    : "견적을 만든 뒤 위 카드에서 선금·잔금 청구를 바로 시작할 수 있습니다."}
+                    ? "공개 청구 링크·리마인드·이메일·추심 메모를 같은 화면에서 이어 가고, 알림 설정으로 운영자 알림까지 맞출 수 있습니다."
+                    : "견적을 만든 뒤 위 카드에서 선금·잔금 청구를 시작하세요. 설정의 리마인드·알림을 미리 켜 두면 수금 단계가 수월합니다."}
                 </p>
               </div>
               <div className="flex flex-wrap gap-1.5 sm:mt-2 sm:justify-end">
@@ -2005,6 +2070,9 @@ function InvoicesBoardPanel({
                   <th className={cn(opsTableHeadCellClass, "max-w-[200px]")}>연결 견적</th>
                   <th className={opsTableHeadCellClass}>유형</th>
                   <th className={cn(opsTableHeadCellClass, "w-[148px] min-w-[140px]")}>결제 상태</th>
+                  <th className={cn(opsTableHeadCellClass, "w-[104px] min-w-[96px] max-w-[120px]")}>
+                    세금계산서
+                  </th>
                   <th className={cn(opsTableHeadCellClass, "text-right")}>금액</th>
                   <th className={opsTableHeadCellClass}>청구일</th>
                   <th className={opsTableHeadCellClass}>입금 기한</th>
@@ -2081,6 +2149,22 @@ function InvoicesBoardPanel({
                             </SelectContent>
                           </Select>
                         </div>
+                      </td>
+                      <td className={cn(opsTableCellClass, "max-w-[120px]")}>
+                        {(() => {
+                          const tm = getTaxInvoiceListChipMeta(invoice)
+                          return (
+                            <span
+                              className={opsStatusChipVariants({
+                                tone: tm.tone,
+                                size: "sm",
+                                emphasis: tm.emphasis,
+                              })}
+                            >
+                              {tm.label}
+                            </span>
+                          )
+                        })()}
                       </td>
                       <td className={cn(opsTableCellClass, "text-right text-sm font-semibold tabular-nums")}>
                         {formatCurrency(invoice.amount)}
@@ -2179,7 +2263,23 @@ function InvoicesBoardPanel({
                         {invoiceTypeTableLabel(invoice.invoiceType)} · {formatCurrency(invoice.amount)}
                       </p>
                     </div>
-                    <PaymentStatusBadge status={invoice.paymentStatus} />
+                    <div className="flex flex-col items-end gap-1">
+                      <PaymentStatusBadge status={invoice.paymentStatus} />
+                      {(() => {
+                        const tm = getTaxInvoiceListChipMeta(invoice)
+                        return (
+                          <span
+                            className={opsStatusChipVariants({
+                              tone: tm.tone,
+                              size: "sm",
+                              emphasis: tm.emphasis,
+                            })}
+                          >
+                            {tm.label}
+                          </span>
+                        )
+                      })()}
+                    </div>
                   </div>
                 </button>
               )
@@ -2276,6 +2376,12 @@ function InvoicesBoardPanel({
                 {collectionNextStepHint(drawerInvoice)}
               </p>
             </div>
+            <InvoiceTaxInvoiceSection
+              invoice={drawerInvoice}
+              businessSettings={businessSettingsSnapshot}
+              quotes={quotes}
+              currentPlan={currentPlan}
+            />
             <div className="space-y-2 rounded-lg border border-border/50 bg-muted/10 p-3">
               <p className="text-xs font-semibold text-muted-foreground">추심·연락 일정</p>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -2650,9 +2756,11 @@ export function InvoicesWorkspace({
   bankAccount,
   paymentTerms,
   currentPlan,
+  businessSettingsSnapshot,
   deepLinkQuoteId,
   deepLinkOpenCreate,
   initialCustomerFilterId,
+  initialTaxInvoiceFilter,
 }: {
   invoices: InvoiceWithReminders[]
   customers: Customer[]
@@ -2663,9 +2771,11 @@ export function InvoicesWorkspace({
   bankAccount: string
   paymentTerms: string
   currentPlan: BillingPlan
+  businessSettingsSnapshot: BusinessSettings | null
   deepLinkQuoteId?: string
   deepLinkOpenCreate?: boolean
   initialCustomerFilterId?: string
+  initialTaxInvoiceFilter?: TaxInvoiceListFilter
 }) {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const createOpenSourceRef = useRef<"header" | null>(null)
@@ -2675,7 +2785,17 @@ export function InvoicesWorkspace({
     <div className="space-y-3 md:space-y-4">
       <PageHeader
         title="청구 및 수금"
-        description="선금·잔금 청구, 입금 상태, 미수 리마인드 이력을 한곳에서 다룹니다."
+        description="공개 청구 링크로 요청하고, 입금 단계·리마인드·(필요 시) 추심 메모까지 한 화면에서 이어갑니다. 캘린더로 기한을 같이 봅니다."
+        capabilityStrip={
+          <CoreCapabilityStrip
+            items={[
+              { label: "리마인드·메일·알림", href: "/settings#notifications-prefs", emphasis: true },
+              { label: "공개 청구 URL" },
+              { label: "입금 약속·추심" },
+              { label: "캘린더 뷰", href: undefined },
+            ]}
+          />
+        }
         action={
           <div className="w-full sm:w-auto sm:min-w-[18rem]">
             {hasQuotes ? (
@@ -2757,12 +2877,14 @@ export function InvoicesWorkspace({
         bankAccount={bankAccount}
         paymentTerms={paymentTerms}
         currentPlan={currentPlan}
+        businessSettingsSnapshot={businessSettingsSnapshot}
         isCreateOpen={isCreateOpen}
         onOpenChange={setIsCreateOpen}
         createOpenSourceRef={createOpenSourceRef}
         deepLinkQuoteId={deepLinkQuoteId}
         deepLinkOpenCreate={deepLinkOpenCreate}
         initialCustomerFilterId={initialCustomerFilterId}
+        initialTaxInvoiceFilter={initialTaxInvoiceFilter}
       />
     </div>
   )

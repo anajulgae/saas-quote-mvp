@@ -19,6 +19,7 @@ import {
 import { toast } from "sonner"
 
 import { createInquiryAction, updateInquiryAction } from "@/app/actions"
+import { CoreCapabilityStrip } from "@/components/app/core-capability-strip"
 import { EmptyState } from "@/components/app/empty-state"
 import { InquiryFormShareDialog } from "@/components/app/inquiry-form-share-dialog"
 import { PageHeader } from "@/components/app/page-header"
@@ -672,7 +673,17 @@ export function InquiriesBoard({
     <div className="space-y-4 md:space-y-5">
       <PageHeader
         title="문의 관리"
-        description="문의에 채널·일정·예상 금액을 남기고, 후속조치와 견적까지 한 흐름으로 관리합니다."
+        description="웹폼·고객 포털에서 들어온 요청을 단계·팔로업·캘린더로 묶고, 상세에서 AI로 정리한 뒤 견적으로 넘깁니다."
+        capabilityStrip={
+          <CoreCapabilityStrip
+            items={[
+              { label: "공개 문의 폼", href: "/settings#public-inquiry", emphasis: true },
+              { label: "고객 포털 링크", href: "/customers" },
+              { label: "AI 문의 정리", href: undefined },
+              { label: "캘린더·알림", href: "/settings#notifications-prefs" },
+            ]}
+          />
+        }
         action={
           <div className="flex w-full flex-col gap-1.5 sm:w-auto sm:items-end">
             <div className="flex w-full flex-wrap justify-end gap-2">
@@ -907,6 +918,25 @@ export function InquiriesBoard({
                   </li>
                 ))}
               </ol>
+            </div>
+
+            <div className="rounded-lg border border-dashed border-primary/20 bg-primary/[0.03] px-3 py-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">확장 기능</p>
+              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                설정에서 공개 문의 URL을 켜 두면 고객이 직접 접수하고, 알림·이메일로 운영자에게 전달됩니다. Pro에서는 고객
+                포털로 견적·청구 요약도 넘길 수 있습니다.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <Link
+                  href="/settings#public-inquiry"
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8 text-xs")}
+                >
+                  공개 문의 설정
+                </Link>
+                <Link href="/customers" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-8 text-xs")}>
+                  고객 포털(목록)
+                </Link>
+              </div>
             </div>
           </CardContent>
         </Card>

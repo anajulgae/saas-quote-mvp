@@ -52,8 +52,17 @@ function mapNotifRow(row: NotifRow): BillNotification {
   }
 }
 
+/** DB 트리거·앱 삽입 공통: 문의 계열 알림은 inquiry_* 설정을 공유 */
+function isInquiryFamilyType(type: string) {
+  return (
+    type === "new_inquiry" ||
+    type === "new_inquiry_public_form" ||
+    type === "new_inquiry_customer_portal"
+  )
+}
+
 function allowsInAppChannel(type: string, prefs: NotificationPreferences): boolean {
-  if (type === "new_inquiry") {
+  if (isInquiryFamilyType(type)) {
     return prefs.inquiryInApp
   }
   if (type.startsWith("quote_")) {
@@ -69,7 +78,7 @@ function allowsInAppChannel(type: string, prefs: NotificationPreferences): boole
 }
 
 function allowsBrowserChannel(type: string, prefs: NotificationPreferences): boolean {
-  if (type === "new_inquiry") {
+  if (isInquiryFamilyType(type)) {
     return prefs.inquiryBrowser
   }
   if (type.startsWith("quote_")) {
@@ -82,6 +91,29 @@ function allowsBrowserChannel(type: string, prefs: NotificationPreferences): boo
     return prefs.reminderEventsBrowser
   }
   return false
+}
+
+function inquiryListPriority(type: string) {
+  if (type === "new_inquiry_customer_portal") {
+    return 0
+  }
+  if (type === "new_inquiry_public_form") {
+    return 1
+  }
+  if (type === "new_inquiry") {
+    return 2
+  }
+  return 10
+}
+
+function notificationRouteBadge(type: string) {
+  if (type === "new_inquiry_customer_portal") {
+    return "고객 포털"
+  }
+  if (type === "new_inquiry_public_form") {
+    return "공개 폼"
+  }
+  return null
 }
 
 function formatNotifTime(iso: string) {
@@ -296,10 +328,15 @@ export function NotificationCenter({ userId, isDemoSession }: { userId: string |
   }
 
   const visibleItems = useMemo(() => {
-    if (!prefs) {
-      return items
-    }
-    return items.filter((n) => allowsInAppChannel(n.type, prefs))
+    const base = !prefs ? items : items.filter((n) => allowsInAppChannel(n.type, prefs))
+    return [...base].sort((a, b) => {
+      const tb = new Date(b.createdAt).getTime()
+      const ta = new Date(a.createdAt).getTime()
+      if (tb !== ta) {
+        return tb - ta
+      }
+      return inquiryListPriority(a.type) - inquiryListPriority(b.type)
+    })
   }, [items, prefs])
 
   if (!userId || isDemoSession) {
@@ -328,10 +365,13 @@ export function NotificationCenter({ userId, isDemoSession }: { userId: string |
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[min(100vw-2rem,22rem)] p-0">
         <div className="flex items-center justify-between border-b border-border/60 px-3 py-2">
-          <p className="text-sm font-semibold">알림</p>
-          <div className="flex items-center gap-1">
+          <div>
+            <p className="text-sm font-semibold">알림</p>
+            <p className="text-[10px] text-muted-foreground">새 문의·이후 견적·청구 이벤트</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
             <Button type="button" variant="ghost" size="sm" className="h-8 text-xs" onClick={() => void requestBrowserPermission()}>
-              브라우저 알림
+              브라우저 허용
             </Button>
             <Button
               type="button"
@@ -352,25 +392,42 @@ export function NotificationCenter({ userId, isDemoSession }: { userId: string |
               <Loader2 className="size-6 animate-spin" />
             </div>
           ) : visibleItems.length === 0 ? (
-            <p className="px-3 py-6 text-center text-sm text-muted-foreground">새 알림이 없습니다.</p>
+            <p className="px-3 py-6 text-center text-sm leading-relaxed text-muted-foreground">
+              아직 표시할 알림이 없습니다.
+              <br />
+              <span className="text-xs">공개 문의·고객 포털 접수 시 여기와 토스트로 바로 알려 드립니다.</span>
+            </p>
           ) : (
             <ul className="divide-y divide-border/50">
-              {visibleItems.map((n) => (
-                <li key={n.id}>
-                  <button
-                    type="button"
-                    className={cn(
-                      "flex w-full flex-col gap-0.5 px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted/50",
-                      !n.isRead && "bg-primary/[0.04]"
-                    )}
-                    onClick={() => void onOpenNotif(n)}
-                  >
-                    <span className="font-medium leading-snug">{n.title}</span>
-                    <span className="line-clamp-2 text-xs text-muted-foreground">{n.body}</span>
-                    <span className="text-[10px] text-muted-foreground">{formatNotifTime(n.createdAt)}</span>
-                  </button>
-                </li>
-              ))}
+              {visibleItems.map((n) => {
+                const badge = notificationRouteBadge(n.type)
+                return (
+                  <li key={n.id}>
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex w-full flex-col gap-1 px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted/50",
+                        !n.isRead && "bg-primary/[0.04]"
+                      )}
+                      onClick={() => void onOpenNotif(n)}
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium leading-snug">{n.title}</span>
+                        {badge ? (
+                          <span className="rounded border border-border/60 bg-muted/40 px-1.5 py-px text-[10px] font-medium text-muted-foreground">
+                            {badge}
+                          </span>
+                        ) : null}
+                        {!n.isRead ? (
+                          <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-label="읽지 않음" />
+                        ) : null}
+                      </div>
+                      <span className="line-clamp-2 text-xs text-muted-foreground">{n.body}</span>
+                      <span className="text-[10px] text-muted-foreground">{formatNotifTime(n.createdAt)}</span>
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </div>

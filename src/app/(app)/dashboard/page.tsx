@@ -14,6 +14,7 @@ import {
 
 import { ActivityEntry } from "@/components/app/activity-entry"
 import { BetaOnboardingBanner } from "@/components/app/beta-onboarding-banner"
+import { DashboardOperationalHub } from "@/components/app/dashboard-operational-hub"
 import { MetricCard } from "@/components/app/metric-card"
 import { PageHeader } from "@/components/app/page-header"
 import { InquiryStageBadge, PaymentStatusBadge } from "@/components/app/status-badge"
@@ -30,6 +31,7 @@ import {
 } from "@/lib/calendar-events"
 import { getDashboardPageData } from "@/lib/data"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
+import { getSiteOrigin } from "@/lib/site-url"
 
 const pipelineColumns = [
   { key: "new", label: "신규 문의" },
@@ -79,7 +81,11 @@ export default async function DashboardPage() {
     pipelineSummary,
     showBetaOnboarding,
     counts,
+    hub,
+    notificationPreview,
+    taxInvoiceSignals,
   } = await getDashboardPageData()
+  const siteOrigin = getSiteOrigin()
 
   const mainAction = resolveDashboardMainAction(counts)
   const MainIcon = mainAction.icon
@@ -115,7 +121,7 @@ export default async function DashboardPage() {
               <div className="min-w-0 space-y-0.5">
                 <p className="text-sm font-medium text-foreground">빠른 시작</p>
                 <p className="text-xs text-muted-foreground sm:text-[13px]">
-                  고객 등록 후 문의부터 넣으면 지표가 채워집니다.
+                  고객 등록 후 문의를 넣고, 설정에서 공개 문의 링크를 켜 두면 유입부터 지표까지 한 번에 채워집니다.
                 </p>
               </div>
             </div>
@@ -145,7 +151,7 @@ export default async function DashboardPage() {
 
       <PageHeader
         title="대시보드"
-        description="이번 달 견적·수금과 오늘의 후속조치를 확인합니다."
+        description="이번 달 견적·수금·미수와 오늘의 팔로업을 보고, 아래 허브에서 유입·발송·알림까지 같은 제품 안에서 이어지는지 확인합니다."
         className="pb-4"
         action={
           softenHeaderCta ? (
@@ -174,6 +180,8 @@ export default async function DashboardPage() {
         }
       />
 
+      <DashboardOperationalHub hub={hub} notificationPreview={notificationPreview} siteOrigin={siteOrigin} />
+
       <section className="grid gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="이번 달 발송한 견적 수"
@@ -196,6 +204,52 @@ export default async function DashboardPage() {
           hint="오늘 팔로업 예정 문의"
         />
       </section>
+
+      {hub.plan === "pro" ? (
+        <Card className="border-border/70">
+          <CardHeader className="space-y-0.5 pb-2">
+            <CardTitle className="text-base font-semibold">전자세금계산서 요약</CardTitle>
+            <CardDescription className="text-xs">
+              청구에 연결된 발행 필요·실패 건수입니다. 발행 실행은 청구 상세에서만 진행됩니다.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            <Link
+              href="/invoices?tax=need"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "inline-flex h-8 items-center gap-1.5 text-xs"
+              )}
+            >
+              발행 필요 <strong className="tabular-nums">{taxInvoiceSignals.needAttention}</strong>건
+              <ArrowRight className="size-3 opacity-70" />
+            </Link>
+            <Link
+              href="/invoices?tax=failed"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "inline-flex h-8 items-center gap-1.5 text-xs",
+                taxInvoiceSignals.failed > 0 && "border-destructive/40 text-destructive"
+              )}
+            >
+              발행 실패 <strong className="tabular-nums">{taxInvoiceSignals.failed}</strong>건
+              <ArrowRight className="size-3 opacity-70" />
+            </Link>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-dashed border-border/70 bg-muted/10">
+          <CardContent className="flex flex-col gap-2 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-muted-foreground">
+              <span className="font-medium text-foreground">전자세금계산서 ASP 연동</span>은 Pro에서 이용할 수 있습니다.
+              청구와 연결해 발행·상태 추적까지 Bill-IO 안에서 이어갈 수 있습니다.
+            </p>
+            <Link href="/billing" className={cn(buttonVariants({ size: "sm" }), "shrink-0 self-start sm:self-auto")}>
+              플랜 안내
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       <section className="grid gap-3 sm:gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <Card className="border-border/70">

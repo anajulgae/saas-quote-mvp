@@ -52,6 +52,15 @@ import {
   updateQuoteRecord,
   updateQuoteStatusRecord,
 } from "@/lib/data"
+import {
+  issueTaxInvoiceForInvoice,
+  prepareTaxInvoiceForInvoice,
+  refreshTaxInvoiceStatus,
+  saveTaxInvoiceAspSettings,
+  testTaxInvoiceAspConnection,
+  updateCustomerTaxProfile,
+  updateInvoiceTaxFlags,
+} from "@/lib/server/tax-invoice-service"
 import { planAllowsFeature } from "@/lib/plan-features"
 import { isResendConfigured, sendHtmlEmailViaResend } from "@/lib/send-resend"
 import { OpenAiError, runLandingDraftAi } from "@/lib/server/landing-draft-core"
@@ -64,6 +73,7 @@ import type {
   QuoteFormInput,
   QuoteStatus,
   ReminderChannel,
+  TaxInvoiceAspProviderConfig,
 } from "@/types/domain"
 
 const customerCreateSchema = z.object({
@@ -1833,5 +1843,299 @@ export async function generateBusinessLandingDraftAction(raw: z.infer<typeof lan
       ok: false as const,
       error: toUserFacingActionError(e, "초안을 만들지 못했습니다."),
     }
+  }
+}
+
+async function requireTaxInvoiceSupabase(): Promise<
+  | {
+      supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>
+      userId: string
+    }
+  | { error: string }
+> {
+  const session = await getAppSession()
+  if (!session?.user?.id) {
+    return { error: "로그인이 필요합니다." }
+  }
+  if (session.mode === "demo") {
+    return { error: "데모 환경에서는 전자세금계산서 연동을 사용할 수 없습니다." }
+  }
+  if (!planAllowsFeature(session.user.plan, "e_tax_invoice_asp")) {
+    return {
+      error:
+        "전자세금계산서 ASP 연동은 Pro 플랜에서 이용할 수 있습니다. 요금 페이지에서 플랜을 확인해 주세요.",
+    }
+  }
+  const supabase = await createSupabaseServerClient()
+  if (!supabase) {
+    return { error: "Supabase 연결을 사용할 수 없습니다. 환경 변수를 확인해 주세요." }
+  }
+  return { supabase, userId: session.user.id }
+}
+
+export async function updateInvoiceTaxFlagsAction(
+  invoiceId: string,
+  input: {
+    eTaxInvoiceTarget: boolean
+    eTaxInvoiceNeedIssue: boolean
+    eTaxInvoiceSupplyDate?: string | null
+    eTaxInvoiceIssueDueDate?: string | null
+  }
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const gate = await requireTaxInvoiceSupabase()
+  if ("error" in gate) {
+    return { ok: false, error: gate.error }
+  }
+  const { supabase, userId } = gate
+  try {
+    await updateInvoiceTaxFlags(supabase, userId, invoiceId, {
+      eTaxInvoiceTarget: input.eTaxInvoiceTarget,
+      eTaxInvoiceNeedIssue: input.eTaxInvoiceNeedIssue,
+      eTaxInvoiceSupplyDate: input.eTaxInvoiceSupplyDate,
+      eTaxInvoiceIssueDueDate: input.eTaxInvoiceIssueDueDate,
+    })
+    const { data: meta } = await supabase
+      .from("invoices")
+      .select("invoice_number, customer_id")
+      .eq("id", invoiceId)
+      .eq("user_id", userId)
+      .maybeSingle()
+    const num = (meta as { invoice_number?: string } | null)?.invoice_number ?? "청구"
+    await createActivityLog({
+      action: "tax_invoice.management_updated",
+      description: `${num} · 세금계산서 대상/발행 필요 및 일정을 저장했습니다.`,
+      invoiceId,
+      customerId: (meta as { customer_id?: string } | null)?.customer_id ?? undefined,
+      metadata: {
+        target: input.eTaxInvoiceTarget,
+        needIssue: input.eTaxInvoiceNeedIssue,
+      },
+    })
+    revalidatePath("/invoices")
+    revalidatePath("/dashboard")
+    return { ok: true as const }
+  } catch (e) {
+    return { ok: false as const, error: toUserFacingActionError(e, "저장하지 못했습니다.") }
+  }
+}
+
+export async function prepareTaxInvoiceAction(
+  invoiceId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const gate = await requireTaxInvoiceSupabase()
+  if ("error" in gate) {
+    return { ok: false, error: gate.error }
+  }
+  const { supabase, userId } = gate
+  try {
+    const tax = await prepareTaxInvoiceForInvoice(supabase, userId, invoiceId)
+    const { data: meta } = await supabase
+      .from("invoices")
+      .select("invoice_number")
+      .eq("id", invoiceId)
+      .eq("user_id", userId)
+      .maybeSingle()
+    const num = (meta as { invoice_number?: string } | null)?.invoice_number ?? "청구"
+    await createActivityLog({
+      action: "tax_invoice.prepared",
+      description: `${num} · 발행 준비(공급자·공급받는자·금액)를 저장했습니다.`,
+      invoiceId,
+      customerId: tax.customerId,
+    })
+    revalidatePath("/invoices")
+    revalidatePath("/dashboard")
+    return { ok: true as const }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "발행 준비에 실패했습니다."
+    return { ok: false as const, error: msg }
+  }
+}
+
+export async function issueTaxInvoiceAction(
+  invoiceId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const gate = await requireTaxInvoiceSupabase()
+  if ("error" in gate) {
+    return { ok: false, error: gate.error }
+  }
+  const { supabase, userId } = gate
+  try {
+    const tax = await issueTaxInvoiceForInvoice(supabase, userId, invoiceId)
+    const { data: meta } = await supabase
+      .from("invoices")
+      .select("invoice_number")
+      .eq("id", invoiceId)
+      .eq("user_id", userId)
+      .maybeSingle()
+    const num = (meta as { invoice_number?: string } | null)?.invoice_number ?? "청구"
+    await createActivityLog({
+      action: "tax_invoice.issued",
+      description: `${num} · ASP 연동으로 발행했습니다. 승인번호 ${tax.approvalNumber?.trim() || "—"}`,
+      invoiceId,
+      customerId: tax.customerId,
+      metadata: {
+        approvalNumber: tax.approvalNumber ?? "",
+        aspDocumentId: tax.aspDocumentId ?? "",
+      },
+    })
+    revalidatePath("/invoices")
+    revalidatePath("/dashboard")
+    return { ok: true as const }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "발행에 실패했습니다."
+    const { data: meta } = await supabase
+      .from("invoices")
+      .select("invoice_number, customer_id")
+      .eq("id", invoiceId)
+      .eq("user_id", userId)
+      .maybeSingle()
+    const num = (meta as { invoice_number?: string } | null)?.invoice_number ?? "청구"
+    await createActivityLog({
+      action: "tax_invoice.issue_failed",
+      description: `${num} · ${msg}`,
+      invoiceId,
+      customerId: (meta as { customer_id?: string } | null)?.customer_id ?? undefined,
+    })
+    revalidatePath("/invoices")
+    revalidatePath("/dashboard")
+    return { ok: false as const, error: msg }
+  }
+}
+
+export async function refreshTaxInvoiceStatusAction(
+  taxInvoiceId: string,
+  invoiceId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const gate = await requireTaxInvoiceSupabase()
+  if ("error" in gate) {
+    return { ok: false, error: gate.error }
+  }
+  const { supabase, userId } = gate
+  try {
+    const tax = await refreshTaxInvoiceStatus(supabase, userId, taxInvoiceId)
+    const { data: meta } = await supabase
+      .from("invoices")
+      .select("invoice_number")
+      .eq("id", invoiceId)
+      .eq("user_id", userId)
+      .maybeSingle()
+    const num = (meta as { invoice_number?: string } | null)?.invoice_number ?? "청구"
+    await createActivityLog({
+      action: "tax_invoice.status_refreshed",
+      description: `${num} · ASP 상태를 다시 조회했습니다. (${tax.status})`,
+      invoiceId,
+      customerId: tax.customerId,
+      metadata: { status: tax.status },
+    })
+    revalidatePath("/invoices")
+    return { ok: true as const }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "상태 조회에 실패했습니다."
+    return { ok: false as const, error: msg }
+  }
+}
+
+export async function saveTaxInvoiceAspSettingsAction(input: {
+  provider: string
+  enabled: boolean
+  apiKey: string
+  apiSecret: string
+  companyCode: string
+  supplierAddress: string
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const gate = await requireTaxInvoiceSupabase()
+  if ("error" in gate) {
+    return { ok: false, error: gate.error }
+  }
+  const { supabase, userId } = gate
+  try {
+    const { data: row } = await supabase
+      .from("business_settings")
+      .select("tax_invoice_provider_config")
+      .eq("user_id", userId)
+      .maybeSingle()
+    const raw = row?.tax_invoice_provider_config
+    const prev: TaxInvoiceAspProviderConfig =
+      raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as TaxInvoiceAspProviderConfig) : {}
+    const config: TaxInvoiceAspProviderConfig = {
+      ...prev,
+      enabled: input.enabled,
+      apiKey: input.apiKey.trim() || prev.apiKey,
+      apiSecret: input.apiSecret.trim() || prev.apiSecret,
+      companyCode: input.companyCode.trim() || prev.companyCode,
+    }
+    await saveTaxInvoiceAspSettings(supabase, userId, {
+      provider: input.provider,
+      config,
+      supplierAddress: input.supplierAddress,
+    })
+    await createActivityLog({
+      action: "tax_invoice.asp_settings_saved",
+      description: "전자세금계산서 ASP 연동 설정을 저장했습니다.",
+    })
+    revalidatePath("/settings")
+    return { ok: true as const }
+  } catch (e) {
+    return { ok: false as const, error: toUserFacingActionError(e, "저장하지 못했습니다.") }
+  }
+}
+
+export async function testTaxInvoiceAspConnectionAction(): Promise<
+  { ok: true; message: string } | { ok: false; error: string }
+> {
+  const gate = await requireTaxInvoiceSupabase()
+  if ("error" in gate) {
+    return { ok: false, error: gate.error }
+  }
+  const { supabase, userId } = gate
+  try {
+    const result = await testTaxInvoiceAspConnection(supabase, userId)
+    await createActivityLog({
+      action: "tax_invoice.asp_connection_tested",
+      description: result.ok ? result.message : `실패: ${result.message}`,
+    })
+    revalidatePath("/settings")
+    return result.ok ? { ok: true as const, message: result.message } : { ok: false as const, error: result.message }
+  } catch (e) {
+    return { ok: false as const, error: toUserFacingActionError(e, "연결 테스트에 실패했습니다.") }
+  }
+}
+
+export async function updateCustomerTaxInvoiceProfileAction(
+  customerId: string,
+  input: {
+    taxBusinessName: string
+    taxBusinessRegistrationNumber: string
+    taxCeoName: string
+    taxInvoiceEmail: string
+    taxContactName: string
+    taxAddress: string
+  }
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const gate = await requireTaxInvoiceSupabase()
+  if ("error" in gate) {
+    return { ok: false, error: gate.error }
+  }
+  const { supabase, userId } = gate
+  try {
+    await updateCustomerTaxProfile(supabase, userId, customerId, {
+      taxBusinessName: input.taxBusinessName,
+      taxBusinessRegistrationNumber: input.taxBusinessRegistrationNumber,
+      taxCeoName: input.taxCeoName,
+      taxInvoiceEmail: input.taxInvoiceEmail,
+      taxContactName: input.taxContactName,
+      taxAddress: input.taxAddress,
+    })
+    await createActivityLog({
+      action: "customer.tax_invoice_profile_updated",
+      description: "고객의 세금계산서용 사업자 정보를 저장했습니다.",
+      customerId,
+    })
+    revalidatePath("/customers")
+    revalidatePath(`/customers/${customerId}`)
+    revalidatePath("/invoices")
+    return { ok: true as const }
+  } catch (e) {
+    return { ok: false as const, error: toUserFacingActionError(e, "저장하지 못했습니다.") }
   }
 }

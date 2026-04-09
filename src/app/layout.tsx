@@ -6,6 +6,8 @@ import { getSiteOrigin } from "@/lib/site-url"
 
 import "./globals.css"
 
+const googleVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim()
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -19,17 +21,31 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteOrigin()),
   title: {
-    default: "Bill-IO",
+    default: "Bill-IO — 문의부터 수금까지 | 소규모 사업자 운영 플랫폼",
     template: "%s · Bill-IO",
   },
   description:
-    "프리랜서·소규모 사업자를 위한 견적·청구·수금 관리. 문의부터 입금까지 한 흐름으로 정리합니다.",
-  keywords: ["견적", "청구", "수금", "프리랜서", "1인 사업자", "Bill-IO", "인보이스"],
+    "공개 문의·견적·청구·리마인드·알림을 한곳에서. 프리랜서·소규모 사업자를 위한 Bill-IO.",
+  keywords: [
+    "Bill-IO",
+    "견적",
+    "청구",
+    "수금",
+    "미수금",
+    "프리랜서",
+    "소상공인",
+    "공개 문의",
+    "인보이스",
+    "견적서",
+  ],
   openGraph: {
     siteName: "Bill-IO",
     locale: "ko_KR",
     type: "website",
   },
+  ...(googleVerification
+    ? { verification: { google: googleVerification } }
+    : {}),
 }
 
 export default function RootLayout({

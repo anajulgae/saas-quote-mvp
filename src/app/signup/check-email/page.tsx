@@ -1,8 +1,15 @@
+import type { Metadata } from "next"
 import { z } from "zod"
 
 import { AuthScreenShell } from "@/components/app/auth-screen-shell"
 import { SignupCheckEmailPanel } from "@/components/app/signup-check-email-panel"
 import { maskEmailForDisplay } from "@/lib/mask-email"
+
+export const metadata: Metadata = {
+  title: "이메일 인증 안내",
+  description: "Bill-IO 회원가입 이메일 인증 안내",
+  robots: { index: false, follow: false },
+}
 
 type PageProps = {
   searchParams?: Promise<{ email?: string }>

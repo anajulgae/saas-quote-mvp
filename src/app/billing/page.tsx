@@ -10,7 +10,14 @@ import { cn } from "@/lib/utils"
 
 export const metadata: Metadata = {
   title: "요금제·업그레이드",
-  description: "Bill-IO Starter·Pro·Business 요금 안내. 결제 연동 전 플랜 구조와 업그레이드 진입점입니다.",
+  description:
+    "Bill-IO Starter(무료)·Pro·Business 플랜 비교. 공개 문의 폼, 고객 포털, AI, 문서 발송 등 Pro 혜택을 한눈에 확인하세요.",
+  alternates: { canonical: "/billing" },
+  openGraph: {
+    title: "Bill-IO 요금제",
+    description: "무료로 시작하고, Pro에서 공개 문의·포털·AI·발송 기능을 활용하세요.",
+    type: "website",
+  },
   robots: { index: true, follow: true },
 }
 
@@ -34,6 +41,17 @@ export default async function BillingPage({
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">요금제</h1>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{BILLING_UPGRADE_CONTACT_COPY}</p>
+          <div className="mt-4 rounded-xl border border-border/60 bg-muted/20 p-4 text-sm leading-relaxed text-muted-foreground">
+            <p className="font-medium text-foreground">플랜이 바꾸는 것</p>
+            <p className="mt-2">
+              무료로도 고객·문의·견적·청구 코어는 동작합니다. Pro에서는{" "}
+              <strong className="font-medium text-foreground">업체 소개 랜딩</strong>,{" "}
+              <strong className="font-medium text-foreground">고객 미니 포털</strong>, 일부{" "}
+              <strong className="font-medium text-foreground">AI·메시징</strong> 게이트가 열리도록 설계해 두었습니다.
+              (코드: <code className="rounded bg-background px-1 text-xs">plan-features</code> ·{" "}
+              <code className="rounded bg-background px-1 text-xs">billing/catalog</code>)
+            </p>
+          </div>
           {highlightPro ? (
             <p className="mt-2 rounded-lg border border-primary/25 bg-primary/[0.06] px-3 py-2 text-xs font-medium text-foreground">
               Pro 플랜을 살펴보고 계십니다. 아래에서 무료로 시작한 뒤, 결제가 열리면 같은 계정으로 업그레이드할 수

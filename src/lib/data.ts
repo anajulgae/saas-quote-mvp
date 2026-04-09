@@ -2,6 +2,12 @@ import { randomBytes } from "node:crypto"
 
 import type { SupabaseClient } from "@supabase/supabase-js"
 
+import {
+  countTaxInvoiceDashboardSignals,
+  fetchTaxInvoiceSummaryForCustomer,
+  fetchTaxInvoicesByInvoiceIds,
+} from "@/lib/server/tax-invoice-service"
+
 import { resolveActivityHeadline, resolveActivityKind } from "@/lib/activity-presentation"
 import {
   demoActivityLogs,
@@ -38,6 +44,7 @@ import type {
   BusinessSettings,
   Customer,
   CustomerSummary,
+  CustomerTaxInvoiceSummary,
   DashboardMetrics,
   MessagingChannelConfig,
   Inquiry,
@@ -60,6 +67,7 @@ import type {
   BusinessLandingSocialLink,
   BusinessLandingFaqItem,
   ReminderFormInput,
+  TaxInvoiceAspProviderConfig,
   Template,
   TimelineEvent,
 } from "@/types/domain"
@@ -115,6 +123,14 @@ function mapCustomer(row: CustomerRow): Customer {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     portalToken: row.portal_token ?? undefined,
+    taxBusinessName: row.tax_business_name ?? undefined,
+    taxBusinessRegistrationNumber: row.tax_business_registration_number
+      ? formatBusinessRegNoInput(row.tax_business_registration_number)
+      : undefined,
+    taxCeoName: row.tax_ceo_name ?? undefined,
+    taxInvoiceEmail: row.tax_invoice_email ?? undefined,
+    taxContactName: row.tax_contact_name ?? undefined,
+    taxAddress: row.tax_address ?? undefined,
   }
 }
 
@@ -202,6 +218,10 @@ function mapInvoice(row: InvoiceRow): Invoice {
     promisedPaymentDate: row.promised_payment_date ?? undefined,
     nextCollectionFollowupAt: row.next_collection_followup_at ?? undefined,
     collectionTone: parseCollectionTone(row.collection_tone),
+    eTaxInvoiceTarget: Boolean(row.e_tax_invoice_target),
+    eTaxInvoiceNeedIssue: Boolean(row.e_tax_invoice_need_issue),
+    eTaxInvoiceSupplyDate: row.e_tax_invoice_supply_date ?? undefined,
+    eTaxInvoiceIssueDueDate: row.e_tax_invoice_issue_due_date ?? undefined,
   }
 }
 
@@ -235,6 +255,13 @@ function mapReminder(row: ReminderRow) {
   }
 }
 
+function parseTaxInvoiceProviderConfig(raw: unknown): TaxInvoiceAspProviderConfig {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return {}
+  }
+  return raw as TaxInvoiceAspProviderConfig
+}
+
 function mapBusinessSettings(row: BusinessSettingsRow): BusinessSettings {
   return {
     id: row.id,
@@ -256,6 +283,9 @@ function mapBusinessSettings(row: BusinessSettingsRow): BusinessSettings {
     publicInquiryConsentIntro: row.public_inquiry_consent_intro ?? "",
     publicInquiryConsentRetention: row.public_inquiry_consent_retention ?? "",
     publicInquiryCompletionMessage: row.public_inquiry_completion_message ?? "",
+    taxInvoiceProvider: row.tax_invoice_provider ?? undefined,
+    taxInvoiceProviderConfig: parseTaxInvoiceProviderConfig(row.tax_invoice_provider_config),
+    taxInvoiceSupplierAddress: row.tax_invoice_supplier_address ?? undefined,
   }
 }
 
@@ -3197,6 +3227,7 @@ export async function getCustomerDetailData(customerId: string): Promise<{
   invoices: Invoice[]
   timeline: TimelineEvent[]
   currentPlan: BillingPlan
+  taxInvoiceSummary: CustomerTaxInvoiceSummary | null
 }> {
   const context = await getDataContext()
 
@@ -3210,6 +3241,7 @@ export async function getCustomerDetailData(customerId: string): Promise<{
       invoices: demoInvoices.filter((item) => item.customerId === customerId),
       timeline: getCustomerTimeline(customerId),
       currentPlan: demoUser.plan,
+      taxInvoiceSummary: null,
     }
   }
 
@@ -3272,6 +3304,12 @@ export async function getCustomerDetailData(customerId: string): Promise<{
     context.userId
   )
 
+  const taxInvoiceSummary = await fetchTaxInvoiceSummaryForCustomer(
+    context.supabase as unknown as SupabaseClient<Database>,
+    context.userId,
+    customerId
+  )
+
   return {
     customer: customerRow ? mapCustomer(customerRow as CustomerRow) : null,
     inquiries: ((inquiryRows ?? []) as InquiryRow[]).map(mapInquiry),
@@ -3281,6 +3319,7 @@ export async function getCustomerDetailData(customerId: string): Promise<{
       .map(mapActivityLog)
       .map(mapActivityToTimeline),
     currentPlan,
+    taxInvoiceSummary,
   }
 }
 
@@ -3516,6 +3555,7 @@ export async function getInvoicesPageData(): Promise<{
   bankAccount: string
   paymentTerms: string
   currentPlan: BillingPlan
+  businessSettingsSnapshot: BusinessSettings | null
 }> {
   const context = await getDataContext()
 
@@ -3525,6 +3565,7 @@ export async function getInvoicesPageData(): Promise<{
         ...invoice,
         customer: demoCustomers.find((customer) => customer.id === invoice.customerId),
         reminders: demoReminders.filter((reminder) => reminder.invoiceId === invoice.id),
+        taxInvoice: null,
       })),
       customers: demoCustomers,
       quotes: demoQuotes,
@@ -3537,6 +3578,7 @@ export async function getInvoicesPageData(): Promise<{
       bankAccount: demoBusinessSettings.bankAccount ?? "",
       paymentTerms: demoBusinessSettings.paymentTerms ?? "",
       currentPlan: demoUser.plan,
+      businessSettingsSnapshot: demoBusinessSettings,
     }
   }
 
@@ -3576,7 +3618,7 @@ export async function getInvoicesPageData(): Promise<{
       .limit(600),
     context.supabase
       .from("business_settings")
-      .select("business_name, bank_account, payment_terms")
+      .select("*")
       .eq("user_id", context.userId)
       .maybeSingle(),
   ])
@@ -3635,15 +3677,17 @@ export async function getInvoicesPageData(): Promise<{
     12
   )
 
-  const biz = bizRow as {
-    business_name?: string
-    bank_account?: string | null
-    payment_terms?: string | null
-  } | null
+  const bizSettingsMapped = bizRow ? mapBusinessSettings(bizRow as BusinessSettingsRow) : null
 
   const { plan: currentPlan } = await fetchUserPlanRow(
     context.supabase as unknown as SupabaseClient<Database>,
     context.userId
+  )
+
+  const taxByInvoiceId = await fetchTaxInvoicesByInvoiceIds(
+    context.supabase as unknown as SupabaseClient<Database>,
+    context.userId,
+    invoiceRowsSafe.map((r) => r.id)
   )
 
   return {
@@ -3654,16 +3698,18 @@ export async function getInvoicesPageData(): Promise<{
         ...invoice,
         customer: customerMap.get(invoice.customerId),
         reminders: remindersByInvoice.get(invoice.id) ?? [],
+        taxInvoice: taxByInvoiceId.get(invoice.id) ?? null,
       }
     }),
     customers: customerRowsSafe.map(mapCustomer),
     quotes: quoteRowsSafe.map(mapQuote),
     defaultReminderMessage: defaultReminderMessageFromTemplates(mappedTemplates),
     invoiceActivityByInvoiceId,
-    businessName: biz?.business_name?.trim() ?? "",
-    bankAccount: biz?.bank_account?.trim() ?? "",
-    paymentTerms: biz?.payment_terms?.trim() ?? "",
+    businessName: bizSettingsMapped?.businessName?.trim() ?? "",
+    bankAccount: bizSettingsMapped?.bankAccount?.trim() ?? "",
+    paymentTerms: bizSettingsMapped?.paymentTerms?.trim() ?? "",
     currentPlan,
+    businessSettingsSnapshot: bizSettingsMapped,
   }
 }
 
@@ -3926,6 +3972,21 @@ export async function upsertBusinessPublicPageRecord(
   return { ok: true, page: mapBusinessPublicPage(data as BusinessPublicPageRow) }
 }
 
+/** 대시보드 운영 허브 — 공개 유입·플랜 등(메뉴 확장 없이 제품 폭 표시) */
+export type DashboardHubSnapshot = {
+  plan: BillingPlan
+  publicInquiryFormEnabled: boolean
+  publicInquiryFormToken: string | null
+}
+
+export type DashboardNotificationPreview = {
+  id: string
+  title: string
+  isRead: boolean
+  createdAt: string
+  linkPath: string | null
+}
+
 export async function getDashboardPageData(): Promise<{
   metrics: DashboardMetrics
   followUps: InquiryWithCustomer[]
@@ -3944,6 +4005,10 @@ export async function getDashboardPageData(): Promise<{
     quotes: number
     invoices: number
   }
+  hub: DashboardHubSnapshot
+  notificationPreview: DashboardNotificationPreview[]
+  /** 전자세금계산서 요약(청구·ASP 연동) */
+  taxInvoiceSignals: { needAttention: number; failed: number }
 }> {
   const context = await getDataContext()
 
@@ -3979,6 +4044,13 @@ export async function getDashboardPageData(): Promise<{
         quotes: demoQuotes.length,
         invoices: demoInvoices.length,
       },
+      hub: {
+        plan: demoUser.plan,
+        publicInquiryFormEnabled: Boolean(demoBusinessSettings.publicInquiryFormEnabled),
+        publicInquiryFormToken: demoBusinessSettings.publicInquiryFormToken ?? null,
+      },
+      notificationPreview: [],
+      taxInvoiceSignals: { needAttention: 0, failed: 0 },
     }
   }
 
@@ -3988,6 +4060,8 @@ export async function getDashboardPageData(): Promise<{
     { data: quoteRows, error: quoteError },
     { data: invoiceRows, error: invoiceError },
     { data: activityRows, error: activityError },
+    { data: hubBsRow, error: hubBsError },
+    { data: notifPreviewRows, error: notifPreviewError },
   ] = await Promise.all([
     context.supabase.from("customers").select("*"),
     context.supabase
@@ -3999,6 +4073,17 @@ export async function getDashboardPageData(): Promise<{
     context.supabase
       .from("activity_logs")
       .select("*")
+      .order("created_at", { ascending: false })
+      .limit(5),
+    context.supabase
+      .from("business_settings")
+      .select("public_inquiry_form_enabled, public_inquiry_form_token")
+      .eq("user_id", context.userId)
+      .maybeSingle(),
+    context.supabase
+      .from("notifications")
+      .select("id, title, is_read, created_at, link_path")
+      .eq("user_id", context.userId)
       .order("created_at", { ascending: false })
       .limit(5),
   ])
@@ -4022,6 +4107,43 @@ export async function getDashboardPageData(): Promise<{
   if (activityError) {
     throw activityError
   }
+
+  if (hubBsError) {
+    throw hubBsError
+  }
+
+  if (notifPreviewError) {
+    throw notifPreviewError
+  }
+
+  const { plan: hubPlan } = await fetchUserPlanRow(
+    context.supabase as unknown as SupabaseClient<Database>,
+    context.userId
+  )
+
+  const taxInvoiceSignals = await countTaxInvoiceDashboardSignals(
+    context.supabase as unknown as SupabaseClient<Database>,
+    context.userId
+  )
+
+  const hubBs = hubBsRow as {
+    public_inquiry_form_enabled?: boolean | null
+    public_inquiry_form_token?: string | null
+  } | null
+
+  const notificationPreview: DashboardNotificationPreview[] = ((notifPreviewRows ?? []) as {
+    id: string
+    title: string
+    is_read: boolean
+    created_at: string
+    link_path: string | null
+  }[]).map((row) => ({
+    id: row.id,
+    title: row.title,
+    isRead: row.is_read,
+    createdAt: row.created_at,
+    linkPath: row.link_path,
+  }))
 
   const customerRowsSafe = (customerRows ?? []) as CustomerRow[]
   const inquiryRowsSafe = (inquiryRows ?? []) as InquiryRow[]
@@ -4128,5 +4250,12 @@ export async function getDashboardPageData(): Promise<{
       quotes: quotes.length,
       invoices: invoices.length,
     },
+    hub: {
+      plan: hubPlan,
+      publicInquiryFormEnabled: Boolean(hubBs?.public_inquiry_form_enabled),
+      publicInquiryFormToken: hubBs?.public_inquiry_form_token ?? null,
+    },
+    notificationPreview,
+    taxInvoiceSignals,
   }
 }

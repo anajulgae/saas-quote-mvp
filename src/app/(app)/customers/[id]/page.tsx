@@ -20,6 +20,7 @@ import { InquiryStageBadge, PaymentStatusBadge, QuoteStatusBadge } from "@/compo
 import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CustomerPortalLinkBlock } from "@/components/app/customer-portal-link-block"
+import { CustomerTaxInvoiceSidebarCard } from "@/components/app/customer-tax-invoice-sidebar-card"
 import { invoiceTypeOptions } from "@/lib/constants"
 import { getCustomerDetailData } from "@/lib/data"
 import { formatCurrency } from "@/lib/format"
@@ -37,7 +38,7 @@ export default async function CustomerDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const { customer, inquiries, quotes, invoices, timeline, currentPlan } =
+  const { customer, inquiries, quotes, invoices, timeline, currentPlan, taxInvoiceSummary } =
     await getCustomerDetailData(id)
 
   if (!customer) {
@@ -176,6 +177,12 @@ export default async function CustomerDetailPage({
         initialToken={customer.portalToken}
         siteOrigin={siteOrigin}
         portalAllowed={portalAllowed}
+      />
+
+      <CustomerTaxInvoiceSidebarCard
+        customer={customer}
+        taxInvoiceSummary={taxInvoiceSummary}
+        currentPlan={currentPlan}
       />
 
       <Card className="border-border/70 shadow-sm">

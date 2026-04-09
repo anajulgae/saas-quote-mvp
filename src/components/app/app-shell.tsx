@@ -21,13 +21,41 @@ const navigation = [
 ]
 
 const HEADER_CONTEXT: { match: string; title: string; description: string }[] = [
-  { match: "/dashboard", title: "대시보드", description: "이번 달 견적·수금과 후속조치 요약" },
-  { match: "/inquiries", title: "문의", description: "유입부터 수주까지 단계별 관리" },
-  { match: "/quotes", title: "견적", description: "견적서 작성·발송·상태 추적" },
-  { match: "/invoices", title: "청구", description: "청구·입금·리마인드" },
-  { match: "/customers", title: "고객", description: "거래처 정보와 이력" },
-  { match: "/settings", title: "설정", description: "계정·사업장·연동" },
-  { match: "/settings/landing", title: "업체 소개 페이지", description: "공개 랜딩·문의 연결·공유" },
+  {
+    match: "/dashboard",
+    title: "대시보드",
+    description: "수금·팔로업 요약과 유입·발송·알림 허브",
+  },
+  {
+    match: "/inquiries",
+    title: "문의",
+    description: "웹폼·포털 접수 → 단계·캘린더 → AI 정리 → 견적 연결",
+  },
+  {
+    match: "/quotes",
+    title: "견적",
+    description: "AI 초안·문서·공개 링크·메일 발송·청구까지",
+  },
+  {
+    match: "/invoices",
+    title: "청구",
+    description: "공개 청구·입금·리마인드·추심·캘린더",
+  },
+  {
+    match: "/customers",
+    title: "고객",
+    description: "거래처·미니 포털·문의·견적·청구 맥락",
+  },
+  {
+    match: "/settings",
+    title: "설정",
+    description: "사업장·문서·공개 유입·알림·AI·플랜·메시징",
+  },
+  {
+    match: "/settings/landing",
+    title: "업체 소개 페이지",
+    description: "공개 랜딩·문의 연결·브랜드 노출",
+  },
 ]
 
 function headerForPath(pathname: string | null) {
@@ -79,6 +107,7 @@ function SidebarContent({
         <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
           Bill-IO
         </p>
+        <p className="text-[10px] leading-snug text-muted-foreground/90">유입 → 견적 → 청구 → 수금</p>
         <h2 className="text-base font-semibold leading-snug tracking-tight text-foreground">
           {businessName}
         </h2>

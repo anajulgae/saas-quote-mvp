@@ -122,8 +122,18 @@ npm run build
 8. `0007_public_inquiry_form.sql` — 공개 문의 폼·`submit_public_inquiry`  
 9. `0008_notifications.sql` — `notifications` / `notification_preferences`, 문의 INSERT 시 알림, Realtime  
 10. `0009_business_public_landing.sql` — Pro 전용 업체 소개 랜딩(`business_public_pages`, `get_public_business_landing`, 문의 유입 `source`/`sourceSlug`)
+11. `0012_tax_invoice_asp.sql` — 청구 연동 전자세금계산서(`tax_invoices`)·ASP 설정(`business_settings`)·고객/청구 세금 필드
 
 `0003_rls` 미적용 시 보안 공격면이 남습니다. `0004` 미적용 시 앱은 동작하지만 설정에 **플랜 마이그레이션 안내**가 표시됩니다. **공개 청구 링크·열람 추적**은 **0006** 이 필요합니다. **앱 내·브라우저·이메일 알림**은 **0008** 과 Supabase Realtime(`notifications`) 전제를 확인하세요. 상세는 **[docs/deployment.md §4.1](./docs/deployment.md#41-알림실시간브라우저이메일)**.
+
+---
+
+## 전자세금계산서(ASP 연동) — 요약
+
+- Bill-IO는 **국세청 직접 송신 제품이 아닙니다.** 사용자가 계약한 **전자세금계산서 발급대행(ASP)** 자격증명을 설정에 저장하고, **청구 상세**에서 발행 준비·실행·상태 새로고침을 합니다.
+- **Pro 플랜**(`e_tax_invoice_asp`)에서 사용합니다. 자격증명은 `business_settings.tax_invoice_provider_config`(JSONB)에 저장되며, 운영 시 **암호화·Vault** 적용을 권장합니다.
+- **Provider 추가**: `src/lib/tax-invoice/registry.ts`에 어댑터를 등록하고, `src/lib/tax-invoice/providers/`에 `TaxInvoiceProviderAdapter` 구현체를 둡니다. Mock 구현은 `providers/mock-provider.ts`를 참고하세요.
+- **상태**: `draft` → `ready`(발행 준비) → `issuing` → `issued` / `failed`. 실패 시 `failure_reason`과 활동 로그(`tax_invoice.*`)를 확인합니다.
 
 ---
 

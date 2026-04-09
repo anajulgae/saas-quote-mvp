@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner"
 
 import { createCustomerAction } from "@/app/actions"
+import { CoreCapabilityStrip } from "@/components/app/core-capability-strip"
 import { resolveActivityHeadline } from "@/lib/activity-presentation"
 import { EmptyState } from "@/components/app/empty-state"
 import { PageHeader } from "@/components/app/page-header"
@@ -353,7 +354,16 @@ export function CustomersBoard({
 
       <PageHeader
         title="고객"
-        description="거래처별 문의·견적·청구 건수와 최근 활동을 한 화면에서 스캔합니다."
+        description="고객마다 문의·견적·청구 맥락을 스캔하고, Pro에서는 미니 포털 링크로 견적·청구 요약을 넘깁니다."
+        capabilityStrip={
+          <CoreCapabilityStrip
+            items={[
+              { label: "고객 포털 링크", href: "/customers", emphasis: true },
+              { label: "문의·견적", href: "/inquiries" },
+              { label: "공개 문의 유입", href: "/settings#public-inquiry" },
+            ]}
+          />
+        }
         action={
           <Button type="button" className="h-9 gap-2" onClick={() => setRegisterOpen(true)}>
             <UserPlus className="size-4" />
@@ -404,7 +414,7 @@ export function CustomersBoard({
       {!customers.length ? (
         <EmptyState
           title="고객이 없습니다"
-          description="문의·견적·청구에 고객이 필요합니다. 첫 고객을 등록한 뒤 업무를 이어가세요."
+          description="문의·견적·청구는 고객에 연결됩니다. 등록하거나, 공개 문의 폼으로 첫 유입을 받을 수 있습니다."
         >
           <Button type="button" className="gap-1.5" onClick={() => setRegisterOpen(true)}>
             <Plus className="size-3.5" />
@@ -413,6 +423,12 @@ export function CustomersBoard({
           <Link href="/inquiries" className={cn(buttonVariants({ variant: "outline" }), "inline-flex gap-1")}>
             문의 화면
             <ArrowRight className="size-3.5" />
+          </Link>
+          <Link
+            href="/settings#public-inquiry"
+            className={cn(buttonVariants({ variant: "ghost" }), "inline-flex gap-1 text-xs")}
+          >
+            공개 문의 폼 설정
           </Link>
         </EmptyState>
       ) : !filtered.length ? (

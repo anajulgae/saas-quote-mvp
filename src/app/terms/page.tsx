@@ -6,7 +6,9 @@ import { cn } from "@/lib/utils"
 
 export const metadata: Metadata = {
   title: "이용약관",
-  description: "Bill-IO 이용약관",
+  description:
+    "Bill-IO 서비스 이용약관. 운영자와 이용자의 권리·의무, 서비스 이용 조건을 정합니다.",
+  alternates: { canonical: "/terms" },
   robots: { index: true, follow: true },
 }
 
