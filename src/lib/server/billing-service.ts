@@ -261,7 +261,7 @@ export async function beginCheckoutForPlan(input: {
   const provider = getBillingProvider()
   const supabase = await resolveWritableSupabase()
   if (!supabase) {
-    return { ok: false, error: "Billing storage is not available." }
+    return { ok: false, error: "결제·구독 저장소에 연결할 수 없습니다." }
   }
 
   const billing = await fetchUserBillingState(supabase, input.userId)
@@ -363,7 +363,7 @@ export async function openBillingPortalForUser(input: {
   const provider = getBillingProvider()
   const supabase = await resolveWritableSupabase()
   if (!supabase) {
-    return { ok: false, error: "Billing portal is unavailable." }
+    return { ok: false, error: "결제 포털을 열 수 없습니다." }
   }
 
   if (provider.name === "mock") {
@@ -411,7 +411,7 @@ export async function changeUserSubscriptionPlan(input: {
   const provider = getBillingProvider()
   const supabase = await resolveWritableSupabase()
   if (!supabase) {
-    return { ok: false, error: "Subscription state is unavailable." }
+    return { ok: false, error: "구독 상태를 불러올 수 없습니다." }
   }
 
   const billing = await fetchUserBillingState(supabase, input.userId)
@@ -440,7 +440,7 @@ export async function changeUserSubscriptionPlan(input: {
   }
 
   if (!billing.billingProviderSubscriptionId) {
-    return { ok: false, error: "No active provider subscription was found. Start checkout first." }
+    return { ok: false, error: "활성 구독이 없습니다. 먼저 결제(체크아웃)를 진행해 주세요." }
   }
 
   const change = await provider.updateSubscriptionPlan({
@@ -555,7 +555,7 @@ export async function changePlanOrCheckout(input: {
 }): Promise<{ ok: true; redirectUrl?: string } | { ok: false; error: string }> {
   const supabase = await resolveWritableSupabase()
   if (!supabase) {
-    return { ok: false, error: "Could not load billing state." }
+    return { ok: false, error: "구독 정보를 불러오지 못했습니다." }
   }
 
   const billing = await fetchUserBillingState(supabase, input.userId)

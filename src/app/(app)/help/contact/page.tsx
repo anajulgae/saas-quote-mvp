@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 
 import { getAppSession } from "@/lib/auth"
-import { submitSupportTicketAction } from "@/app/help/actions"
+import { submitSupportTicketAction } from "@/app/(app)/help/actions"
 import { buttonVariants } from "@/components/ui/button-variants"
 import { cn } from "@/lib/utils"
 

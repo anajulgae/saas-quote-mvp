@@ -2,598 +2,304 @@
 
 import { useTransition } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import {
-  AlertTriangle,
-  ArrowRight,
-  CreditCard,
-  Loader2,
-  ReceiptText,
-  RotateCcw,
-  Sparkles,
-} from "lucide-react"
 import { toast } from "sonner"
 
 import {
-  openBillingPortalAction,
+  clearPendingPlanAction,
   resumeSubscriptionAction,
+  scheduleDowngradeAction,
   scheduleSubscriptionCancelAction,
   selectSubscriptionPlanAction,
-  startCheckoutAction,
-} from "@/app/billing/subscription-actions"
+} from "@/app/(app)/billing/subscription-actions"
 import { buttonVariants } from "@/components/ui/button-variants"
+import { cn } from "@/lib/utils"
 import {
   BILLING_PAGE_PATH,
   PLAN_LABEL,
   PLAN_PRICE_KRW_MONTH,
   PLAN_TAGLINE,
 } from "@/lib/billing/catalog"
-import type { BillingConsoleEventRow } from "@/lib/billing/console-types"
 import {
-  billingStatusLabel,
-  billingStatusTone,
   getUsageLimitsForEffectivePlan,
   trialRemainingLabel,
   type UserBillingSnapshot,
 } from "@/lib/subscription"
-import { cn } from "@/lib/utils"
+import type { BillingConsoleEventRow } from "@/lib/billing/console-types"
 import type { BillingPlan } from "@/types/domain"
 
 const PLANS: BillingPlan[] = ["starter", "pro", "business"]
 
-const EVENT_LABELS: Partial<Record<string, string>> = {
-  trial_started: "Trial started",
-  trial_will_end: "Trial ending soon",
-  trial_ended: "Trial ended",
-  checkout_started: "Checkout started",
-  payment_method_added: "Payment method added",
-  subscription_started: "Subscription started",
-  subscription_updated: "Subscription updated",
-  subscription_upgraded: "Plan upgraded",
-  subscription_downgraded: "Plan downgraded",
-  payment_succeeded: "Payment succeeded",
-  payment_failed: "Payment failed",
-  retry_scheduled: "Retry scheduled",
-  cancel_scheduled: "Cancellation scheduled",
-  cancel_resumed: "Cancellation removed",
-  subscription_canceled: "Subscription canceled",
-  portal_opened: "Billing portal opened",
-  document_send_counted: "document_send counted",
+function subscriptionStatusKo(status: string) {
+  const m: Record<string, string> = {
+    trialing: "체험 중",
+    active: "이용 중",
+    past_due: "결제 연체",
+    canceled: "해지됨",
+    trial_expired: "체험 만료",
+    incomplete: "결제 미완료",
+    pending: "대기 중",
+  }
+  return m[status] ?? status
 }
 
-type ActionResult = { ok: true; redirectUrl?: string } | { ok: false; error: string }
-
-function formatDate(value: string | null) {
-  if (!value) {
-    return "Not scheduled"
+function billingEventKindKo(kind: string) {
+  const m: Record<string, string> = {
+    subscription: "구독",
+    plan_change: "플랜 변경",
+    cancel_scheduled: "해지 예약",
+    cancel_resumed: "해지 철회",
+    downgrade_scheduled: "다운그레이드 예약",
+    trial_ended: "체험 종료",
+    payment_succeeded: "결제 완료",
+    payment_failed: "결제 실패",
   }
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return "Not scheduled"
-  }
-  return date.toLocaleDateString("ko-KR")
-}
-
-function formatDateTime(value: string) {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-  return date.toLocaleString("ko-KR")
-}
-
-function percentage(used: number, limit: number) {
-  if (limit <= 0) {
-    return 0
-  }
-  return Math.min(100, Math.round((used / limit) * 100))
-}
-
-function toneClasses(tone: "positive" | "warning" | "danger" | "muted") {
-  switch (tone) {
-    case "positive":
-      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-950"
-    case "warning":
-      return "border-amber-500/35 bg-amber-500/10 text-amber-950"
-    case "danger":
-      return "border-rose-500/35 bg-rose-500/10 text-rose-950"
-    default:
-      return "border-border/70 bg-muted/40 text-foreground"
-  }
-}
-
-function getBanner(
-  billing: UserBillingSnapshot,
-  effectivePlan: BillingPlan
-): { tone: "positive" | "warning" | "danger" | "muted"; title: string; body: string } | null {
-  const remaining = trialRemainingLabel(billing)
-
-  if (billing.pendingPlan) {
-    return {
-      tone: "warning",
-      title: `${PLAN_LABEL[billing.pendingPlan]} plan change is pending`,
-      body:
-        "A pending plan marker exists in billing state. Review the provider portal or recent billing events to confirm whether the subscription change is already queued or finished.",
-    }
-  }
-
-  if (billing.subscriptionStatus === "past_due") {
-    return {
-      tone: "danger",
-      title: "Payment failed",
-      body:
-        "Automatic renewal failed. Update the payment method now so document delivery, AI usage, and premium features stay active.",
-    }
-  }
-
-  if (billing.subscriptionStatus === "trial_expired") {
-    return {
-      tone: "danger",
-      title: "Trial ended",
-      body:
-        "The free trial has ended. Start checkout to restore paid access and automatic renewal.",
-    }
-  }
-
-  if (billing.subscriptionStatus === "trialing") {
-    return {
-      tone: remaining && remaining.includes("1") ? "danger" : "warning",
-      title: `${PLAN_LABEL[effectivePlan]} trial is active`,
-      body: `Trial start: ${formatDate(billing.trialStartedAt)} / trial end: ${formatDate(
-        billing.trialEndsAt
-      )}${remaining ? ` (${remaining})` : ""}. Save a payment method before the trial ends for automatic conversion.`,
-    }
-  }
-
-  if (billing.subscriptionStatus === "pending" || billing.subscriptionStatus === "incomplete") {
-    return {
-      tone: "warning",
-      title: "Checkout is not complete",
-      body:
-        "Payment method registration or subscription creation has not finished yet. Re-open checkout to complete it.",
-    }
-  }
-
-  if (billing.cancelAtPeriodEnd) {
-    return {
-      tone: "warning",
-      title: "Cancellation is scheduled",
-      body: `The current plan remains active until ${formatDate(
-        billing.currentPeriodEnd
-      )}, then access will fall back according to billing status.`,
-    }
-  }
-
-  if (billing.subscriptionStatus === "canceled") {
-    return {
-      tone: "muted",
-      title: "No active subscription",
-      body: "You can restart automatic billing at any time by choosing a plan below.",
-    }
-  }
-
-  return null
-}
-
-function UsageBar({ used, limit, colorClass }: { used: number; limit: number; colorClass: string }) {
-  return (
-    <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
-      <div className={cn("h-full transition-all", colorClass)} style={{ width: `${percentage(used, limit)}%` }} />
-    </div>
-  )
+  return m[kind] ?? kind
 }
 
 export function BillingConsoleClient({
   billing,
   effectivePlan,
-  selectedPlan,
   portalEnabledCount,
-  publicInquiryFormCount,
-  seatUsedCount,
-  runtime,
   events,
 }: {
   billing: UserBillingSnapshot
   effectivePlan: BillingPlan
-  selectedPlan: BillingPlan | null
   portalEnabledCount: number
-  publicInquiryFormCount: number
-  seatUsedCount: number
-  runtime: {
-    provider: string
-    mode: string
-    configured: boolean
-    configurationError: string | null
-  }
   events: BillingConsoleEventRow[]
 }) {
-  const router = useRouter()
-  const [pending, startTransition] = useTransition()
+  const [pending, start] = useTransition()
   const limits = getUsageLimitsForEffectivePlan(effectivePlan)
-  const banner = getBanner(billing, effectivePlan)
-  const billingUnavailable = !runtime.configured
-  const selectedPlanNeedsAttention = Boolean(selectedPlan && selectedPlan !== billing.plan)
+  const trialLeft = trialRemainingLabel(billing)
 
-  const paymentMethodLabel =
-    billing.paymentMethodBrand && billing.paymentMethodLast4
-      ? `${billing.paymentMethodBrand.toUpperCase()} •••• ${billing.paymentMethodLast4}`
-      : billing.paymentMethodLast4
-        ? `Card •••• ${billing.paymentMethodLast4}`
-        : runtime.provider === "mock"
-          ? "Mock payment method"
-          : "No saved payment method"
-
-  const run = (task: () => Promise<ActionResult>, successMessage?: string) => {
-    startTransition(async () => {
-      const result = await task()
-      if (!result.ok) {
-        toast.error(result.error)
-        return
+  const run = (
+    fn: () => Promise<
+      { ok: true; redirectUrl?: string } | { ok: false; error: string }
+    >
+  ) => {
+    start(async () => {
+      const r = await fn()
+      if (r.ok) {
+        if ("redirectUrl" in r && r.redirectUrl) {
+          window.location.href = r.redirectUrl
+          return
+        }
+        toast.success("반영했습니다.")
+      } else {
+        toast.error(r.error)
       }
-      if (result.redirectUrl) {
-        window.location.href = result.redirectUrl
-        return
-      }
-      if (successMessage) {
-        toast.success(successMessage)
-      }
-      router.refresh()
     })
   }
 
+  const aiPct = limits.aiCallsPerMonth > 0 ? Math.round((billing.aiCallsThisMonth / limits.aiCallsPerMonth) * 100) : 0
+  const docPct =
+    limits.documentSendsPerMonth > 0
+      ? Math.round((billing.documentSendsThisMonth / limits.documentSendsPerMonth) * 100)
+      : 0
+
   return (
-    <div className="space-y-6 rounded-2xl border border-border/70 bg-card p-5 shadow-sm sm:p-7">
-      {!runtime.configured ? (
-        <div className="rounded-xl border border-rose-500/35 bg-rose-500/10 px-4 py-3 text-sm text-rose-950">
-          <p className="font-semibold">Billing provider is not configured</p>
-          <p className="mt-1 text-xs leading-relaxed">
-            {runtime.configurationError ?? "Check BILLING_PROVIDER and PG environment variables."}
+    <div className="space-y-8 rounded-2xl border border-border/70 bg-card p-5 shadow-sm sm:p-7">
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight">구독·사용량</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          청구 플랜은 <strong className="text-foreground">{PLAN_LABEL[billing.plan]}</strong>, 기능·한도는{" "}
+          <strong className="text-foreground">{PLAN_LABEL[effectivePlan]}</strong> 기준입니다.
+          {billing.subscriptionStatus === "trialing" && trialLeft ? (
+            <span className="mt-2 block rounded-lg border border-primary/25 bg-primary/[0.06] px-3 py-2 text-xs font-medium text-foreground">
+              프로 수준 체험 중 · {trialLeft} ·{" "}
+              <Link href={BILLING_PAGE_PATH} className="text-primary underline-offset-2 hover:underline">
+                체험 후 플랜 선택
+              </Link>
+            </span>
+          ) : null}
+          {billing.subscriptionStatus === "trial_expired" ? (
+            <span className="mt-2 block rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs font-medium text-foreground">
+              체험이 종료되었습니다. 스타터 이상을 선택하면 이전과 같이 운영할 수 있습니다.
+            </span>
+          ) : null}
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+          <p className="text-xs font-medium text-muted-foreground">구독 상태</p>
+          <p className="mt-1 text-sm font-semibold text-foreground">
+            {subscriptionStatusKo(billing.subscriptionStatus)}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            다음 결제·갱신 예정:{" "}
+            {billing.currentPeriodEnd
+              ? new Date(billing.currentPeriodEnd).toLocaleDateString("ko-KR")
+              : "PG 연동 후 표시"}
+          </p>
+          {billing.cancelAtPeriodEnd ? (
+            <p className="mt-2 text-xs font-medium text-amber-900">해지 예약됨 — 갱신일에 종료(시뮬레이션)</p>
+          ) : null}
+          {billing.pendingPlan ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              예약 다운그레이드: <strong className="text-foreground">{PLAN_LABEL[billing.pendingPlan]}</strong>
+            </p>
+          ) : null}
+        </div>
+        <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+          <p className="text-xs font-medium text-muted-foreground">결제 수단</p>
+          <p className="mt-1 text-sm text-foreground">
+            결제(PG) 연동 시 이 영역에 카드 마스킹·변경 버튼이 붙습니다. 지금은 운영 구조만 준비되어 있습니다.
           </p>
         </div>
-      ) : null}
+      </div>
 
-      {banner ? (
-        <div className={cn("rounded-xl border px-4 py-3", toneClasses(banner.tone))}>
-          <p className="font-semibold">{banner.title}</p>
-          <p className="mt-1 text-sm leading-relaxed">{banner.body}</p>
-        </div>
-      ) : null}
-
-      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-        <div className="space-y-4 rounded-2xl border border-border/60 bg-muted/10 p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Current plan</p>
-              <h2 className="mt-1 text-2xl font-semibold tracking-tight">{PLAN_LABEL[billing.plan]}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">{PLAN_TAGLINE[billing.plan]}</p>
+      <div>
+        <h3 className="text-sm font-semibold">이번 달 사용량</h3>
+        <ul className="mt-3 space-y-3 text-sm">
+          <li>
+            <div className="flex justify-between gap-2">
+              <span>AI 호출</span>
+              <span className="tabular-nums text-muted-foreground">
+                {billing.aiCallsThisMonth} / {limits.aiCallsPerMonth}회
+              </span>
             </div>
-            <span
-              className={cn(
-                "rounded-full border px-3 py-1 text-xs font-semibold",
-                toneClasses(billingStatusTone(billing.subscriptionStatus))
-              )}
-            >
-              {billingStatusLabel(billing.subscriptionStatus)}
+            <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
+              <div className="h-full bg-primary transition-all" style={{ width: `${Math.min(100, aiPct)}%` }} />
+            </div>
+            {aiPct >= 85 ? (
+              <p className="mt-1 text-xs text-amber-800">한도에 가깝습니다. 플랜 업그레이드를 검토해 주세요.</p>
+            ) : null}
+          </li>
+          <li>
+            <div className="flex justify-between gap-2">
+              <span>문서 발송(이메일 등)</span>
+              <span className="tabular-nums text-muted-foreground">
+                {billing.documentSendsThisMonth} / {limits.documentSendsPerMonth}건
+              </span>
+            </div>
+            <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
+              <div className="h-full bg-teal-600/80 transition-all" style={{ width: `${Math.min(100, docPct)}%` }} />
+            </div>
+          </li>
+          <li className="flex justify-between gap-2 border-t border-border/50 pt-2">
+            <span>활성 고객 포털</span>
+            <span className="tabular-nums">
+              {portalEnabledCount} / {limits.maxPortalCustomers}
             </span>
-          </div>
+          </li>
+          <li className="flex justify-between gap-2">
+            <span>팀 시트(좌석)</span>
+            <span className="tabular-nums">{limits.seats}명까지(제품 멀티유저 연동 시)</span>
+          </li>
+        </ul>
+      </div>
 
-          <div className="grid gap-3 text-sm sm:grid-cols-2">
-            <div className="rounded-xl border border-border/60 bg-background px-3 py-3">
-              <p className="text-xs text-muted-foreground">Trial start</p>
-              <p className="mt-1 font-medium">{formatDate(billing.trialStartedAt)}</p>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-background px-3 py-3">
-              <p className="text-xs text-muted-foreground">Trial end</p>
-              <p className="mt-1 font-medium">{formatDate(billing.trialEndsAt)}</p>
-              {trialRemainingLabel(billing) ? (
-                <p className="mt-1 text-xs text-amber-700">{trialRemainingLabel(billing)}</p>
-              ) : null}
-            </div>
-            <div className="rounded-xl border border-border/60 bg-background px-3 py-3">
-              <p className="text-xs text-muted-foreground">Next billing date</p>
-              <p className="mt-1 font-medium">{formatDate(billing.currentPeriodEnd)}</p>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-background px-3 py-3">
-              <p className="text-xs text-muted-foreground">Cancellation</p>
-              <p className="mt-1 font-medium">
-                {billing.cancelAtPeriodEnd ? `Scheduled for ${formatDate(billing.currentPeriodEnd)}` : "Not scheduled"}
-              </p>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-background px-3 py-3">
-              <p className="text-xs text-muted-foreground">Target plan intent</p>
-              <p className="mt-1 font-medium">{selectedPlan ? PLAN_LABEL[selectedPlan] : "Current plan"}</p>
-              {selectedPlanNeedsAttention ? (
-                <p className="mt-1 text-xs text-amber-700">
-                  Pricing entry intent is set to {PLAN_LABEL[selectedPlan!]}. Choose that plan below to apply it.
-                </p>
-              ) : null}
-            </div>
-            <div className="rounded-xl border border-border/60 bg-background px-3 py-3">
-              <p className="text-xs text-muted-foreground">Billing provider</p>
-              <p className="mt-1 font-medium uppercase">
-                {runtime.provider} <span className="text-muted-foreground">({runtime.mode})</span>
-              </p>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-background px-3 py-3">
-              <p className="text-xs text-muted-foreground">Effective access</p>
-              <p className="mt-1 font-medium">{PLAN_LABEL[effectivePlan]}</p>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-border/60 bg-background px-4 py-3">
-            <div className="flex items-center gap-2">
-              <CreditCard className="size-4 text-muted-foreground" />
-              <p className="text-sm font-medium">Payment method</p>
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">{paymentMethodLabel}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}
-                disabled={pending || billingUnavailable}
-                onClick={() => run(() => openBillingPortalAction())}
-              >
-                {pending ? <Loader2 className="mr-1 size-4 animate-spin" /> : null}
-                Manage card / portal
-              </button>
-              {(billing.subscriptionStatus === "trial_expired" ||
-                billing.subscriptionStatus === "canceled" ||
-                billing.subscriptionStatus === "pending" ||
-                billing.subscriptionStatus === "incomplete") ? (
-                <button
-                  type="button"
-                  className={cn(buttonVariants({ size: "sm" }), "h-9")}
-                  disabled={pending || billingUnavailable}
-                  onClick={() => run(() => startCheckoutAction(billing.plan))}
-                >
-                  Restart checkout
-                </button>
-              ) : null}
-            </div>
-          </div>
+      <div>
+        <h3 className="text-sm font-semibold">플랜 변경</h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          실제 과금 전까지는 아래 버튼이 DB 플랜을 바꿉니다. PG 웹훅이 붙으면 Checkout·Customer Portal과 동기화하면 됩니다.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {PLANS.map((p) => (
+            <button
+              key={p}
+              type="button"
+              disabled={pending}
+              className={cn(
+                buttonVariants({ variant: billing.plan === p ? "default" : "outline", size: "sm" }),
+                "h-9"
+              )}
+              onClick={() => run(() => selectSubscriptionPlanAction(p))}
+            >
+              {PLAN_LABEL[p]} ·{" "}
+              {PLAN_PRICE_KRW_MONTH[p] != null
+                ? `₩${PLAN_PRICE_KRW_MONTH[p]!.toLocaleString("ko-KR")}/월`
+                : "—"}
+            </button>
+          ))}
         </div>
-
-        <div className="space-y-4 rounded-2xl border border-border/60 bg-muted/10 p-4">
-          <div className="flex items-center gap-2">
-            <ReceiptText className="size-4 text-muted-foreground" />
-            <h3 className="text-base font-semibold">This month usage</h3>
-          </div>
-
-          <div>
-            <div className="flex justify-between gap-2 text-sm">
-              <span>AI usage</span>
-              <span className="tabular-nums text-muted-foreground">
-                {billing.aiCallsThisMonth} / {limits.aiCallsPerMonth}
-              </span>
-            </div>
-            <UsageBar used={billing.aiCallsThisMonth} limit={limits.aiCallsPerMonth} colorClass="bg-primary" />
-          </div>
-
-          <div>
-            <div className="flex justify-between gap-2 text-sm">
-              <span>document_send</span>
-              <span className="tabular-nums text-muted-foreground">
-                {billing.documentSendsThisMonth} / {limits.documentSendsPerMonth}
-              </span>
-            </div>
-            <UsageBar
-              used={billing.documentSendsThisMonth}
-              limit={limits.documentSendsPerMonth}
-              colorClass="bg-teal-600"
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Counted actions: email delivery, link copy/share, PDF download, and BYOA message send.
-            </p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-border/60 bg-background px-3 py-3">
-              <p className="text-xs text-muted-foreground">Public inquiry forms</p>
-              <p className="mt-1 font-medium tabular-nums">{publicInquiryFormCount}</p>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-background px-3 py-3">
-              <p className="text-xs text-muted-foreground">Customer portals</p>
-              <p className="mt-1 font-medium tabular-nums">
-                {portalEnabledCount} / {limits.maxPortalCustomers}
-              </p>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-background px-3 py-3">
-              <p className="text-xs text-muted-foreground">Team members</p>
-              <p className="mt-1 font-medium tabular-nums">
-                {seatUsedCount} / {limits.seats}
-              </p>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Launch build currently tracks the active operator count for this workspace.
-              </p>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-background px-3 py-3">
-              <p className="text-xs text-muted-foreground">Payment status updated</p>
-              <p className="mt-1 font-medium">{formatDate(billing.billingStatusUpdatedAt)}</p>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-border/60 bg-background px-4 py-3 text-xs text-muted-foreground">
-            <p className="font-medium text-foreground">Grace and fallback policy</p>
-            <p className="mt-1 leading-relaxed">
-              `past_due` stays visible with an explicit payment warning. `trial_expired`, `canceled`, `pending`, and
-              `incomplete` fall back to starter-level access until billing is restored.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h3 className="text-base font-semibold">Upgrade / downgrade</h3>
-            <p className="text-sm text-muted-foreground">
-              Choose a new plan to start checkout or update the current subscription.
-            </p>
-          </div>
-          <Link href={BILLING_PAGE_PATH} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-9")}>
-            Pricing guide
-          </Link>
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-3">
-          {PLANS.map((plan) => {
-            const currentPrice = PLAN_PRICE_KRW_MONTH[billing.plan] ?? 0
-            const nextPrice = PLAN_PRICE_KRW_MONTH[plan] ?? 0
-            const isCurrent = billing.plan === plan
-            const isSelectedIntent = selectedPlan === plan
-            const label = isCurrent ? "Current" : nextPrice > currentPrice ? "Upgrade" : "Downgrade"
-
-            return (
-              <article
-                key={plan}
-                className={cn(
-                  "rounded-2xl border p-4 shadow-sm",
-                  isCurrent
-                    ? "border-primary/40 bg-primary/[0.04]"
-                    : isSelectedIntent
-                      ? "border-amber-500/40 bg-amber-500/[0.05]"
-                      : "border-border/60 bg-background"
-                )}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-primary">{PLAN_LABEL[plan]}</p>
-                    <p className="mt-1 text-2xl font-semibold tracking-tight">
-                      {PLAN_PRICE_KRW_MONTH[plan] != null
-                        ? `₩${PLAN_PRICE_KRW_MONTH[plan]!.toLocaleString("ko-KR")}`
-                        : "Contact"}
-                      <span className="ml-1 text-sm font-normal text-muted-foreground">/mo</span>
-                    </p>
-                  </div>
-                  {isCurrent ? (
-                    <span className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
-                      Current plan
-                    </span>
-                  ) : isSelectedIntent ? (
-                    <span className="rounded-full border border-amber-500/35 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900">
-                      Selected intent
-                    </span>
-                  ) : null}
-                </div>
-
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{PLAN_TAGLINE[plan]}</p>
-                {!isCurrent && nextPrice < currentPrice ? (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Downgrades apply through the current provider flow as soon as the subscription change is accepted.
-                  </p>
-                ) : null}
-
-                <div className="mt-5 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className={cn(
-                      buttonVariants({ size: "sm", variant: isCurrent ? "outline" : "default" }),
-                      "h-9"
-                    )}
-                    disabled={pending || isCurrent || billingUnavailable}
-                    onClick={() =>
-                      run(
-                        () => selectSubscriptionPlanAction(plan),
-                        `${PLAN_LABEL[plan]} plan request has been applied.`
-                      )
-                    }
-                  >
-                    {label}
-                  </button>
-
-                  {!isCurrent &&
-                  (billing.subscriptionStatus === "trial_expired" ||
-                    billing.subscriptionStatus === "canceled" ||
-                    billing.subscriptionStatus === "pending" ||
-                    billing.subscriptionStatus === "incomplete") ? (
-                    <button
-                      type="button"
-                      className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}
-                      disabled={pending || billingUnavailable}
-                      onClick={() => run(() => startCheckoutAction(plan))}
-                    >
-                      Start checkout
-                    </button>
-                  ) : null}
-                </div>
-              </article>
-            )
-          })}
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-rose-500/25 bg-rose-500/[0.06] p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-foreground">Cancellation and recovery</p>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              The cancel button is always visible. Cancellation takes effect at period end, and the resume action clears
-              the scheduled cancellation.
-            </p>
-          </div>
-          <AlertTriangle className="size-5 text-rose-700" />
-        </div>
-
         <div className="mt-4 flex flex-wrap gap-2">
           <button
             type="button"
-            className={cn(buttonVariants({ variant: "destructive", size: "sm" }), "h-9")}
-            disabled={pending || billing.cancelAtPeriodEnd || billingUnavailable}
-            onClick={() => run(() => scheduleSubscriptionCancelAction(), "Cancellation has been scheduled.")}
-          >
-            Cancel at period end
-          </button>
-
-          <button
-            type="button"
+            disabled={pending}
             className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}
-            disabled={pending || !billing.cancelAtPeriodEnd || billingUnavailable}
-            onClick={() => run(() => resumeSubscriptionAction(), "Scheduled cancellation was removed.")}
+            onClick={() => run(() => scheduleDowngradeAction("starter"))}
           >
-            <RotateCcw className="mr-1 size-4" />
-            Resume subscription
+            다운그레이드 예약 → 스타터
           </button>
-
           <button
             type="button"
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-9")}
-            disabled={pending || billingUnavailable}
-            onClick={() => run(() => openBillingPortalAction())}
+            disabled={pending}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}
+            onClick={() => run(() => scheduleDowngradeAction("pro"))}
           >
-            Update payment method
+            다운그레이드 예약 → 프로
           </button>
+          {billing.pendingPlan ? (
+            <button
+              type="button"
+              disabled={pending}
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-9")}
+              onClick={() => run(() => clearPendingPlanAction())}
+            >
+              다운그레이드 예약 취소
+            </button>
+          ) : null}
         </div>
-      </section>
+      </div>
 
-      <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Sparkles className="size-4 text-muted-foreground" />
-          <h3 className="text-base font-semibold">Recent billing events</h3>
+      <div className="rounded-xl border border-rose-500/25 bg-rose-500/[0.06] p-4">
+        <h3 className="text-sm font-semibold text-rose-950">해지</h3>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          해지하면 갱신일까지는 이용 가능하고, 이후 AI·프로 전용 기능·높은 한도가 제한됩니다. 데이터는 계정 정책에 따라
+          보관·삭제됩니다(운영 정책에 맞게 조정하세요).
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={pending || billing.cancelAtPeriodEnd}
+            className={cn(buttonVariants({ variant: "destructive", size: "sm" }), "h-9")}
+            onClick={() => run(() => scheduleSubscriptionCancelAction())}
+          >
+            해지 예약하기
+          </button>
+          {billing.cancelAtPeriodEnd ? (
+            <button
+              type="button"
+              disabled={pending}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}
+              onClick={() => run(() => resumeSubscriptionAction())}
+            >
+              해지 예약 철회
+            </button>
+          ) : null}
         </div>
+      </div>
 
+      <div>
+        <h3 className="text-sm font-semibold">최근 구독·과금 이벤트</h3>
         {events.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border/60 px-4 py-4 text-sm text-muted-foreground">
-            No billing history has been recorded yet.
-          </div>
+          <p className="mt-2 text-xs text-muted-foreground">아직 기록이 없습니다. 플랜을 바꾸면 타임라인에 쌓입니다.</p>
         ) : (
-          <ul className="space-y-2">
-            {events.map((event) => (
-              <li key={event.id} className="rounded-xl border border-border/60 bg-background px-4 py-3 text-sm">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-foreground">{EVENT_LABELS[event.kind] ?? event.kind}</p>
-                    <p className="mt-1 text-muted-foreground">{event.message}</p>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <time>{formatDateTime(event.createdAt)}</time>
-                    <ArrowRight className="size-3" />
-                  </div>
-                </div>
+          <ul className="mt-2 max-h-56 space-y-2 overflow-y-auto text-xs">
+            {events.map((e) => (
+              <li key={e.id} className="flex flex-col border-b border-border/40 pb-2 last:border-0">
+                <span className="font-medium text-foreground">{billingEventKindKo(e.kind)}</span>
+                <span className="text-muted-foreground">{e.message}</span>
+                <time className="text-[10px] text-muted-foreground">
+                  {new Date(e.createdAt).toLocaleString("ko-KR")}
+                </time>
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </div>
+
+      <div className="rounded-xl border border-border/50 bg-muted/15 p-4 text-xs text-muted-foreground">
+        <p className="font-medium text-foreground">플랜 요약</p>
+        <ul className="mt-2 list-inside list-disc space-y-1">
+          {PLANS.map((p) => (
+            <li key={p}>
+              <strong className="text-foreground">{PLAN_LABEL[p]}</strong> — {PLAN_TAGLINE[p]}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   )
 }

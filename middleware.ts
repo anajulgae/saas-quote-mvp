@@ -13,8 +13,6 @@ const PUBLIC_PATHS = [
   "/reset-password",
   "/privacy",
   "/terms",
-  "/billing",
-  "/help",
 ]
 
 function hasSessionCookie(request: NextRequest) {

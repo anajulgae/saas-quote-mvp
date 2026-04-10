@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { getAppSession } from "@/lib/auth"
+import { PLAN_LABEL } from "@/lib/billing/catalog"
 import { normalizePlan } from "@/lib/plan-features"
 import {
   beginCheckoutForPlan,

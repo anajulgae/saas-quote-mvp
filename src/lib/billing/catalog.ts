@@ -7,9 +7,9 @@ import type { BillingPlan } from "@/types/domain"
 export const BILLING_PAGE_PATH = "/billing"
 
 export const PLAN_LABEL: Record<BillingPlan, string> = {
-  starter: "Starter",
-  pro: "Pro",
-  business: "Business",
+  starter: "스타터",
+  pro: "프로",
+  business: "비즈니스",
 }
 
 /** 월 VAT 별도 가정 시 원 표기(표시용) */
@@ -38,10 +38,10 @@ export const FEATURE_GATES_AFTER_PAYMENT: Record<PlanFeature, BillingPlan[]> = {
   kakao_byoa_messaging: ["pro", "business"],
   customer_mini_portal: ["starter", "pro", "business"],
   e_tax_invoice_asp: ["business"],
+  advanced_reports: ["business"],
   analytics_custom_range: ["pro", "business"],
   analytics_breakdown: ["pro", "business"],
   analytics_export: ["business"],
-  advanced_reports: ["business"],
 }
 
 export const BILLING_UPGRADE_CONTACT_COPY =

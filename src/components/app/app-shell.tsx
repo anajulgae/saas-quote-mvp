@@ -4,6 +4,8 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   BarChart3,
+  CircleHelp,
+  CreditCard,
   LayoutDashboard,
   Menu,
   Receipt,
@@ -27,6 +29,8 @@ const navigation = [
   { href: "/invoices", label: "청구", icon: Receipt },
   { href: "/customers", label: "고객", icon: Users },
   { href: "/analytics", label: "통계", icon: BarChart3 },
+  { href: "/billing", label: "요금·구독", icon: CreditCard },
+  { href: "/help", label: "고객센터", icon: CircleHelp },
   { href: "/settings", label: "설정", icon: Settings },
 ]
 
@@ -62,6 +66,16 @@ const HEADER_CONTEXT: { match: string; title: string; description: string }[] = 
     description: "문의·견적·청구·수금 전환, AI·문서 발송, 기간별 운영 리포트",
   },
   {
+    match: "/billing",
+    title: "요금·구독",
+    description: "플랜·체험·사용량, 구독 변경·해지, PG 연동 확장 포인트",
+  },
+  {
+    match: "/help",
+    title: "고객센터",
+    description: "FAQ·공지·가이드·문의 접수, 지원 메일 안내",
+  },
+  {
     match: "/settings",
     title: "설정",
     description: "사업장·문서·공개 유입·알림·AI·플랜·메시징",
@@ -86,7 +100,10 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
     <nav className="space-y-1">
       {navigation.map((item) => {
         const Icon = item.icon
-        const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+        const isActive =
+          item.href === "/help"
+            ? pathname === "/help" || pathname.startsWith("/help/")
+            : pathname === item.href || pathname.startsWith(`${item.href}/`)
 
         return (
           <Link

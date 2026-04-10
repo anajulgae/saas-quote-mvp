@@ -14,7 +14,7 @@ export default function HelpHomePage() {
   return (
     <div className="space-y-10">
       <section className="space-y-3">
-        <h1 className="text-2xl font-bold tracking-tight">무엇을 도와드릴까요?</h1>
+        <h2 className="text-xl font-bold tracking-tight">무엇을 도와드릴까요?</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
           반복 질문은 FAQ와 가이드를 먼저 봐 주세요. 계정·결제·오류는 문의 양식으로 남기시면 기록된 순서로 답변드립니다.
         </p>
