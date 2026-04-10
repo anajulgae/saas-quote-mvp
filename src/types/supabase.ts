@@ -16,12 +16,12 @@ export interface Database {
           business_name: string | null
           phone: string | null
           plan: string
-          trial_started_at: string | null
           trial_ends_at: string | null
           subscription_status: string | null
           current_period_end: string | null
           cancel_at_period_end: boolean
           pending_plan: string | null
+          trial_started_at: string | null
           billing_provider: string | null
           billing_provider_subscription_id: string | null
           billing_provider_price_id: string | null
@@ -34,6 +34,10 @@ export interface Database {
           document_sends_this_month: number
           created_at: string
           updated_at: string
+          is_admin: boolean
+          admin_role: string | null
+          account_disabled: boolean
+          email: string | null
         }
         Insert: {
           id: string
@@ -41,12 +45,12 @@ export interface Database {
           business_name?: string | null
           phone?: string | null
           plan?: string
-          trial_started_at?: string | null
           trial_ends_at?: string | null
           subscription_status?: string | null
           current_period_end?: string | null
           cancel_at_period_end?: boolean
           pending_plan?: string | null
+          trial_started_at?: string | null
           billing_provider?: string | null
           billing_provider_subscription_id?: string | null
           billing_provider_price_id?: string | null
@@ -59,6 +63,10 @@ export interface Database {
           document_sends_this_month?: number
           created_at?: string
           updated_at?: string
+          is_admin?: boolean
+          admin_role?: string | null
+          account_disabled?: boolean
+          email?: string | null
         }
         Update: {
           id?: string
@@ -66,12 +74,12 @@ export interface Database {
           business_name?: string | null
           phone?: string | null
           plan?: string
-          trial_started_at?: string | null
           trial_ends_at?: string | null
           subscription_status?: string | null
           current_period_end?: string | null
           cancel_at_period_end?: boolean
           pending_plan?: string | null
+          trial_started_at?: string | null
           billing_provider?: string | null
           billing_provider_subscription_id?: string | null
           billing_provider_price_id?: string | null
@@ -84,6 +92,10 @@ export interface Database {
           document_sends_this_month?: number
           created_at?: string
           updated_at?: string
+          is_admin?: boolean
+          admin_role?: string | null
+          account_disabled?: boolean
+          email?: string | null
         }
         Relationships: []
       }
@@ -129,7 +141,7 @@ export interface Database {
           id?: string
           provider: string
           event_id: string
-          event_type: string
+          event_type?: string
           payload?: Json
           processed?: boolean
           processed_at?: string | null
@@ -190,6 +202,9 @@ export interface Database {
           contact_email: string
           status: string
           created_at: string
+          operator_note: string | null
+          assignee_admin_id: string | null
+          replied_at: string | null
         }
         Insert: {
           id?: string
@@ -200,6 +215,9 @@ export interface Database {
           contact_email: string
           status?: string
           created_at?: string
+          operator_note?: string | null
+          assignee_admin_id?: string | null
+          replied_at?: string | null
         }
         Update: {
           id?: string
@@ -210,6 +228,9 @@ export interface Database {
           contact_email?: string
           status?: string
           created_at?: string
+          operator_note?: string | null
+          assignee_admin_id?: string | null
+          replied_at?: string | null
         }
         Relationships: []
       }
@@ -1023,6 +1044,84 @@ export interface Database {
           failure_reason?: string | null
           created_at?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      admin_user_notes: {
+        Row: {
+          id: string
+          target_user_id: string
+          author_admin_id: string
+          body: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          target_user_id: string
+          author_admin_id: string
+          body: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          target_user_id?: string
+          author_admin_id?: string
+          body?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      ops_error_events: {
+        Row: {
+          id: string
+          source: string
+          kind: string
+          message: string
+          user_id: string | null
+          metadata: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          source: string
+          kind: string
+          message: string
+          user_id?: string | null
+          metadata?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          source?: string
+          kind?: string
+          message?: string
+          user_id?: string | null
+          metadata?: Json
+          created_at?: string
+        }
+        Relationships: []
+      }
+      public_inquiry_submissions: {
+        Row: {
+          id: string
+          owner_user_id: string
+          form_token: string
+          phone_normalized: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          owner_user_id: string
+          form_token: string
+          phone_normalized: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          owner_user_id?: string
+          form_token?: string
+          phone_normalized?: string
+          created_at?: string
         }
         Relationships: []
       }

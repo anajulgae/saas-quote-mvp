@@ -50,6 +50,7 @@ export async function ensureUserProfile(
         full_name: string
         business_name: string
         phone: string | null
+        email: string | null
       },
       options: { onConflict: string }
     ) => Promise<unknown>
@@ -59,6 +60,7 @@ export async function ensureUserProfile(
       full_name: fullName,
       business_name: businessName,
       phone,
+      email: user.email?.trim() ? user.email.trim().toLowerCase() : null,
     },
     {
       onConflict: "id",
@@ -107,33 +109,6 @@ export async function ensureUserProfile(
       const code = insertSettingsError.code
       if (code !== "23505") {
         throw insertSettingsError
-      }
-    }
-
-    const { data: billingState, error: billingStateError } = await supabase
-      .from("users")
-      .select("subscription_status, trial_started_at, trial_ends_at")
-      .eq("id", user.id)
-      .maybeSingle()
-
-    if (billingStateError) {
-      console.warn("[ensureUserProfile] users billing lookup:", billingStateError.message)
-    } else if (billingState?.subscription_status === "trialing") {
-      const { error: billingEventError } = await supabase.from("billing_events").insert({
-        user_id: user.id,
-        kind: "trial_started",
-        message: billingState.trial_ends_at
-          ? `7-day trial started. Save a payment method before ${billingState.trial_ends_at} for automatic renewal.`
-          : "7-day trial started for this workspace.",
-        metadata: {
-          source: "ensure_user_profile",
-          trialStartedAt: billingState.trial_started_at,
-          trialEndsAt: billingState.trial_ends_at,
-        },
-      })
-
-      if (billingEventError) {
-        console.warn("[ensureUserProfile] billing_events insert:", billingEventError.message)
       }
     }
   }
@@ -186,6 +161,23 @@ export async function getAppSession() {
   }
 
   const profile = await ensureUserProfile(supabase, user)
+
+  const { data: gateRow, error: gateErr } = await supabase
+    .from("users")
+    .select("account_disabled")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (gateErr) {
+    console.warn("[getAppSession] account_disabled lookup:", gateErr.message)
+  } else if (gateRow && (gateRow as { account_disabled?: boolean }).account_disabled) {
+    try {
+      await supabase.auth.signOut()
+    } catch {
+      // ignore
+    }
+    return null
+  }
 
   const billing = await fetchUserBillingState(supabase as never, user.id)
   const effectivePlan = getEffectiveBillingPlan(billing)

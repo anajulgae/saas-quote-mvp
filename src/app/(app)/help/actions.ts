@@ -43,7 +43,7 @@ export async function submitSupportTicketAction(formData: FormData) {
     subject,
     body,
     contact_email: contactEmail,
-    status: "open",
+    status: "new",
   })
 
   if (error) {
