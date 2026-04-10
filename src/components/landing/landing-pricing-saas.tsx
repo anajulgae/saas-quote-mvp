@@ -8,19 +8,19 @@ import type { BillingPlan } from "@/types/domain"
 
 const comparisonRows = [
   {
-    starter: "1 seat with core inquiry, quote, invoice, and collection flow",
-    pro: "Adds public landing, AI assist, and more document delivery volume",
-    business: "Adds reporting, ASP integration, and larger team-scale operation",
+    starter: "1석 · 문의·견적·청구·추심까지 핵심 흐름",
+    pro: "공개 랜딩, AI 보조, 문서 발송 한도 확대",
+    business: "분석 리포트, ASP(세금계산서) 연동, 팀·대규모 운영",
   },
   {
-    starter: "document_send includes email, link copy/share, and PDF download",
-    pro: "Higher AI and document_send quota for active paid operation",
-    business: "Large monthly quota for production-grade SaaS customers",
+    starter: "문서 발송: 이메일·링크 공유·PDF 다운로드",
+    pro: "활발한 유료 운영에 맞춘 AI·문서 발송 한도 상향",
+    business: "프로덕션급 고객을 위한 대용량 월간 한도",
   },
   {
-    starter: "7-day free trial before paid conversion",
-    pro: "Automatic billing continues after the trial if payment is saved",
-    business: "Custom rollout and sales path for advanced operation needs",
+    starter: "유료 전환 전 7일 무료 체험",
+    pro: "결제 수단 등록 시 체험 후 자동 갱신",
+    business: "고급 운영·도입 협의를 위한 세일즈·맞춤 경로",
   },
 ]
 
@@ -34,29 +34,29 @@ const plans: Array<{
   {
     plan: "starter",
     highlight: false,
-    summary: "For solo operators who want a clean quote-to-cash workflow.",
-    cta: "Start 7-day trial",
+    summary: "1인 운영자가 문의부터 입금까지 깔끔한 흐름을 갖추기에 적합합니다.",
+    cta: "7일 무료 체험 시작",
     href: "/billing?plan=starter",
   },
   {
     plan: "pro",
     highlight: true,
-    summary: "For teams that want AI assist, public landing, and richer customer delivery.",
-    cta: "Choose Pro",
+    summary: "AI 보조, 공개 랜딩, 고객 전달 채널을 넓히려는 팀에 맞습니다.",
+    cta: "프로 선택",
     href: "/billing?plan=pro",
   },
   {
     plan: "business",
     highlight: false,
-    summary: "For advanced reporting, e-tax invoice ASP, and larger organizations.",
-    cta: "Talk to sales",
+    summary: "고급 리포트, 전자세금계산서 ASP, 다인 조직·대규모 운영에 맞습니다.",
+    cta: "영업 문의",
     href: "/billing?plan=business#business",
   },
 ]
 
 function priceLabel(plan: BillingPlan) {
   const value = PLAN_PRICE_KRW_MONTH[plan]
-  return value == null ? "Contact" : `₩${value.toLocaleString("ko-KR")}`
+  return value == null ? "문의" : `₩${value.toLocaleString("ko-KR")}`
 }
 
 export function LandingPricingSaas() {
@@ -68,32 +68,31 @@ export function LandingPricingSaas() {
     >
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto mb-12 max-w-3xl text-center">
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/90">Pricing</p>
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/90">요금</p>
           <h2
             id="pricing-heading"
             className="text-2xl font-extrabold tracking-tight text-foreground sm:text-[1.95rem] sm:leading-snug"
           >
-            Launch-ready pricing tied to the real billing flow
+            실제 결제 흐름과 맞춘 런칭 요금
           </h2>
           <p className="mt-4 text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">
-            Every new account starts with a <strong className="text-foreground">7-day free trial</strong>. Logged-in
-            users move directly into the billing console, and signed-out users are guided into signup/login before plan
-            selection continues.
+            신규 계정은 <strong className="text-foreground">7일 무료 체험</strong>으로 시작합니다. 로그인한 사용자는
+            요금·구독 화면으로 바로 이동하고, 비로그인 사용자는 가입·로그인 후 플랜 선택이 이어집니다.
           </p>
         </div>
 
         <div className="mb-12 overflow-hidden rounded-2xl border-2 border-border/60 bg-card shadow-md ring-1 ring-black/[0.04]">
           <div className="grid border-b border-border/50 bg-muted/35 text-xs font-extrabold sm:grid-cols-3">
             <div className="border-b border-border/50 px-3 py-3 sm:border-b-0 sm:border-r sm:py-4 sm:pl-5">
-              Starter
+              {PLAN_LABEL.starter}
             </div>
             <div className="flex items-center gap-2 border-b border-border/50 bg-primary/[0.1] px-3 py-3 sm:border-b-0 sm:border-r sm:py-4 sm:pl-5">
               <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
-                Recommended
+                추천
               </span>
-              Pro
+              {PLAN_LABEL.pro}
             </div>
-            <div className="px-3 py-3 sm:py-4 sm:pl-5">Business</div>
+            <div className="px-3 py-3 sm:py-4 sm:pl-5">{PLAN_LABEL.business}</div>
           </div>
 
           <div className="grid sm:grid-cols-3">
@@ -139,8 +138,8 @@ export function LandingPricingSaas() {
             >
               <div className="mb-2 min-h-[1.75rem]">
                 {highlight ? (
-                  <span className="inline-flex rounded-full bg-primary px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-primary-foreground shadow-sm">
-                    Best launch fit
+                  <span className="inline-flex rounded-full bg-primary px-3 py-1 text-[11px] font-extrabold tracking-wide text-primary-foreground shadow-sm">
+                    런칭에 추천
                   </span>
                 ) : null}
               </div>
@@ -148,15 +147,15 @@ export function LandingPricingSaas() {
               <h3 className="text-lg font-extrabold tracking-tight text-foreground">{PLAN_LABEL[plan]}</h3>
               <p className="mt-2 text-3xl font-extrabold tracking-tight text-foreground">
                 {priceLabel(plan)}
-                <span className="ml-1 text-sm font-semibold text-muted-foreground">/mo</span>
+                <span className="ml-1 text-sm font-semibold text-muted-foreground">/월</span>
               </p>
               <p className="mt-3 text-sm font-semibold text-muted-foreground">{PLAN_TAGLINE[plan]}</p>
               <p className="mt-3 text-sm leading-relaxed text-foreground/90">{summary}</p>
 
               <div className="mt-5 rounded-xl border border-primary/22 bg-primary/[0.08] px-3 py-2.5 text-xs font-bold leading-relaxed text-foreground">
-                Trial policy:
+                체험 정책
                 <br />
-                7 days free first, then automatic billing on the selected plan when payment is saved.
+                먼저 7일 무료이며, 결제 수단이 등록되면 선택한 플랜으로 자동 청구됩니다.
               </div>
 
               <Link

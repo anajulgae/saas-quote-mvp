@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 
 import { buttonVariants } from "@/components/ui/button-variants"
+import { PLAN_LABEL } from "@/lib/billing/catalog"
 import { cn } from "@/lib/utils"
 
 import { DashboardMockPreview } from "./dashboard-mock-preview"
@@ -555,7 +556,7 @@ export function LandingPricing() {
     "PDF·기본 발송·알림",
   ]
   const proHighlights = [
-    "Starter 대비 AI·발송·포털 한도 확대",
+    "스타터 대비 AI·발송·포털 한도 확대",
     "업체 소개 랜딩(`/biz`)·고객 포털 본격 활용",
     "카카오 채널(BYOA)·추심·리마인드 고도화",
     "문의·견적·청구·고객 AI 보조(운영 분석·풀 초안·수금 문구)",
@@ -579,35 +580,35 @@ export function LandingPricing() {
     highlight: boolean
   }[] = [
     {
-      name: "Starter",
+      name: PLAN_LABEL.starter,
       price: "₩29,000",
       period: "/월",
       blurb: "1인 핵심 운영",
       who: "혼자 견적·청구까지 끊지 않게 쓰는 사장님",
-      tagline: "가입 후 7일간 Pro 수준으로 체험한 뒤, Starter로 계속하거나 업그레이드할 수 있습니다.",
+      tagline: "가입 후 7일간 프로 수준으로 체험한 뒤, 스타터로 계속하거나 업그레이드할 수 있습니다.",
       cta: "7일 체험으로 시작",
       href: "/signup",
       highlight: false,
     },
     {
-      name: "Pro",
+      name: PLAN_LABEL.pro,
       price: "₩59,000",
       period: "/월",
       blurb: "소규모 팀·유입·자동화",
       who: "링크 유입·포털·AI·카카오까지 쓰고 싶은 팀",
       tagline: "랜딩·포털·AI·추심까지 — 장사 운영에 필요한 자동화가 모입니다.",
-      cta: "Pro 자세히",
+      cta: "프로 자세히",
       href: "/billing?plan=pro",
       highlight: true,
     },
     {
-      name: "Business",
+      name: PLAN_LABEL.business,
       price: "₩129,000",
       period: "/월",
       blurb: "팀·세금계산서·대량",
       who: "여러 명 협업·전자세금계산서·맞춤 한도",
-      tagline: "더 큰 한도와 우선 지원이 필요하면 Business 또는 맞춤 견적을 선택하세요.",
-      cta: "Business·맞춤 문의",
+      tagline: "더 큰 한도와 우선 지원이 필요하면 비즈니스 또는 맞춤 견적을 선택하세요.",
+      cta: "비즈니스·맞춤 문의",
       href: "/billing#business",
       highlight: false,
     },
@@ -629,8 +630,8 @@ export function LandingPricing() {
             얼마가 아니라, 무엇이 열리는지
           </h2>
           <p className="mt-4 text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">
-            <strong className="font-bold text-foreground">7일 무료 체험</strong>으로 Pro 수준 AI·한도를 먼저 써 보고, 이후{" "}
-            <strong className="font-bold text-foreground">Starter / Pro / Business</strong> 중에서 고르면 됩니다.{" "}
+            <strong className="font-bold text-foreground">7일 무료 체험</strong>으로 프로 수준 AI·한도를 먼저 써 보고, 이후{" "}
+            <strong className="font-bold text-foreground">스타터 / 프로 / 비즈니스</strong> 중에서 고르면 됩니다.{" "}
             <Link href="/billing" className="font-bold text-primary underline-offset-4 hover:underline">
               요금·구독 화면
             </Link>
@@ -641,15 +642,15 @@ export function LandingPricing() {
         <div className="mb-12 overflow-hidden rounded-2xl border-2 border-border/60 bg-card shadow-md ring-1 ring-black/[0.04]">
           <div className="grid border-b border-border/50 bg-muted/35 text-xs font-extrabold sm:grid-cols-3">
             <div className="border-b border-border/50 px-3 py-3 sm:border-b-0 sm:border-r sm:py-4 sm:pl-5">
-              Starter
+              {PLAN_LABEL.starter}
             </div>
             <div className="flex items-center gap-2 border-b border-border/50 bg-primary/[0.1] px-3 py-3 sm:border-b-0 sm:border-r sm:py-4 sm:pl-5">
               <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
                 추천
               </span>
-              Pro
+              {PLAN_LABEL.pro}
             </div>
-            <div className="px-3 py-3 sm:py-4 sm:pl-5">Business</div>
+            <div className="px-3 py-3 sm:py-4 sm:pl-5">{PLAN_LABEL.business}</div>
           </div>
           <div className="grid sm:grid-cols-3">
             <ul className="space-y-2.5 border-border/50 p-4 sm:border-r sm:p-5">
@@ -687,7 +688,7 @@ export function LandingPricing() {
                 "flex flex-col rounded-2xl border p-6 sm:p-7",
                 plan.highlight
                   ? "relative z-[1] border-primary/50 bg-card shadow-xl ring-2 ring-primary/35 lg:scale-[1.02]"
-                  : plan.name === "Business"
+                  : plan.name === PLAN_LABEL.business
                     ? "border-dashed border-border/65 bg-card/90"
                     : "border-border/60 bg-card shadow-sm ring-1 ring-black/[0.03]"
               )}
