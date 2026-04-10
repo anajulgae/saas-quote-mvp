@@ -335,6 +335,20 @@ export function SettingsForm({
               <code className="rounded bg-muted px-1">current_period_end</code> 는 PG 웹훅에서 채웁니다.
             </p>
           )}
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Link
+              href={BILLING_PAGE_PATH}
+              className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
+            >
+              援щ룆 肄섏넄 ?닿린
+            </Link>
+            <Link
+              href="/help"
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}
+            >
+              寃곗젣쨌援щ룆 媛?대뱶
+            </Link>
+          </div>
         </CardContent>
       </Card>
 

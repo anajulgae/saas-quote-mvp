@@ -2,7 +2,16 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Menu, Receipt, Settings, Users, FileText, MessagesSquare } from "lucide-react"
+import {
+  CreditCard,
+  FileText,
+  LayoutDashboard,
+  Menu,
+  MessagesSquare,
+  Receipt,
+  Settings,
+  Users,
+} from "lucide-react"
 
 import { logoutAction } from "@/app/actions"
 import { AuthLegalLinks } from "@/components/app/auth-legal-links"
@@ -12,56 +21,62 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 
 const navigation = [
-  { href: "/dashboard", label: "대시보드", icon: LayoutDashboard },
-  { href: "/inquiries", label: "문의", icon: MessagesSquare },
-  { href: "/quotes", label: "견적", icon: FileText },
-  { href: "/invoices", label: "청구", icon: Receipt },
-  { href: "/customers", label: "고객", icon: Users },
-  { href: "/settings", label: "설정", icon: Settings },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/inquiries", label: "Inquiries", icon: MessagesSquare },
+  { href: "/quotes", label: "Quotes", icon: FileText },
+  { href: "/invoices", label: "Invoices", icon: Receipt },
+  { href: "/customers", label: "Customers", icon: Users },
+  { href: "/billing", label: "Billing", icon: CreditCard },
+  { href: "/settings", label: "Settings", icon: Settings },
 ]
 
 const HEADER_CONTEXT: { match: string; title: string; description: string }[] = [
   {
     match: "/dashboard",
-    title: "대시보드",
-    description: "수금·팔로업 요약과 유입·발송·알림 허브",
+    title: "Dashboard",
+    description: "Review pipeline, follow-ups, collections, and billing signals at a glance.",
   },
   {
     match: "/inquiries",
-    title: "문의",
-    description: "웹폼·포털 접수 → 단계·캘린더 → AI 운영 분석·정리 → 견적 연결",
+    title: "Inquiries",
+    description: "Capture inbound requests, qualify them, and move them into quotes.",
   },
   {
     match: "/quotes",
-    title: "견적",
-    description: "AI 풀 초안·문서·공개 링크·메일 발송·청구까지",
+    title: "Quotes",
+    description: "Draft, share, email, and convert quotes with AI-assisted workflow.",
   },
   {
     match: "/invoices",
-    title: "청구",
-    description: "공개 청구·입금·AI 추천·리마인드·추심·캘린더",
+    title: "Invoices",
+    description: "Track payment status, reminders, collections, and tax invoice readiness.",
   },
   {
     match: "/customers",
-    title: "고객",
-    description: "거래처·미니 포털·문의·견적·청구·AI 인사이트 맥락",
+    title: "Customers",
+    description: "Keep customer details, activity history, and delivery channels in one place.",
   },
   {
-    match: "/settings",
-    title: "설정",
-    description: "사업장·문서·공개 유입·알림·AI·플랜·메시징",
+    match: "/billing",
+    title: "Billing",
+    description: "Manage plans, trials, payment recovery, cancellation, and usage from one console.",
   },
   {
     match: "/settings/landing",
-    title: "업체 소개 페이지",
-    description: "공개 랜딩·문의 연결·브랜드 노출",
+    title: "Public Landing",
+    description: "Publish a public business page and connect it to inquiry capture.",
+  },
+  {
+    match: "/settings",
+    title: "Settings",
+    description: "Configure business profile, templates, notifications, messaging, and plan-linked options.",
   },
 ]
 
 function headerForPath(pathname: string | null) {
   const path = pathname ?? "/dashboard"
   const row = HEADER_CONTEXT.find((h) => path === h.match || path.startsWith(`${h.match}/`))
-  return row ?? { title: "Bill-IO", description: "견적 · 청구 · 수금 연결 관리" }
+  return row ?? { title: "Bill-IO", description: "Quote-to-cash operations for service teams." }
 }
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
@@ -107,7 +122,7 @@ function SidebarContent({
         <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
           Bill-IO
         </p>
-        <p className="text-[10px] leading-snug text-muted-foreground/90">유입 → 견적 → 청구 → 수금</p>
+        <p className="text-[10px] leading-snug text-muted-foreground/90">Inquiry to quote to billing.</p>
         <h2 className="text-base font-semibold leading-snug tracking-tight text-foreground">
           {businessName}
         </h2>
@@ -123,12 +138,12 @@ function SidebarContent({
       <div className="space-y-3 border-t border-border/70 p-3">
         <AuthLegalLinks
           showBilling
-          navLabel="약관·요금·고객센터"
+          navLabel="Billing, support, and legal links"
           className="flex flex-wrap gap-x-1.5 gap-y-1 text-[11px] leading-relaxed text-muted-foreground"
         />
         <form action={logoutAction}>
           <Button type="submit" variant="outline" className="w-full">
-            로그아웃
+            Log out
           </Button>
         </form>
       </div>
@@ -155,7 +170,7 @@ function AppHeader({
       <div className="flex items-center justify-between gap-3 px-4 py-2.5 md:px-6">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Sheet>
-            <SheetTrigger render={<Button variant="outline" size="icon-sm" aria-label="메뉴 열기" />}>
+            <SheetTrigger render={<Button variant="outline" size="icon-sm" aria-label="Open menu" />}>
               <Menu className="size-4" />
             </SheetTrigger>
             <SheetContent side="left" className="w-72 p-0 xl:hidden">
@@ -181,11 +196,8 @@ export function AppShell({
   children,
 }: {
   businessName: string
-  /** 사업장명과 다른 경우에만 표시 (이메일·이름 중복 방지) */
   sidebarSecondary?: string
-  /** 외부 점검용 데모 쿠키 세션 (Supabase·운영 DB 미사용) */
   isDemoSession?: boolean
-  /** Supabase 로그인 사용자 id — 알림 Realtime·배지 */
   sessionUserId?: string | null
   children: React.ReactNode
 }) {
@@ -201,7 +213,7 @@ export function AppShell({
               role="status"
               className="border-b border-amber-500/40 bg-amber-500/15 px-4 py-2 text-center text-sm font-medium text-amber-950 dark:text-amber-100"
             >
-              테스트용 데모 환경 · 샘플 데이터만 표시됩니다 (운영 DB·실사용자 데이터와 분리)
+              Demo workspace: sample data only. Production billing and customer data stay separate.
             </div>
           ) : null}
           <AppHeader

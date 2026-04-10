@@ -41,6 +41,26 @@ import type { BillingPlan } from "@/types/domain"
 
 const PLANS: BillingPlan[] = ["starter", "pro", "business"]
 
+const EVENT_LABELS: Partial<Record<string, string>> = {
+  trial_started: "Trial started",
+  trial_will_end: "Trial ending soon",
+  trial_ended: "Trial ended",
+  checkout_started: "Checkout started",
+  payment_method_added: "Payment method added",
+  subscription_started: "Subscription started",
+  subscription_updated: "Subscription updated",
+  subscription_upgraded: "Plan upgraded",
+  subscription_downgraded: "Plan downgraded",
+  payment_succeeded: "Payment succeeded",
+  payment_failed: "Payment failed",
+  retry_scheduled: "Retry scheduled",
+  cancel_scheduled: "Cancellation scheduled",
+  cancel_resumed: "Cancellation removed",
+  subscription_canceled: "Subscription canceled",
+  portal_opened: "Billing portal opened",
+  document_send_counted: "document_send counted",
+}
+
 type ActionResult = { ok: true; redirectUrl?: string } | { ok: false; error: string }
 
 function formatDate(value: string | null) {
@@ -87,6 +107,15 @@ function getBanner(
   effectivePlan: BillingPlan
 ): { tone: "positive" | "warning" | "danger" | "muted"; title: string; body: string } | null {
   const remaining = trialRemainingLabel(billing)
+
+  if (billing.pendingPlan) {
+    return {
+      tone: "warning",
+      title: `${PLAN_LABEL[billing.pendingPlan]} plan change is pending`,
+      body:
+        "A pending plan marker exists in billing state. Review the provider portal or recent billing events to confirm whether the subscription change is already queued or finished.",
+    }
+  }
 
   if (billing.subscriptionStatus === "past_due") {
     return {
@@ -157,6 +186,7 @@ function UsageBar({ used, limit, colorClass }: { used: number; limit: number; co
 export function BillingConsoleClient({
   billing,
   effectivePlan,
+  selectedPlan,
   portalEnabledCount,
   publicInquiryFormCount,
   seatUsedCount,
@@ -165,6 +195,7 @@ export function BillingConsoleClient({
 }: {
   billing: UserBillingSnapshot
   effectivePlan: BillingPlan
+  selectedPlan: BillingPlan | null
   portalEnabledCount: number
   publicInquiryFormCount: number
   seatUsedCount: number
@@ -180,6 +211,8 @@ export function BillingConsoleClient({
   const [pending, startTransition] = useTransition()
   const limits = getUsageLimitsForEffectivePlan(effectivePlan)
   const banner = getBanner(billing, effectivePlan)
+  const billingUnavailable = !runtime.configured
+  const selectedPlanNeedsAttention = Boolean(selectedPlan && selectedPlan !== billing.plan)
 
   const paymentMethodLabel =
     billing.paymentMethodBrand && billing.paymentMethodLast4
@@ -267,6 +300,15 @@ export function BillingConsoleClient({
               </p>
             </div>
             <div className="rounded-xl border border-border/60 bg-background px-3 py-3">
+              <p className="text-xs text-muted-foreground">Target plan intent</p>
+              <p className="mt-1 font-medium">{selectedPlan ? PLAN_LABEL[selectedPlan] : "Current plan"}</p>
+              {selectedPlanNeedsAttention ? (
+                <p className="mt-1 text-xs text-amber-700">
+                  Pricing entry intent is set to {PLAN_LABEL[selectedPlan!]}. Choose that plan below to apply it.
+                </p>
+              ) : null}
+            </div>
+            <div className="rounded-xl border border-border/60 bg-background px-3 py-3">
               <p className="text-xs text-muted-foreground">Billing provider</p>
               <p className="mt-1 font-medium uppercase">
                 {runtime.provider} <span className="text-muted-foreground">({runtime.mode})</span>
@@ -288,7 +330,7 @@ export function BillingConsoleClient({
               <button
                 type="button"
                 className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}
-                disabled={pending}
+                disabled={pending || billingUnavailable}
                 onClick={() => run(() => openBillingPortalAction())}
               >
                 {pending ? <Loader2 className="mr-1 size-4 animate-spin" /> : null}
@@ -301,7 +343,7 @@ export function BillingConsoleClient({
                 <button
                   type="button"
                   className={cn(buttonVariants({ size: "sm" }), "h-9")}
-                  disabled={pending}
+                  disabled={pending || billingUnavailable}
                   onClick={() => run(() => startCheckoutAction(billing.plan))}
                 >
                   Restart checkout
@@ -360,6 +402,9 @@ export function BillingConsoleClient({
               <p className="mt-1 font-medium tabular-nums">
                 {seatUsedCount} / {limits.seats}
               </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Launch build currently tracks the active operator count for this workspace.
+              </p>
             </div>
             <div className="rounded-xl border border-border/60 bg-background px-3 py-3">
               <p className="text-xs text-muted-foreground">Payment status updated</p>
@@ -395,6 +440,7 @@ export function BillingConsoleClient({
             const currentPrice = PLAN_PRICE_KRW_MONTH[billing.plan] ?? 0
             const nextPrice = PLAN_PRICE_KRW_MONTH[plan] ?? 0
             const isCurrent = billing.plan === plan
+            const isSelectedIntent = selectedPlan === plan
             const label = isCurrent ? "Current" : nextPrice > currentPrice ? "Upgrade" : "Downgrade"
 
             return (
@@ -402,7 +448,11 @@ export function BillingConsoleClient({
                 key={plan}
                 className={cn(
                   "rounded-2xl border p-4 shadow-sm",
-                  isCurrent ? "border-primary/40 bg-primary/[0.04]" : "border-border/60 bg-background"
+                  isCurrent
+                    ? "border-primary/40 bg-primary/[0.04]"
+                    : isSelectedIntent
+                      ? "border-amber-500/40 bg-amber-500/[0.05]"
+                      : "border-border/60 bg-background"
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -419,10 +469,19 @@ export function BillingConsoleClient({
                     <span className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
                       Current plan
                     </span>
+                  ) : isSelectedIntent ? (
+                    <span className="rounded-full border border-amber-500/35 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900">
+                      Selected intent
+                    </span>
                   ) : null}
                 </div>
 
                 <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{PLAN_TAGLINE[plan]}</p>
+                {!isCurrent && nextPrice < currentPrice ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Downgrades apply through the current provider flow as soon as the subscription change is accepted.
+                  </p>
+                ) : null}
 
                 <div className="mt-5 flex flex-wrap gap-2">
                   <button
@@ -431,7 +490,7 @@ export function BillingConsoleClient({
                       buttonVariants({ size: "sm", variant: isCurrent ? "outline" : "default" }),
                       "h-9"
                     )}
-                    disabled={pending || isCurrent}
+                    disabled={pending || isCurrent || billingUnavailable}
                     onClick={() =>
                       run(
                         () => selectSubscriptionPlanAction(plan),
@@ -450,7 +509,7 @@ export function BillingConsoleClient({
                     <button
                       type="button"
                       className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}
-                      disabled={pending}
+                      disabled={pending || billingUnavailable}
                       onClick={() => run(() => startCheckoutAction(plan))}
                     >
                       Start checkout
@@ -479,7 +538,7 @@ export function BillingConsoleClient({
           <button
             type="button"
             className={cn(buttonVariants({ variant: "destructive", size: "sm" }), "h-9")}
-            disabled={pending || billing.cancelAtPeriodEnd}
+            disabled={pending || billing.cancelAtPeriodEnd || billingUnavailable}
             onClick={() => run(() => scheduleSubscriptionCancelAction(), "Cancellation has been scheduled.")}
           >
             Cancel at period end
@@ -488,7 +547,7 @@ export function BillingConsoleClient({
           <button
             type="button"
             className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}
-            disabled={pending || !billing.cancelAtPeriodEnd}
+            disabled={pending || !billing.cancelAtPeriodEnd || billingUnavailable}
             onClick={() => run(() => resumeSubscriptionAction(), "Scheduled cancellation was removed.")}
           >
             <RotateCcw className="mr-1 size-4" />
@@ -498,7 +557,7 @@ export function BillingConsoleClient({
           <button
             type="button"
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-9")}
-            disabled={pending}
+            disabled={pending || billingUnavailable}
             onClick={() => run(() => openBillingPortalAction())}
           >
             Update payment method
@@ -522,7 +581,7 @@ export function BillingConsoleClient({
               <li key={event.id} className="rounded-xl border border-border/60 bg-background px-4 py-3 text-sm">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <p className="font-medium text-foreground">{event.kind}</p>
+                    <p className="font-medium text-foreground">{EVENT_LABELS[event.kind] ?? event.kind}</p>
                     <p className="mt-1 text-muted-foreground">{event.message}</p>
                   </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">

@@ -109,6 +109,33 @@ export async function ensureUserProfile(
         throw insertSettingsError
       }
     }
+
+    const { data: billingState, error: billingStateError } = await supabase
+      .from("users")
+      .select("subscription_status, trial_started_at, trial_ends_at")
+      .eq("id", user.id)
+      .maybeSingle()
+
+    if (billingStateError) {
+      console.warn("[ensureUserProfile] users billing lookup:", billingStateError.message)
+    } else if (billingState?.subscription_status === "trialing") {
+      const { error: billingEventError } = await supabase.from("billing_events").insert({
+        user_id: user.id,
+        kind: "trial_started",
+        message: billingState.trial_ends_at
+          ? `7-day trial started. Save a payment method before ${billingState.trial_ends_at} for automatic renewal.`
+          : "7-day trial started for this workspace.",
+        metadata: {
+          source: "ensure_user_profile",
+          trialStartedAt: billingState.trial_started_at,
+          trialEndsAt: billingState.trial_ends_at,
+        },
+      })
+
+      if (billingEventError) {
+        console.warn("[ensureUserProfile] billing_events insert:", billingEventError.message)
+      }
+    }
   }
 
   const { error: notifPrefErr } = await supabase.from("notification_preferences").insert({

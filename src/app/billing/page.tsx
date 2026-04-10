@@ -85,6 +85,7 @@ export default async function BillingPage({
           <BillingConsoleClient
             billing={consoleData.billing}
             effectivePlan={consoleData.effectivePlan}
+            selectedPlan={selectedPlan}
             portalEnabledCount={consoleData.portalEnabledCount}
             publicInquiryFormCount={consoleData.publicInquiryFormCount}
             seatUsedCount={consoleData.seatUsedCount}
