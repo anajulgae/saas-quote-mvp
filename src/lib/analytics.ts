@@ -26,6 +26,19 @@ type ReminderRow = Database["public"]["Tables"]["reminders"]["Row"]
 type ActivityLogRow = Database["public"]["Tables"]["activity_logs"]["Row"]
 type DocumentSendEventRow = Database["public"]["Tables"]["document_send_events"]["Row"]
 
+/** 마이그레이션 0015 미적용 등으로 테이블이 없을 때 통계 나머지는 계속 보여 주기 위함 */
+function isMissingDbRelationError(error: { message?: string; code?: string }): boolean {
+  const msg = (error.message ?? "").toLowerCase()
+  const code = String(error.code ?? "")
+  return (
+    code === "42P01" ||
+    code === "PGRST205" ||
+    msg.includes("does not exist") ||
+    msg.includes("schema cache") ||
+    (msg.includes("document_send_events") && msg.includes("could not find"))
+  )
+}
+
 export type AnalyticsRangePreset =
   | "today"
   | "7d"
@@ -1415,7 +1428,6 @@ export async function getAnalyticsReportForCurrentUser(
     { data: invoiceRows, error: invoiceError },
     { data: reminderRows, error: reminderError },
     { data: activityRows, error: activityError },
-    { data: documentSendRows, error: documentSendError },
     planContext,
   ] = await Promise.all([
     supabase.from("customers").select("id, name, company_name, created_at").eq("user_id", userId),
@@ -1433,10 +1445,6 @@ export async function getAnalyticsReportForCurrentUser(
       .from("activity_logs")
       .select("id, customer_id, inquiry_id, quote_id, invoice_id, action, metadata, created_at")
       .eq("user_id", userId),
-    supabase
-      .from("document_send_events")
-      .select("id, document_kind, document_id, channel, created_at")
-      .eq("user_id", userId),
     loadPlanContext(supabase as SupabaseClient<Database>, userId),
   ])
 
@@ -1446,7 +1454,22 @@ export async function getAnalyticsReportForCurrentUser(
   if (invoiceError) throw invoiceError
   if (reminderError) throw reminderError
   if (activityError) throw activityError
-  if (documentSendError) throw documentSendError
+
+  let documentSendRows: DocumentSendEventRow[] = []
+  const { data: documentSendData, error: documentSendError } = await supabase
+    .from("document_send_events")
+    .select("id, document_kind, document_id, channel, created_at")
+    .eq("user_id", userId)
+
+  if (documentSendError) {
+    if (isMissingDbRelationError(documentSendError)) {
+      console.warn("[analytics] document_send_events unavailable:", documentSendError.message)
+    } else {
+      throw documentSendError
+    }
+  } else {
+    documentSendRows = (documentSendData ?? []) as DocumentSendEventRow[]
+  }
 
   return buildReport({
     plan: planContext.plan,
@@ -1459,7 +1482,7 @@ export async function getAnalyticsReportForCurrentUser(
     invoices: normalizeInvoices((invoiceRows ?? []) as InvoiceRow[]),
     reminders: normalizeReminders((reminderRows ?? []) as ReminderRow[]),
     activities: normalizeActivities((activityRows ?? []) as ActivityLogRow[]),
-    documentSendEvents: normalizeDocumentSendEvents((documentSendRows ?? []) as DocumentSendEventRow[]),
+    documentSendEvents: normalizeDocumentSendEvents(documentSendRows),
   })
 }
 
