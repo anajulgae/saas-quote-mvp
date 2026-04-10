@@ -1,3 +1,5 @@
+import type { UserBillingSnapshot } from "@/lib/subscription"
+
 import type {
   ActivityKind,
   ActivityLog,
@@ -19,7 +21,24 @@ export const demoUser: AppUser = {
   businessName: "민준 스튜디오",
   email: "demo@flowbill.kr",
   phone: "010-2841-5532",
-  plan: "pro",
+  plan: "business",
+  effectivePlan: "business",
+  subscriptionStatus: "active",
+  trialEndsAt: null,
+}
+
+/** 설정·빌링 UI 데모용 */
+export const demoBillingSnapshot: UserBillingSnapshot = {
+  plan: "business",
+  subscriptionStatus: "active",
+  trialEndsAt: null,
+  currentPeriodEnd: new Date(Date.now() + 30 * 86400000).toISOString(),
+  cancelAtPeriodEnd: false,
+  pendingPlan: null,
+  usageMonth: new Date().toISOString().slice(0, 7),
+  aiCallsThisMonth: 42,
+  documentSendsThisMonth: 28,
+  billingColumnsMissing: false,
 }
 
 export const demoBusinessSettings: BusinessSettings = {

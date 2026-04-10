@@ -36,7 +36,7 @@ export default async function SettingsLandingPage() {
     <div className="space-y-5 md:space-y-6">
       <PageHeader
         title="업체 소개 페이지"
-        description="Pro 전용 공개 랜딩입니다. slug로 /biz/주소 가 접속되며, 문의하기는 공개 문의 폼과 연결됩니다."
+        description="Pro·Business 공개 랜딩입니다. slug로 /biz/주소 가 접속되며, 문의하기는 공개 문의 폼과 연결됩니다."
       />
 
       <p>
@@ -47,9 +47,9 @@ export default async function SettingsLandingPage() {
 
       {!canUse ? (
         <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-4 text-sm text-foreground">
-          <p className="font-medium">Pro 플랜에서 이용할 수 있습니다</p>
+          <p className="font-medium">Pro 이상 플랜에서 이용할 수 있습니다</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            소개 랜딩·AI 소개 초안·공개 링크는 Pro 전용입니다. 업그레이드 후 다시 방문해 주세요.
+            소개 랜딩·AI 소개 초안·공개 링크는 Pro·Business에서 사용할 수 있습니다. 업그레이드 후 다시 방문해 주세요.
             {planColumnMissing ? " (`users.plan` 컬럼이 없으면 무료로 처리됩니다. 마이그레이션을 확인해 주세요.)" : ""}
           </p>
           <Link href="/billing?plan=pro" className={cn(buttonVariants({ size: "sm" }), "mt-3 inline-flex h-9")}>

@@ -207,10 +207,10 @@ export function InvoiceTaxInvoiceSection({
       <div className="space-y-2 rounded-lg border border-border/60 bg-muted/15 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-semibold text-foreground">전자세금계산서</p>
-          <span className={opsStatusChipVariants({ tone: "muted", size: "sm", emphasis: false })}>Pro</span>
+          <span className={opsStatusChipVariants({ tone: "muted", size: "sm", emphasis: false })}>Business</span>
         </div>
         <p className="text-xs leading-relaxed text-muted-foreground">
-          등록한 발급대행(ASP) 계정으로 청구와 연결해 전자세금계산서를 발행·추적할 수 있습니다. Pro 플랜에서 이용할 수
+          등록한 발급대행(ASP) 계정으로 청구와 연결해 전자세금계산서를 발행·추적할 수 있습니다. Business 플랜에서 이용할 수
           있습니다.
         </p>
         <Link href={BILLING_PAGE_PATH} className={cn(buttonVariants({ size: "sm", variant: "outline" }), "w-full sm:w-auto")}>

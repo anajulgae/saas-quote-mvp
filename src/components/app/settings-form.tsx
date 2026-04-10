@@ -20,9 +20,16 @@ import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { BILLING_PAGE_PATH, PLAN_LABEL } from "@/lib/billing/catalog"
 import { formatBusinessRegNoInput } from "@/lib/format"
 import { planAllowsFeature } from "@/lib/plan-features"
 import { computeTemplatesSyncKey } from "@/lib/settings-form-key"
+import {
+  getEffectiveBillingPlan,
+  getUsageLimitsForEffectivePlan,
+  trialRemainingLabel,
+  type UserBillingSnapshot,
+} from "@/lib/subscription"
 import { cn } from "@/lib/utils"
 import type {
   BillingPlan,
@@ -96,6 +103,7 @@ export function SettingsForm({
   initialSettings,
   templates,
   currentPlan,
+  billing,
   planColumnMissing,
   siteOrigin,
   initialNotificationPreferences,
@@ -104,6 +112,7 @@ export function SettingsForm({
   initialSettings: BusinessSettings
   templates: Template[]
   currentPlan: BillingPlan
+  billing: UserBillingSnapshot
   planColumnMissing: boolean
   siteOrigin: string
   initialNotificationPreferences: NotificationPreferences
@@ -224,39 +233,108 @@ export function SettingsForm({
           className="rounded-xl border border-amber-500/40 bg-amber-500/[0.08] px-4 py-3 text-sm text-amber-950 dark:text-amber-50/95"
           role="status"
         >
-          <p className="font-semibold text-foreground">데이터베이스: 플랜 컬럼 미적용</p>
+          <p className="font-semibold text-foreground">데이터베이스: 플랜·구독 컬럼 미적용</p>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Supabase에 <code className="rounded bg-background/80 px-1">0004_user_plan.sql</code> 마이그레이션이
-            적용되지 않은 것으로 보입니다. 지금은 모두 Free로 동작합니다. SQL Editor에서 해당 파일을 실행한 뒤 이
-            안내가 사라지는지 확인해 주세요.
+            <code className="rounded bg-background/80 px-1">0004_user_plan.sql</code> 및{" "}
+            <code className="rounded bg-background/80 px-1">0014_saas_plans_trial_usage_support.sql</code> 이
+            적용되지 않은 것으로 보입니다. 체험·사용량·빌링 이벤트·고객센터 티켓은 마이그레이션 후 정상 동작합니다.
           </p>
         </div>
       ) : null}
 
       <Card className="border-border/60 bg-muted/10">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">요금제</CardTitle>
+          <CardTitle className="text-base">구독 및 요금</CardTitle>
           <CardDescription>
-            계정 플랜입니다. 상세·업그레이드 안내는{" "}
-            <a href="/billing" className="font-medium text-primary underline-offset-4 hover:underline">
-              요금제 페이지
-            </a>
-            에서 확인할 수 있습니다.
+            청구 플랜·체험·이번 달 사용량 요약입니다. 플랜 변경·해지·타임라인은{" "}
+            <Link href={BILLING_PAGE_PATH} className="font-medium text-primary underline-offset-4 hover:underline">
+              구독 콘솔
+            </Link>
+            에서 관리합니다.{" "}
+            <Link href="/help" className="font-medium text-primary underline-offset-4 hover:underline">
+              고객센터
+            </Link>
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-3 text-sm">
-          <span
-            className={cn(
-              "rounded-full border border-border/70 px-3 py-1 text-xs font-semibold",
-              currentPlan === "pro" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-            )}
-          >
-            {currentPlan === "pro" ? "Pro" : "Free"}
-          </span>
-          <p className="text-muted-foreground">
-            결제 모듈(예: Stripe, 국내 PG)은 <code className="rounded bg-muted px-1">users.plan</code> 과
-            연동해 갱신하는 구조로 두었습니다.
-          </p>
+        <CardContent className="space-y-3 text-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-border/70 bg-background px-3 py-1 text-xs font-semibold">
+              청구 플랜: {PLAN_LABEL[billing.plan]}
+            </span>
+            <span
+              className={cn(
+                "rounded-full border border-border/70 px-3 py-1 text-xs font-semibold",
+                getEffectiveBillingPlan(billing) === "business"
+                  ? "bg-violet-500/10 text-violet-950 dark:text-violet-100"
+                  : getEffectiveBillingPlan(billing) === "pro"
+                    ? "bg-primary/10 text-primary"
+                    : "bg-muted text-muted-foreground"
+              )}
+            >
+              기능 적용: {PLAN_LABEL[getEffectiveBillingPlan(billing)]}
+            </span>
+            {billing.subscriptionStatus === "trialing" ? (
+              <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-950 dark:text-amber-50">
+                7일 체험 · {trialRemainingLabel(billing) ?? "진행 중"}
+              </span>
+            ) : null}
+            {billing.cancelAtPeriodEnd ? (
+              <span className="rounded-full border border-rose-500/35 bg-rose-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-rose-950">
+                해지 예약됨
+              </span>
+            ) : null}
+            {billing.pendingPlan ? (
+              <span className="rounded-full border border-border/70 bg-muted/50 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                예정: {PLAN_LABEL[billing.pendingPlan]}
+              </span>
+            ) : null}
+          </div>
+          <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+            <p>
+              AI 사용(이번 달):{" "}
+              <span className="font-medium tabular-nums text-foreground">
+                {billing.aiCallsThisMonth} / {getUsageLimitsForEffectivePlan(getEffectiveBillingPlan(billing)).aiCallsPerMonth}
+              </span>{" "}
+              회
+            </p>
+            <p>
+              문서 이메일 발송:{" "}
+              <span className="font-medium tabular-nums text-foreground">
+                {billing.documentSendsThisMonth} /{" "}
+                {getUsageLimitsForEffectivePlan(getEffectiveBillingPlan(billing)).documentSendsPerMonth}
+              </span>{" "}
+              건
+            </p>
+            <p>
+              고객 포털 한도:{" "}
+              <span className="font-medium tabular-nums text-foreground">
+                {getUsageLimitsForEffectivePlan(getEffectiveBillingPlan(billing)).maxPortalCustomers}
+              </span>
+              명까지 활성
+            </p>
+            <p>
+              팀 좌석(표시 한도):{" "}
+              <span className="font-medium tabular-nums text-foreground">
+                {getUsageLimitsForEffectivePlan(getEffectiveBillingPlan(billing)).seats}
+              </span>
+            </p>
+          </div>
+          {billing.currentPeriodEnd ? (
+            <p className="text-xs text-muted-foreground">
+              다음 갱신·정산 기준일(예정):{" "}
+              <span className="font-medium text-foreground">
+                {new Date(billing.currentPeriodEnd).toLocaleDateString("ko-KR")}
+              </span>
+              {billing.subscriptionStatus === "past_due" ? (
+                <span className="ml-2 text-rose-600 dark:text-rose-400">결제 확인 필요</span>
+              ) : null}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              자동결제(PG) 연결 전까지 갱신일은 «미정»으로 표시될 수 있습니다.{" "}
+              <code className="rounded bg-muted px-1">current_period_end</code> 는 PG 웹훅에서 채웁니다.
+            </p>
+          )}
         </CardContent>
       </Card>
 

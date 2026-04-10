@@ -21,6 +21,7 @@ import { InquiryStageBadge, PaymentStatusBadge } from "@/components/app/status-b
 import { OpsAgendaList } from "@/components/operations/ops-agenda-list"
 import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { planAllowsFeature } from "@/lib/plan-features"
 import { cn } from "@/lib/utils"
 import { resolveActivityHeadline, resolveActivityKind } from "@/lib/activity-presentation"
 import {
@@ -205,7 +206,7 @@ export default async function DashboardPage() {
         />
       </section>
 
-      {hub.plan === "pro" ? (
+      {planAllowsFeature(hub.plan, "e_tax_invoice_asp") ? (
         <Card className="border-border/70">
           <CardHeader className="space-y-0.5 pb-2">
             <CardTitle className="text-base font-semibold">전자세금계산서 요약</CardTitle>
@@ -241,7 +242,7 @@ export default async function DashboardPage() {
         <Card className="border-dashed border-border/70 bg-muted/10">
           <CardContent className="flex flex-col gap-2 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
             <p className="text-muted-foreground">
-              <span className="font-medium text-foreground">전자세금계산서 ASP 연동</span>은 Pro에서 이용할 수 있습니다.
+              <span className="font-medium text-foreground">전자세금계산서 ASP 연동</span>은 Business 플랜에서 이용할 수 있습니다.
               청구와 연결해 발행·상태 추적까지 Bill-IO 안에서 이어갈 수 있습니다.
             </p>
             <Link href="/billing" className={cn(buttonVariants({ size: "sm" }), "shrink-0 self-start sm:self-auto")}>

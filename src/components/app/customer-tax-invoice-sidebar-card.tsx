@@ -136,7 +136,7 @@ export function CustomerTaxInvoiceSidebarCard({
 
         {!allowed ? (
           <p className="text-xs text-muted-foreground">
-            세금계산서용 필드 편집은 Pro에서 가능합니다.{" "}
+            세금계산서용 필드 편집은 Business 플랜에서 가능합니다.{" "}
             <Link href={BILLING_PAGE_PATH} className="font-medium text-primary underline-offset-4 hover:underline">
               플랜 안내
             </Link>

@@ -39,7 +39,13 @@ export function AuthLegalLinks({
             ·
           </span>
           <Link href="/billing" className={linkClass}>
-            요금 안내
+            요금·구독
+          </Link>
+          <span className="mx-1.5 text-border" aria-hidden>
+            ·
+          </span>
+          <Link href="/help" className={linkClass}>
+            고객센터
           </Link>
         </>
       ) : null}

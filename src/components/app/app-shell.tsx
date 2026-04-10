@@ -123,7 +123,7 @@ function SidebarContent({
       <div className="space-y-3 border-t border-border/70 p-3">
         <AuthLegalLinks
           showBilling
-          navLabel="약관·요금 안내"
+          navLabel="약관·요금·고객센터"
           className="flex flex-wrap gap-x-1.5 gap-y-1 text-[11px] leading-relaxed text-muted-foreground"
         />
         <form action={logoutAction}>

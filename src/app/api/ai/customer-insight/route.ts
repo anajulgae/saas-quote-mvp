@@ -1,22 +1,19 @@
 import { NextResponse } from "next/server"
 
 import { getCustomerDetailData } from "@/lib/data"
-import { planAllowsFeature } from "@/lib/plan-features"
 import { reportServerError } from "@/lib/observability"
-import { getAuthenticatedUserForApi } from "@/lib/server/api-auth"
+import { guardAiPost } from "@/lib/server/ai-route-guard"
+import { bumpUserUsage } from "@/lib/server/usage-bump"
 import { runCustomerInsightAi } from "@/lib/server/customer-insight-core"
 import { OpenAiError } from "@/lib/server/openai-chat"
 import { openAiErrorUserPayload } from "@/lib/server/openai-user-errors"
 
 export async function POST(req: Request) {
-  const auth = await getAuthenticatedUserForApi()
-  if (!auth.ok) {
-    return NextResponse.json({ error: auth.message }, { status: auth.status })
+  const g = await guardAiPost()
+  if (!g.ok) {
+    return g.response
   }
-
-  if (!planAllowsFeature(auth.plan, "ai_assist")) {
-    return NextResponse.json({ error: "현재 플랜에서 AI 기능을 사용할 수 없습니다." }, { status: 403 })
-  }
+  const { supabase } = g.ctx
 
   let customerId = ""
   try {
@@ -72,6 +69,7 @@ export async function POST(req: Request) {
 
     const insight = await runCustomerInsightAi(JSON.stringify(snapshot))
 
+    void bumpUserUsage(supabase, "ai")
     return NextResponse.json({ ok: true as const, insight })
   } catch (e) {
     if (e instanceof OpenAiError) {

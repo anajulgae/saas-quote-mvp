@@ -549,19 +549,22 @@ export function LandingHowItWorks() {
 }
 
 export function LandingPricing() {
-  const freeHighlights = [
-    "고객 · 문의 · 견적 · 청구 코어",
-    "대시보드·운영 허브로 한눈에",
-    "공개 문의 폼 · 기본 알림",
-    "‘한 흐름’ 검증·도입에 충분",
+  const starterHighlights = [
+    "1인·문의→견적→청구→수금 한 흐름",
+    "공개 문의 폼·고객 포털 각 1·AI 월 할당(플랜 기준)",
+    "PDF·기본 발송·알림",
   ]
   const proHighlights = [
-    "Starter 전부 포함",
-    "공개 문의·유입 정식 활용 + 업체 소개 랜딩(`/biz`)",
-    "고객 미니 포털 — 로그인 없이 견적·청구 확인",
-    "문의·견적·청구·고객 AI 보조 — 운영 분석·풀 견적 초안·수금 문구·인사이트(플랜 정책에 따름)",
-    "문서 발송·PDF·직인 흐름 정착",
-    "리마인드·추심 보조·고급 알림",
+    "Starter 대비 AI·발송·포털 한도 확대",
+    "업체 소개 랜딩(`/biz`)·고객 포털 본격 활용",
+    "카카오 채널(BYOA)·추심·리마인드 고도화",
+    "문의·견적·청구·고객 AI 보조(운영 분석·풀 초안·수금 문구)",
+  ]
+  const businessHighlights = [
+    "다인 팀·좌석 확장(제품 로드맵과 연동)",
+    "전자세금계산서 ASP·고급 리포트",
+    "AI 대량 사용·API/웹훅 확장 여지",
+    "우선 지원·맞춤 온보딩",
   ]
 
   const plans: {
@@ -577,33 +580,34 @@ export function LandingPricing() {
   }[] = [
     {
       name: "Starter",
-      price: "₩0",
+      price: "₩29,000",
       period: "/월",
-      blurb: "흐름부터 검증",
-      who: "혼자 운영·먼저 써보고 싶은 팀",
-      cta: "무료로 시작 — 첫 문의 받기",
+      blurb: "1인 핵심 운영",
+      who: "혼자 견적·청구까지 끊지 않게 쓰는 사장님",
+      tagline: "가입 후 7일간 Pro 수준으로 체험한 뒤, Starter로 계속하거나 업그레이드할 수 있습니다.",
+      cta: "7일 체험으로 시작",
       href: "/signup",
       highlight: false,
     },
     {
       name: "Pro",
-      price: "₩39,000",
+      price: "₩59,000",
       period: "/월",
-      blurb: "유입·포털·AI·수금까지",
-      who: "링크로 받고, 문서로 보내고, 미수까지 책임지고 싶은 팀",
-      tagline:
-        "홈페이지 없이 접수받고, 고객에게 포털을 주고, 리마인드까지 — ‘장사에 쓰는’ 기능이 여기서 열립니다.",
-      cta: "Pro 살펴보기",
+      blurb: "소규모 팀·유입·자동화",
+      who: "링크 유입·포털·AI·카카오까지 쓰고 싶은 팀",
+      tagline: "랜딩·포털·AI·추심까지 — 장사 운영에 필요한 자동화가 모입니다.",
+      cta: "Pro 자세히",
       href: "/billing?plan=pro",
       highlight: true,
     },
     {
       name: "Business",
-      price: "문의",
-      period: "",
-      blurb: "좌석·온보딩",
-      who: "여러 명·맞춤 도입이 필요한 경우",
-      cta: "도입 문의",
+      price: "₩129,000",
+      period: "/월",
+      blurb: "팀·세금계산서·대량",
+      who: "여러 명 협업·전자세금계산서·맞춤 한도",
+      tagline: "더 큰 한도와 우선 지원이 필요하면 Business 또는 맞춤 견적을 선택하세요.",
+      cta: "Business·맞춤 문의",
       href: "/billing#business",
       highlight: false,
     },
@@ -625,36 +629,49 @@ export function LandingPricing() {
             얼마가 아니라, 무엇이 열리는지
           </h2>
           <p className="mt-4 text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">
-            Starter는 <strong className="font-bold text-foreground">코어 흐름 검증</strong>, Pro는{" "}
-            <strong className="font-bold text-foreground">유입·고객 경험·AI·수금 보조</strong>까지 한 번에 켭니다.
+            <strong className="font-bold text-foreground">7일 무료 체험</strong>으로 Pro 수준 AI·한도를 먼저 써 보고, 이후{" "}
+            <strong className="font-bold text-foreground">Starter / Pro / Business</strong> 중에서 고르면 됩니다.{" "}
+            <Link href="/billing" className="font-bold text-primary underline-offset-4 hover:underline">
+              요금·구독 화면
+            </Link>
+            에서 플랜·사용량·해지까지 한 번에 확인할 수 있습니다.
           </p>
         </div>
 
         <div className="mb-12 overflow-hidden rounded-2xl border-2 border-border/60 bg-card shadow-md ring-1 ring-black/[0.04]">
-          <div className="grid border-b border-border/50 bg-muted/35 text-sm font-extrabold sm:grid-cols-2">
-            <div className="border-b border-border/50 px-4 py-3.5 sm:border-b-0 sm:border-r sm:py-4 sm:pl-6">
-              Starter · 무료
+          <div className="grid border-b border-border/50 bg-muted/35 text-xs font-extrabold sm:grid-cols-3">
+            <div className="border-b border-border/50 px-3 py-3 sm:border-b-0 sm:border-r sm:py-4 sm:pl-5">
+              Starter
             </div>
-            <div className="flex items-center gap-2 bg-primary/[0.1] px-4 py-3.5 sm:py-4 sm:pl-6">
+            <div className="flex items-center gap-2 border-b border-border/50 bg-primary/[0.1] px-3 py-3 sm:border-b-0 sm:border-r sm:py-4 sm:pl-5">
               <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
                 추천
               </span>
-              Pro · 월 39,000원
+              Pro
             </div>
+            <div className="px-3 py-3 sm:py-4 sm:pl-5">Business</div>
           </div>
-          <div className="grid sm:grid-cols-2">
-            <ul className="space-y-2.5 border-border/50 p-4 sm:border-r sm:p-6">
-              {freeHighlights.map((f) => (
+          <div className="grid sm:grid-cols-3">
+            <ul className="space-y-2.5 border-border/50 p-4 sm:border-r sm:p-5">
+              {starterHighlights.map((f) => (
                 <li key={f} className="flex gap-2.5 text-sm font-medium text-muted-foreground">
                   <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-muted-foreground/75" strokeWidth={2} />
                   <span>{f}</span>
                 </li>
               ))}
             </ul>
-            <ul className="space-y-2.5 bg-primary/[0.04] p-4 sm:p-6">
+            <ul className="space-y-2.5 border-border/50 bg-primary/[0.04] p-4 sm:border-r sm:p-5">
               {proHighlights.map((f) => (
                 <li key={f} className="flex gap-2.5 text-sm font-bold text-foreground">
                   <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" strokeWidth={2} />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+            <ul className="space-y-2.5 p-4 sm:p-5">
+              {businessHighlights.map((f) => (
+                <li key={f} className="flex gap-2.5 text-sm font-semibold text-foreground">
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-teal-700" strokeWidth={2} />
                   <span>{f}</span>
                 </li>
               ))}
@@ -744,8 +761,20 @@ const faqItems = [
     a: "네. 입금 단계를 기록하고, 리마인드·추심 메모·알림으로 다음 연락을 놓치지 않게 정리할 수 있습니다.",
   },
   {
-    q: "무료 플랜으로 어디까지 가능한가요?",
-    a: "고객·문의·견적·청구 코어, 대시보드, 공개 문의 폼, 기본 알림으로 ‘한 흐름’을 충분히 검증할 수 있습니다. 업체 랜딩·고객 포털·향상된 AI 운영 보조·고급 알림 등은 Pro에서 열립니다.",
+    q: "체험 기간이 끝나면 어떻게 되나요?",
+    a: "7일 Pro 체험이 끝나면 구독을 선택하지 않은 계정은 trial_expired 상태가 되고, Starter 기준 기능·AI 한도로 돌아갑니다. /billing 에서 언제든 플랜을 고를 수 있습니다.",
+  },
+  {
+    q: "플랜은 어떻게 바꾸나요? 구독 해지는요?",
+    a: "로그인 후 /billing 구독 콘솔에서 업그레이드·다운그레이드 예약·해지 예약을 할 수 있습니다. PG가 붙기 전까지는 DB 플랜이 즉시 바뀌는 시뮬레이션이며, 이벤트는 billing_events에 남습니다.",
+  },
+  {
+    q: "전자세금계산서는 어떻게 발행하나요?",
+    a: "Business 플랜에서 ASP(발급대행) 연동을 설정한 뒤, 청구 상세에서 발행 흐름을 진행합니다. 설정·플랜은 /settings 과 /billing 을 참고하세요.",
+  },
+  {
+    q: "카카오 연동은 어떻게 하나요?",
+    a: "Pro 이상에서 알림톡 BYOA 엔드포인트를 설정에 저장합니다. 무료 체험 중에도 Pro 기능을 쓸 수 있어 동일하게 시험해 볼 수 있습니다.",
   },
 ]
 

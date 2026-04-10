@@ -13,6 +13,7 @@ import {
   getDemoSessionCookieName,
   isSupabaseConfigured,
 } from "@/lib/auth"
+import { bumpUserUsage } from "@/lib/server/usage-bump"
 import { maskEmailForDisplay } from "@/lib/mask-email"
 import { getSiteOrigin } from "@/lib/site-url"
 import { toPasswordResetEmailError, toUserFacingActionError } from "@/lib/action-errors"
@@ -1226,6 +1227,11 @@ export async function sendQuoteEmailAction(input: z.infer<typeof sendQuoteEmailI
       replyTo: sender.email || undefined,
     })
 
+    const supabaseForUsage = await createSupabaseServerClient()
+    if (supabaseForUsage) {
+      void bumpUserUsage(supabaseForUsage, "document_send")
+    }
+
     await createActivityLog({
       action: "quote.email_sent",
       description: `「${snap.title}」(${snap.quoteNumber}) 견적서를 이메일로 보냈습니다. (${parsed.to})`,
@@ -1370,6 +1376,11 @@ export async function sendInvoiceEmailAction(input: z.infer<typeof sendInvoiceEm
       fromEmail: sender.email || undefined,
       replyTo: sender.email || undefined,
     })
+
+    const supabaseForUsage = await createSupabaseServerClient()
+    if (supabaseForUsage) {
+      void bumpUserUsage(supabaseForUsage, "document_send")
+    }
 
     await createActivityLog({
       action: "invoice.email_sent",
@@ -1743,8 +1754,9 @@ export async function saveBusinessPublicPageAction(raw: z.infer<typeof landingPa
   if (session.mode === "demo") {
     return { ok: false as const, error: "데모 환경에서는 업체 소개 페이지를 저장할 수 없습니다." }
   }
-  if (!planAllowsFeature(session.user.plan, "mini_landing")) {
-    return { ok: false as const, error: "업체 소개 페이지는 Pro 플랜에서 이용할 수 있습니다." }
+  const eff = session.user.effectivePlan ?? session.user.plan
+  if (!planAllowsFeature(eff, "mini_landing")) {
+    return { ok: false as const, error: "업체 소개 페이지는 Pro 이상 플랜에서 이용할 수 있습니다." }
   }
   try {
     const parsed = landingPageSaveSchema.parse(raw)
@@ -1811,8 +1823,9 @@ export async function generateBusinessLandingDraftAction(raw: z.infer<typeof lan
   if (session.mode === "demo") {
     return { ok: false as const, error: "데모 환경에서는 AI 초안을 사용할 수 없습니다." }
   }
-  if (!planAllowsFeature(session.user.plan, "mini_landing")) {
-    return { ok: false as const, error: "AI 초안 생성은 Pro 플랜에서 이용할 수 있습니다." }
+  const eff = session.user.effectivePlan ?? session.user.plan
+  if (!planAllowsFeature(eff, "mini_landing")) {
+    return { ok: false as const, error: "AI 소개 초안은 Pro 이상 플랜에서 이용할 수 있습니다." }
   }
   try {
     const parsed = landingDraftInputSchema.parse(raw)
@@ -1861,10 +1874,11 @@ async function requireTaxInvoiceSupabase(): Promise<
   if (session.mode === "demo") {
     return { error: "데모 환경에서는 전자세금계산서 연동을 사용할 수 없습니다." }
   }
-  if (!planAllowsFeature(session.user.plan, "e_tax_invoice_asp")) {
+  const eff = session.user.effectivePlan ?? session.user.plan
+  if (!planAllowsFeature(eff, "e_tax_invoice_asp")) {
     return {
       error:
-        "전자세금계산서 ASP 연동은 Pro 플랜에서 이용할 수 있습니다. 요금 페이지에서 플랜을 확인해 주세요.",
+        "전자세금계산서 ASP 연동은 Business 플랜에서 이용할 수 있습니다. 요금 페이지에서 플랜을 확인해 주세요.",
     }
   }
   const supabase = await createSupabaseServerClient()

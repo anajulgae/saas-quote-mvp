@@ -2,13 +2,12 @@ import { NextResponse } from "next/server"
 
 import { invoiceTypeOptions } from "@/lib/constants"
 import type { CollectionToneHint } from "@/types/domain"
-import { planAllowsFeature } from "@/lib/plan-features"
 import { reportServerError } from "@/lib/observability"
-import { getAuthenticatedUserForApi } from "@/lib/server/api-auth"
+import { guardAiPost } from "@/lib/server/ai-route-guard"
+import { bumpUserUsage } from "@/lib/server/usage-bump"
 import { runCollectionAdviceAi } from "@/lib/server/collection-advice-core"
 import { OpenAiError } from "@/lib/server/openai-chat"
 import { openAiErrorUserPayload } from "@/lib/server/openai-user-errors"
-import { createServerSupabaseClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/supabase"
 
 type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"]
@@ -18,14 +17,11 @@ function invoiceTypeLabel(type: string) {
 }
 
 export async function POST(req: Request) {
-  const auth = await getAuthenticatedUserForApi()
-  if (!auth.ok) {
-    return NextResponse.json({ error: auth.message }, { status: auth.status })
+  const g = await guardAiPost()
+  if (!g.ok) {
+    return g.response
   }
-
-  if (!planAllowsFeature(auth.plan, "ai_assist")) {
-    return NextResponse.json({ error: "현재 플랜에서 AI 기능을 사용할 수 없습니다." }, { status: 403 })
-  }
+  const { auth, supabase } = g.ctx
 
   let invoiceId = ""
   try {
@@ -37,11 +33,6 @@ export async function POST(req: Request) {
 
   if (!invoiceId) {
     return NextResponse.json({ error: "invoiceId 가 필요합니다." }, { status: 400 })
-  }
-
-  const supabase = await createServerSupabaseClient()
-  if (!supabase) {
-    return NextResponse.json({ error: "데이터 연결을 확인할 수 없습니다." }, { status: 503 })
   }
 
   const { data: invRow, error: invErr } = await supabase
@@ -85,6 +76,7 @@ export async function POST(req: Request) {
       collectionToneDefault: (inv.collection_tone as CollectionToneHint | null) ?? undefined,
     })
 
+    void bumpUserUsage(supabase, "ai")
     return NextResponse.json({ ok: true as const, advice })
   } catch (e) {
     if (e instanceof OpenAiError) {

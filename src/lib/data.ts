@@ -21,6 +21,7 @@ import {
   demoReminders,
   demoTemplates,
   demoUser,
+  demoBillingSnapshot,
   getCustomerTimeline,
   getDashboardMetrics,
 } from "@/lib/demo-data"
@@ -37,7 +38,9 @@ import { getSiteOrigin } from "@/lib/site-url"
 
 export { defaultNotificationPreferences }
 import { createServerSupabaseClient } from "@/lib/supabase/server"
-import { fetchUserPlanRow } from "@/lib/user-plan"
+import { loadPlanContext } from "@/lib/user-plan"
+import type { BillingConsoleEventRow } from "@/lib/billing/console-types"
+import { getUsageLimitsForEffectivePlan, type UserBillingSnapshot } from "@/lib/subscription"
 import { parseInquiryAiAnalysisFromJson } from "@/lib/inquiry-ai-analysis-parse"
 import type {
   ActivityLog,
@@ -2203,12 +2206,12 @@ export async function upsertMessagingChannelConfigRecord(input: {
     return { mode: "demo" as const }
   }
 
-  const { plan } = await fetchUserPlanRow(
+  const { effectivePlan } = await loadPlanContext(
     context.supabase as unknown as SupabaseClient<Database>,
     context.userId
   )
-  if (!planAllowsFeature(plan, "kakao_byoa_messaging")) {
-    throw new Error("카카오 알림톡(BYOA) 연동은 Pro 플랜에서만 저장할 수 있습니다.")
+  if (!planAllowsFeature(effectivePlan, "kakao_byoa_messaging")) {
+    throw new Error("카카오 알림톡(BYOA) 연동은 Pro 이상 플랜에서만 저장할 수 있습니다.")
   }
 
   const { error } = await context.supabase.from("messaging_channel_configs").upsert(
@@ -2267,13 +2270,13 @@ export async function ensureCustomerPortalTokenRecord(
     return { token: `demo${customerId.replace(/-/g, "").slice(0, 24)}` }
   }
 
-  const { plan } = await fetchUserPlanRow(
+  const { effectivePlan } = await loadPlanContext(
     context.supabase as unknown as SupabaseClient<Database>,
     context.userId
   )
 
-  if (plan !== "pro") {
-    return { error: "고객 미니 포털은 Pro 플랜에서 사용할 수 있습니다." }
+  if (!planAllowsFeature(effectivePlan, "customer_mini_portal")) {
+    return { error: "현재 플랜에서 고객 미니 포털을 사용할 수 없습니다." }
   }
 
   const { data: cust, error: cErr } = await context.supabase
@@ -2295,6 +2298,23 @@ export async function ensureCustomerPortalTokenRecord(
   const existing = row.portal_token?.trim()
   if (existing) {
     return { token: existing }
+  }
+
+  const limits = getUsageLimitsForEffectivePlan(effectivePlan)
+  const { data: portalRows, error: cntErr } = await context.supabase
+    .from("customers")
+    .select("portal_token")
+    .eq("user_id", context.userId)
+
+  if (cntErr) {
+    throw cntErr
+  }
+  const portalList = (portalRows ?? []) as { portal_token?: string | null }[]
+  const portalCount = portalList.filter((r) => Boolean(r.portal_token?.trim())).length
+  if (portalCount >= limits.maxPortalCustomers) {
+    return {
+      error: `고객 포털은 현재 플랜에서 최대 ${limits.maxPortalCustomers}명까지 활성화할 수 있습니다. 플랜을 업그레이드하거나 기존 포털을 정리해 주세요.`,
+    }
   }
 
   const token = randomBytes(20).toString("hex")
@@ -2336,12 +2356,12 @@ export async function sendKakaoAlimtalkForInvoiceRecord(
     return { ok: false, error: "데모 세션에서는 알림톡 발송을 사용할 수 없습니다." }
   }
 
-  const { plan } = await fetchUserPlanRow(
+  const { effectivePlan } = await loadPlanContext(
     context.supabase as unknown as SupabaseClient<Database>,
     context.userId
   )
-  if (!planAllowsFeature(plan, "kakao_byoa_messaging")) {
-    return { ok: false, error: "카카오 알림톡(BYOA)은 Pro 플랜에서만 사용할 수 있습니다." }
+  if (!planAllowsFeature(effectivePlan, "kakao_byoa_messaging")) {
+    return { ok: false, error: "카카오 알림톡(BYOA)은 Pro 이상 플랜에서만 사용할 수 있습니다." }
   }
 
   const config = await getMessagingChannelConfigRecord()
@@ -2433,12 +2453,12 @@ export async function sendKakaoAlimtalkForQuoteRecord(
     return { ok: false, error: "데모 세션에서는 알림톡 발송을 사용할 수 없습니다." }
   }
 
-  const { plan } = await fetchUserPlanRow(
+  const { effectivePlan } = await loadPlanContext(
     context.supabase as unknown as SupabaseClient<Database>,
     context.userId
   )
-  if (!planAllowsFeature(plan, "kakao_byoa_messaging")) {
-    return { ok: false, error: "카카오 알림톡(BYOA)은 Pro 플랜에서만 사용할 수 있습니다." }
+  if (!planAllowsFeature(effectivePlan, "kakao_byoa_messaging")) {
+    return { ok: false, error: "카카오 알림톡(BYOA)은 Pro 이상 플랜에서만 사용할 수 있습니다." }
   }
 
   const config = await getMessagingChannelConfigRecord()
@@ -3035,7 +3055,7 @@ export async function getInquiriesPageData(): Promise<{
       }
     : null
 
-  const { plan: currentPlan } = await fetchUserPlanRow(
+  const { effectivePlan: currentPlan } = await loadPlanContext(
     context.supabase as unknown as SupabaseClient<Database>,
     context.userId
   )
@@ -3334,7 +3354,7 @@ export async function getCustomerDetailData(customerId: string): Promise<{
     throw activityError
   }
 
-  const { plan: currentPlan } = await fetchUserPlanRow(
+  const { effectivePlan: currentPlan } = await loadPlanContext(
     context.supabase as unknown as SupabaseClient<Database>,
     context.userId
   )
@@ -3555,7 +3575,7 @@ export async function getQuotesPageData(): Promise<{
   const paymentTerms = biz?.payment_terms?.trim() ?? ""
   const defaultBusinessName = biz?.business_name?.trim() ?? ""
 
-  const { plan: currentPlan } = await fetchUserPlanRow(
+  const { effectivePlan: currentPlan } = await loadPlanContext(
     context.supabase as unknown as SupabaseClient<Database>,
     context.userId
   )
@@ -3714,7 +3734,7 @@ export async function getInvoicesPageData(): Promise<{
 
   const bizSettingsMapped = bizRow ? mapBusinessSettings(bizRow as BusinessSettingsRow) : null
 
-  const { plan: currentPlan } = await fetchUserPlanRow(
+  const { effectivePlan: currentPlan } = await loadPlanContext(
     context.supabase as unknown as SupabaseClient<Database>,
     context.userId
   )
@@ -3752,6 +3772,7 @@ export async function getSettingsPageData(): Promise<{
   settings: BusinessSettings
   templates: Template[]
   currentPlan: BillingPlan
+  billing: UserBillingSnapshot
   planColumnMissing: boolean
   notificationPreferences: NotificationPreferences
   messagingChannelConfig: MessagingChannelConfig | null
@@ -3763,6 +3784,7 @@ export async function getSettingsPageData(): Promise<{
       settings: demoBusinessSettings,
       templates: demoTemplates,
       currentPlan: demoUser.plan,
+      billing: demoBillingSnapshot,
       planColumnMissing: false,
       notificationPreferences: defaultNotificationPreferences(demoUser.id),
       messagingChannelConfig: null,
@@ -3815,10 +3837,12 @@ export async function getSettingsPageData(): Promise<{
     throw messagingError
   }
 
-  const { plan: currentPlan, columnMissing: planColumnMissing } = await fetchUserPlanRow(
+  const planCtx = await loadPlanContext(
     context.supabase as unknown as SupabaseClient<Database>,
     context.userId
   )
+  const currentPlan = planCtx.effectivePlan
+  const planColumnMissing = planCtx.billing.billingColumnsMissing
 
   const settings = settingsRow
     ? mapBusinessSettings(settingsRow as BusinessSettingsRow)
@@ -3854,6 +3878,7 @@ export async function getSettingsPageData(): Promise<{
     settings,
     templates,
     currentPlan,
+    billing: planCtx.billing,
     planColumnMissing,
     notificationPreferences,
     messagingChannelConfig: messagingRow
@@ -3892,10 +3917,12 @@ export async function getLandingPageEditorData(): Promise<{
     throw settingsError
   }
 
-  const { plan: currentPlan, columnMissing: planColumnMissing } = await fetchUserPlanRow(
+  const planCtx = await loadPlanContext(
     context.supabase as unknown as SupabaseClient<Database>,
     context.userId
   )
+  const currentPlan = planCtx.effectivePlan
+  const planColumnMissing = planCtx.billing.billingColumnsMissing
 
   const page = pageRow
     ? mapBusinessPublicPage(pageRow as BusinessPublicPageRow)
@@ -4151,7 +4178,7 @@ export async function getDashboardPageData(): Promise<{
     throw notifPreviewError
   }
 
-  const { plan: hubPlan } = await fetchUserPlanRow(
+  const { effectivePlan: hubPlan } = await loadPlanContext(
     context.supabase as unknown as SupabaseClient<Database>,
     context.userId
   )
@@ -4292,5 +4319,79 @@ export async function getDashboardPageData(): Promise<{
     },
     notificationPreview,
     taxInvoiceSignals,
+  }
+}
+
+export type { BillingConsoleEventRow } from "@/lib/billing/console-types"
+
+/** /billing 로그인 콘솔 — 비로그인 RSC에서는 호출하지 말 것 */
+export async function getBillingConsoleData(): Promise<{
+  billing: UserBillingSnapshot
+  effectivePlan: BillingPlan
+  portalEnabledCount: number
+  events: BillingConsoleEventRow[]
+} | null> {
+  const context = await getDataContext()
+  if (context.mode === "demo") {
+    return {
+      billing: demoBillingSnapshot,
+      effectivePlan: "business",
+      portalEnabledCount: 2,
+      events: [
+        {
+          id: "demo-ev-1",
+          kind: "subscription",
+          message: "Business 플랜 · 다음 갱신 예정(데모)",
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    }
+  }
+
+  if (!context.supabase) {
+    return null
+  }
+
+  const planCtx = await loadPlanContext(
+    context.supabase as unknown as SupabaseClient<Database>,
+    context.userId
+  )
+
+  const { data: eventRows, error: evErr } = await context.supabase
+    .from("billing_events")
+    .select("id, kind, message, created_at")
+    .eq("user_id", context.userId)
+    .order("created_at", { ascending: false })
+    .limit(40)
+
+  if (evErr) {
+    console.warn("[getBillingConsoleData] billing_events", evErr.message)
+  }
+
+  const { data: custRows } = await context.supabase
+    .from("customers")
+    .select("portal_token")
+    .eq("user_id", context.userId)
+
+  const portalList = (custRows ?? []) as { portal_token?: string | null }[]
+  const portalEnabledCount = portalList.filter((r) => Boolean(r.portal_token?.trim())).length
+
+  const rawEv = (eventRows ?? []) as {
+    id: string
+    kind: string
+    message: string
+    created_at: string
+  }[]
+
+  return {
+    billing: planCtx.billing,
+    effectivePlan: planCtx.effectivePlan,
+    portalEnabledCount,
+    events: rawEv.map((r) => ({
+      id: r.id,
+      kind: r.kind,
+      message: r.message,
+      createdAt: r.created_at,
+    })),
   }
 }

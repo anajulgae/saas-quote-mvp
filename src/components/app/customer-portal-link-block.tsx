@@ -53,17 +53,18 @@ export function CustomerPortalLinkBlock({
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle className="text-base font-semibold">고객 미니 포털</CardTitle>
           <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-            Pro
+            플랜 한도
           </span>
         </div>
         <CardDescription className="text-xs leading-relaxed">
-          고객이 로그인 없이 견적·청구 요약을 볼 수 있는 단일 링크입니다. 최초 복사 시 토큰이 발급됩니다.
+          고객이 로그인 없이 견적·청구 요약을 볼 수 있는 단일 링크입니다. Starter는 1명, Pro는 더 많은 고객까지 활성화할 수
+          있습니다. 최초 복사 시 토큰이 발급됩니다.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
         {!portalAllowed ? (
           <p className="text-xs text-muted-foreground">
-            Pro 플랜에서 링크를 발급할 수 있습니다. 무료 플랜에서는 개별 견적·청구 공유 링크를 사용해 주세요.
+            현재 플랜에서 포털이 비활성화된 경우입니다. 개별 견적·청구 공유 링크를 사용하거나 플랜을 확인해 주세요.
           </p>
         ) : (
           <>

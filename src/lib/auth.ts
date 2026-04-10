@@ -3,7 +3,8 @@ import { redirect } from "next/navigation"
 
 import { demoUser } from "@/lib/demo-data"
 import { isDemoLoginEnabled } from "@/lib/demo-flags"
-import { fetchUserPlanRow } from "@/lib/user-plan"
+import { getEffectiveBillingPlan } from "@/lib/subscription"
+import { fetchUserBillingState } from "@/lib/user-plan"
 import { FLOWBILL_DEMO_SESSION_COOKIE } from "@/lib/demo-session"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 
@@ -159,7 +160,8 @@ export async function getAppSession() {
 
   const profile = await ensureUserProfile(supabase, user)
 
-  const { plan } = await fetchUserPlanRow(supabase, user.id)
+  const billing = await fetchUserBillingState(supabase as never, user.id)
+  const effectivePlan = getEffectiveBillingPlan(billing)
 
   return {
     mode: "supabase" as const,
@@ -169,7 +171,10 @@ export async function getAppSession() {
       businessName: profile.businessName ?? "내 사업장",
       email: user.email ?? "",
       phone: profile.phone ?? "",
-      plan,
+      plan: billing.plan,
+      effectivePlan,
+      subscriptionStatus: billing.subscriptionStatus,
+      trialEndsAt: billing.trialEndsAt,
     },
   }
 }

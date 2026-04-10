@@ -18,7 +18,16 @@ export type PaymentStatus =
 
 export type ReminderChannel = "sms" | "kakao" | "email" | "manual"
 
-export type BillingPlan = "free" | "pro"
+/** DB `users.plan` — legacy `free` 는 런타임에서 starter 로 정규화 */
+export type BillingPlan = "starter" | "pro" | "business"
+
+/** 구독·체험 상태 (`users.subscription_status`) */
+export type SubscriptionStatus =
+  | "trialing"
+  | "active"
+  | "past_due"
+  | "canceled"
+  | "trial_expired"
 
 export interface AppUser {
   id: string
@@ -26,7 +35,12 @@ export interface AppUser {
   businessName: string
   email: string
   phone: string
+  /** DB 청구 플랜 */
   plan: BillingPlan
+  /** 기능 게이트용(체험 중이면 pro 등) */
+  effectivePlan?: BillingPlan
+  subscriptionStatus?: SubscriptionStatus
+  trialEndsAt?: string | null
 }
 
 export interface Customer {

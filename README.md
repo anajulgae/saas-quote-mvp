@@ -64,7 +64,8 @@ npm run build
 | `ENABLE_DEMO_LOGIN` | 선택 | 데모 로그인 허용 (아래 표 참고) |
 | `DEMO_LOGIN_EMAIL` / `DEMO_LOGIN_PASSWORD` | 선택 | 데모 전용 |
 | `NEXT_PUBLIC_APP_NAME` | 선택 | 표시용 이름 |
-| `NEXT_PUBLIC_CONTACT_EMAIL` | 선택 | `/billing` Business 문의 |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | 선택 | `/billing` Business 맞춤 견적 문의 |
+| `NEXT_PUBLIC_SUPPORT_EMAIL` | 권장 | 고객센터 헤더·도움말에 노출할 지원 메일 (`src/lib/billing/catalog.ts`의 `SUPPORT_EMAIL_ENV`) |
 
 전체 예시와 주석: **`.env.example`**
 
@@ -121,23 +122,24 @@ npm run build
 2. `0002_phase2_foundation.sql`  
 3. `0003_rls_tenant_fk_enforcement.sql` — 테넌트 FK RLS 보강  
 4. `0003_quote_seal_share_document.sql` — 견적 공유·직인·RPC  
-5. `0004_user_plan.sql` — `users.plan` (`free` / `pro`)  
+5. `0004_user_plan.sql` — `users.plan` (레거시 `free` → 마이그레이션 0014에서 `starter` 등으로 정리)  
 6. `0005_business_registration_number.sql` — 사업자등록번호 컬럼·공유 견적 RPC  
 7. `0006_invoice_public_share_and_link_opens.sql` — 공개 청구 토큰·열람 카운트·`get_invoice_share_payload`·열람 시 활동 로그  
 8. `0007_public_inquiry_form.sql` — 공개 문의 폼·`submit_public_inquiry`  
 9. `0008_notifications.sql` — `notifications` / `notification_preferences`, 문의 INSERT 시 알림, Realtime  
 10. `0009_business_public_landing.sql` — Pro 전용 업체 소개 랜딩(`business_public_pages`, `get_public_business_landing`, 문의 유입 `source`/`sourceSlug`)
 11. `0012_tax_invoice_asp.sql` — 청구 연동 전자세금계산서(`tax_invoices`)·ASP 설정(`business_settings`)·고객/청구 세금 필드  
-12. `0013_inquiry_ai_analysis.sql` — 문의 AI 트리아지 저장(`inquiries.ai_analysis`, `ai_analysis_updated_at`)
+12. `0013_inquiry_ai_analysis.sql` — 문의 AI 트리아지 저장(`inquiries.ai_analysis`, `ai_analysis_updated_at`)  
+13. `0014_saas_plans_trial_usage_support.sql` — **Starter / Pro / Business** 플랜, **7일 체험**(`trial_ends_at`, `subscription_status`), 월별 **AI·문서 발송 사용량**, `billing_events`, **고객센터 티켓**(`support_tickets`), `bump_user_usage` RPC
 
-`0003_rls` 미적용 시 보안 공격면이 남습니다. `0004` 미적용 시 앱은 동작하지만 설정에 **플랜 마이그레이션 안내**가 표시됩니다. **공개 청구 링크·열람 추적**은 **0006** 이 필요합니다. **앱 내·브라우저·이메일 알림**은 **0008** 과 Supabase Realtime(`notifications`) 전제를 확인하세요. 상세는 **[docs/deployment.md §4.1](./docs/deployment.md#41-알림실시간브라우저이메일)**.
+`0003_rls` 미적용 시 보안 공격면이 남습니다. `0004`·`0014` 미적용 시 앱은 동작하지만 설정에 **플랜·구독 컬럼 안내**가 표시되고, 체험·사용량·빌링 이벤트·지원 티켓이 제한될 수 있습니다. **공개 청구 링크·열람 추적**은 **0006** 이 필요합니다. **앱 내·브라우저·이메일 알림**은 **0008** 과 Supabase Realtime(`notifications`) 전제를 확인하세요. 상세는 **[docs/deployment.md §4.1](./docs/deployment.md#41-알림실시간브라우저이메일)**.
 
 ---
 
 ## 전자세금계산서(ASP 연동) — 요약
 
 - Bill-IO는 **국세청 직접 송신 제품이 아닙니다.** 사용자가 계약한 **전자세금계산서 발급대행(ASP)** 자격증명을 설정에 저장하고, **청구 상세**에서 발행 준비·실행·상태 새로고침을 합니다.
-- **Pro 플랜**(`e_tax_invoice_asp`)에서 사용합니다. 자격증명은 `business_settings.tax_invoice_provider_config`(JSONB)에 저장되며, 운영 시 **암호화·Vault** 적용을 권장합니다.
+- **Business 플랜**(`e_tax_invoice_asp`)에서 사용합니다. 자격증명은 `business_settings.tax_invoice_provider_config`(JSONB)에 저장되며, 운영 시 **암호화·Vault** 적용을 권장합니다.
 - **Provider 추가**: `src/lib/tax-invoice/registry.ts`에 어댑터를 등록하고, `src/lib/tax-invoice/providers/`에 `TaxInvoiceProviderAdapter` 구현체를 둡니다. Mock 구현은 `providers/mock-provider.ts`를 참고하세요.
 - **상태**: `draft` → `ready`(발행 준비) → `issuing` → `issued` / `failed`. 실패 시 `failure_reason`과 활동 로그(`tax_invoice.*`)를 확인합니다.
 
@@ -225,11 +227,20 @@ npm run build
 
 ---
 
+## 요금제·7일 체험·구독·고객센터 (운영 구조)
+
+- **플랜**: Starter / Pro / Business — 가격·카피는 `src/lib/billing/catalog.ts`, 기능 게이트는 `src/lib/plan-features.ts`, 월 한도(AI 호출 수·문서 이메일 발송·포털 인원·좌석)는 `src/lib/subscription.ts`의 `PLAN_USAGE_LIMITS`와 DB `users` 사용량 컬럼(마이그레이션 **0014**).
+- **7일 체험**: 가입 시 `subscription_status=trialing`, `trial_ends_at` 기준으로 **기능·한도는 Pro 수준**(`getEffectiveBillingPlan`). 만료 시 `trial_expired`로 전환되며 Starter 기준으로 동작( `fetchUserBillingState` ).
+- **구독 UI**: `/billing` — 플랜 선택·해지 예약·다운그레이드 예약·사용량·이벤트 타임라인. PG 연동 시 `users.current_period_end`, `stripe_customer_id` 등을 웹훅으로 채우는 확장점이 마련되어 있습니다(`append_billing_event` RPC).
+- **문서 발송 사용량**: 견적·청구 **이메일 발송 성공** 시 서버 액션에서 `bump_user_usage('document_send')` 호출.
+- **고객센터**: `/help` (FAQ, 공지, 가이드, 문의 `/help/contact`) — 문의는 `support_tickets`에 저장(RLS). 지원 메일 노출: 환경변수 **`NEXT_PUBLIC_SUPPORT_EMAIL`**.
+- **콘텐츠 초안**: `src/content/help-center.ts`.
+
 ## 현재 제품 범위 요약
 
-**포함**: 회원가입·이메일 인증, 고객·문의·견적·청구, 견적·청구 공개 링크·인쇄/PDF, **Resend 견적·청구 메일**, **OpenAI 보조**(초안·문의 구조화·문구), 리마인드, 설정·직인, 플랜 컬럼(`free`/`pro`), **Pro 전용 업체 소개 공개 랜딩** (`/biz/[slug]`, 설정 → 업체 소개 페이지, AI 초안, 공개 문의 CTA·유입 추적), **`/billing` 결제 진입점(문서·UI)**, **승인 견적 → `/invoices?quote={id}&new=1` 청구 초안**(선금·잔금 자동 제안), **운영 딥링크** (`/customers?customer=…`·`?new=1`, `/invoices?customer=…` 고객 필터 등), **공개 문의 폼 자동 접수**(기존 `/request/[token]`·활동 로그), **Pro BYOA 카카오 알림톡**(설정 → 메시지 채널 연결, 사용자 HTTPS 프록시로 `BillIoMessagingPayloadV1` POST, 발송 로그·견적/청구 발송 모달), **Pro 고객 미니 포털** (`/c/[token]`, RPC `get_customer_portal_payload`), **청구 추심 보조**(입금 약속일·다음 연락일·톤, drawer·편집 폼), **문의·청구 달력형 보조 뷰**(리스트 기본 유지 + 일정/기한 중심 월간 캘린더, 대시보드 일정 요약, 견적 유효기한 보조 요약).
+**포함**: 회원가입·이메일 인증, 고객·문의·견적·청구, 견적·청구 공개 링크·인쇄/PDF, **Resend 견적·청구 메일**, **OpenAI 보조**(초안·문의 구조화·문구), 리마인드, 설정·직인, 플랜(`starter`/`pro`/`business`)·**7일 체험·사용량**, **Pro·Business 업체 소개 공개 랜딩** (`/biz/[slug]`, 설정 → 업체 소개 페이지, AI 초안, 공개 문의 CTA·유입 추적), **`/billing` 구독 콘솔**, **`/help` 고객센터**, **승인 견적 → `/invoices?quote={id}&new=1` 청구 초안**(선금·잔금 자동 제안), **운영 딥링크** (`/customers?customer=…`·`?new=1`, `/invoices?customer=…` 고객 필터 등), **공개 문의 폼 자동 접수**(기존 `/request/[token]`·활동 로그), **Pro·Business BYOA 카카오 알림톡**(설정 → 메시지 채널 연결, 사용자 HTTPS 프록시로 `BillIoMessagingPayloadV1` POST, 발송 로그·견적/청구 발송 모달), **고객 미니 포털** (`/c/[token]`, 플랜별 인원 한도, RPC `get_customer_portal_payload`), **Business 전자세금계산서 ASP**, **청구 추심 보조**(입금 약속일·다음 연락일·톤, drawer·편집 폼), **문의·청구 달력형 보조 뷰**(리스트 기본 유지 + 일정/기한 중심 월간 캘린더, 대시보드 일정 요약, 견적 유효기한 보조 요약).
 
-**미포함**: Bill-IO 자체 알림톡 과금/충전, 실제 PG(카드) 결제, 자동 청구서 발행, 회계·팀 좌석 본격 지원 등 — 플랜 게이트는 `src/lib/plan-features.ts` / `src/lib/billing/catalog.ts` 에서 확장합니다.
+**미포함**: Bill-IO 자체 알림톡 과금/충전, **실제 PG(카드) 자동결제**(구조만 준비), 자동 청구서 발행, 회계·팀 좌석 본격 지원 등 — 플랜 게이트는 `src/lib/plan-features.ts` / `src/lib/billing/catalog.ts` 에서 확장합니다.
 
 **DB**: `supabase/migrations/0010_messaging_portal_collections.sql` — 메시징 설정·발송 로그, `customers.portal_token`, 청구 추심 컬럼, 포털 RPC.
 

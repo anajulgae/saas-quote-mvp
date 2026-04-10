@@ -14,6 +14,7 @@ const PUBLIC_PATHS = [
   "/privacy",
   "/terms",
   "/billing",
+  "/help",
 ]
 
 function hasSessionCookie(request: NextRequest) {

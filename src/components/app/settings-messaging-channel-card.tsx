@@ -116,7 +116,7 @@ export function SettingsMessagingChannelCard({
       <CardContent className="space-y-4 pb-4">
         {!allowed ? (
           <p className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-            Pro 플랜에서 설정·발송할 수 있습니다. 무료 플랜에서는 링크 복사·이메일·카톡 문구 복사로 안내할 수
+            Pro 이상에서 설정·발송할 수 있습니다. Starter에서는 링크 복사·이메일·카톡 문구 복사로 안내할 수
             있습니다.
           </p>
         ) : null}

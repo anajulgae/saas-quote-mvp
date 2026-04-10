@@ -16,6 +16,15 @@ export interface Database {
           business_name: string | null
           phone: string | null
           plan: string
+          trial_ends_at: string | null
+          subscription_status: string | null
+          current_period_end: string | null
+          cancel_at_period_end: boolean
+          pending_plan: string | null
+          stripe_customer_id: string | null
+          usage_month: string | null
+          ai_calls_this_month: number
+          document_sends_this_month: number
           created_at: string
           updated_at: string
         }
@@ -25,6 +34,15 @@ export interface Database {
           business_name?: string | null
           phone?: string | null
           plan?: string
+          trial_ends_at?: string | null
+          subscription_status?: string | null
+          current_period_end?: string | null
+          cancel_at_period_end?: boolean
+          pending_plan?: string | null
+          stripe_customer_id?: string | null
+          usage_month?: string | null
+          ai_calls_this_month?: number
+          document_sends_this_month?: number
           created_at?: string
           updated_at?: string
         }
@@ -34,8 +52,77 @@ export interface Database {
           business_name?: string | null
           phone?: string | null
           plan?: string
+          trial_ends_at?: string | null
+          subscription_status?: string | null
+          current_period_end?: string | null
+          cancel_at_period_end?: boolean
+          pending_plan?: string | null
+          stripe_customer_id?: string | null
+          usage_month?: string | null
+          ai_calls_this_month?: number
+          document_sends_this_month?: number
           created_at?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      billing_events: {
+        Row: {
+          id: string
+          user_id: string
+          kind: string
+          message: string
+          metadata: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          kind: string
+          message?: string
+          metadata?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          kind?: string
+          message?: string
+          metadata?: Json
+          created_at?: string
+        }
+        Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          id: string
+          user_id: string | null
+          category: string
+          subject: string
+          body: string
+          contact_email: string
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          category: string
+          subject: string
+          body: string
+          contact_email: string
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          category?: string
+          subject?: string
+          body?: string
+          contact_email?: string
+          status?: string
+          created_at?: string
         }
         Relationships: []
       }
@@ -945,6 +1032,14 @@ export interface Database {
           p_details: string
         }
         Returns: boolean
+      }
+      bump_user_usage: {
+        Args: { p_kind: string }
+        Returns: Json
+      }
+      append_billing_event: {
+        Args: { p_kind: string; p_message: string; p_metadata?: Json }
+        Returns: undefined
       }
     }
     Enums: {

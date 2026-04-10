@@ -13,6 +13,7 @@ export default async function SettingsPage() {
     settings,
     templates,
     currentPlan,
+    billing,
     planColumnMissing,
     notificationPreferences,
     messagingChannelConfig,
@@ -31,6 +32,7 @@ export default async function SettingsPage() {
         initialSettings={settings}
         templates={templates}
         currentPlan={currentPlan}
+        billing={billing}
         planColumnMissing={planColumnMissing}
         siteOrigin={siteOrigin}
         initialNotificationPreferences={notificationPreferences}

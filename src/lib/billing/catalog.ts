@@ -1,36 +1,47 @@
 /**
- * 요금·플랜 카탈로그 (UI·문서와 동기). PG 연동 시 Checkout 세션 생성 등의 진입점은 `/billing` 을 기준으로 둡니다.
+ * 요금·플랜 카탈로그 — 랜딩·빌링·문서와 동기.
  */
 import type { PlanFeature } from "@/lib/plan-features"
 import type { BillingPlan } from "@/types/domain"
 
 export const BILLING_PAGE_PATH = "/billing"
 
-/** 랜딩·설정에서 안내용 */
 export const PLAN_LABEL: Record<BillingPlan, string> = {
-  free: "Starter (Free)",
+  starter: "Starter",
   pro: "Pro",
+  business: "Business",
+}
+
+/** 월 VAT 별도 가정 시 원 표기(표시용) */
+export const PLAN_PRICE_KRW_MONTH: Record<BillingPlan, number | null> = {
+  starter: 29_000,
+  pro: 59_000,
+  business: 129_000,
+}
+
+export const PLAN_TAGLINE: Record<BillingPlan, string> = {
+  starter: "1인·핵심 운영 — 문의부터 수금까지 기본 흐름",
+  pro: "소규모 팀 — AI·포털·랜딩·카카오·추심 고도화",
+  business: "다인 팀 — 세금계산서·리포트·대량 AI·우선 지원",
 }
 
 /**
- * 현재 운영: AI·무제한 견적 등은 Free에서도 허용 (`plan-features.ts` 의 FEATURE_GATES).
- * 결제(PG) 연동 직전에 아래 맵을 `FEATURE_GATES` 와 맞추면 Pro 전용 기능을 한 번에 켤 수 있습니다.
+ * PG 연동 후 FEATURE_GATES 와 맞추면 한 번에 잠글 수 있습니다.
+ * 현재 앱은 FEATURE_GATES 를 소스 오브 트루스로 사용합니다.
  */
 export const FEATURE_GATES_AFTER_PAYMENT: Record<PlanFeature, BillingPlan[]> = {
-  /** 제안: Pro 전용 — AI 호출·월 할당량 */
-  ai_assist: ["pro"],
-  /** 제안: Pro 전용 — 월 N건 초과 시 업셀 */
-  unlimited_quotes: ["pro"],
-  /** 제안: Pro 전용 — Resend 견적·청구 메일 */
-  email_outbound: ["pro"],
-  /** 제안: Pro 전용 — 공개 링크 열람 로그·추적 */
-  public_share_tracking: ["pro"],
-  /** 업체 소개 미니 랜딩 — Pro 전용 (현재 `FEATURE_GATES`와 동일) */
-  mini_landing: ["pro"],
-  kakao_byoa_messaging: ["pro"],
-  customer_mini_portal: ["pro"],
-  e_tax_invoice_asp: ["pro"],
+  ai_assist: ["starter", "pro", "business"],
+  unlimited_quotes: ["starter", "pro", "business"],
+  email_outbound: ["starter", "pro", "business"],
+  public_share_tracking: ["pro", "business"],
+  mini_landing: ["pro", "business"],
+  kakao_byoa_messaging: ["pro", "business"],
+  customer_mini_portal: ["starter", "pro", "business"],
+  e_tax_invoice_asp: ["business"],
+  advanced_reports: ["business"],
 }
 
 export const BILLING_UPGRADE_CONTACT_COPY =
-  "결제 모듈 연동 전입니다. Pro·Business는 아래 페이지에서 안내 후 곧 카드 결제로 이어질 예정입니다."
+  "카드 자동결제(PG) 연동 시 이 화면에서 바로 결제 수단을 등록하고 갱신일이 표시됩니다. 지금은 플랜·체험·사용량을 확정하고, 해지·변경 요청을 기록하는 운영 단계입니다."
+
+export const SUPPORT_EMAIL_ENV = "NEXT_PUBLIC_SUPPORT_EMAIL"

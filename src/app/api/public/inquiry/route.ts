@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
-import { planAllowsFeature } from "@/lib/plan-features"
+import { normalizePlan, planAllowsFeature } from "@/lib/plan-features"
 import { reportServerError } from "@/lib/observability"
 import {
   sendNewInquiryEmailToOperator,
@@ -11,8 +11,6 @@ import { runInquiryAiAnalysis } from "@/lib/server/inquiry-analyze-core"
 import { persistInquiryAiAnalysisAsOwner } from "@/lib/server/inquiry-ai-admin-persist"
 import { OpenAiError, runInquiryStructureForPublicForm } from "@/lib/server/inquiry-structure-core"
 import { createAnonSupabaseClient } from "@/lib/supabase/anon"
-import type { BillingPlan } from "@/types/domain"
-
 const bodySchema = z.object({
   token: z.string().trim().min(16),
   name: z.string().trim().min(1).max(120),
@@ -190,7 +188,7 @@ export async function POST(request: Request) {
 
   const inquiryId = result.inquiryId
   const ownerUserId = result.ownerUserId
-  const ownerPlan = (result.ownerPlan as BillingPlan | undefined) ?? "free"
+  const ownerPlan = normalizePlan(result.ownerPlan as string | null | undefined)
   const submissionSourceLower = (src ?? "").toLowerCase()
 
   if (ownerUserId && inquiryId) {

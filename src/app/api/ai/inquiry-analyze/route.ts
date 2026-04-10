@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 
 import { parseInquiryAiAnalysisFromJson } from "@/lib/inquiry-ai-analysis-parse"
-import { planAllowsFeature } from "@/lib/plan-features"
 import { updateInquiryAiAnalysisForOwner } from "@/lib/data"
 import { reportServerError } from "@/lib/observability"
-import { getAuthenticatedUserForApi } from "@/lib/server/api-auth"
+import { assertAiFeatureAllowed, getAuthenticatedUserForApi } from "@/lib/server/api-auth"
+import { bumpUserUsage } from "@/lib/server/usage-bump"
 import { runInquiryAiAnalysis } from "@/lib/server/inquiry-analyze-core"
 import { OpenAiError } from "@/lib/server/openai-chat"
 import { openAiErrorUserPayload } from "@/lib/server/openai-user-errors"
@@ -17,10 +17,6 @@ export async function POST(req: Request) {
   const auth = await getAuthenticatedUserForApi()
   if (!auth.ok) {
     return NextResponse.json({ error: auth.message }, { status: auth.status })
-  }
-
-  if (!planAllowsFeature(auth.plan, "ai_assist")) {
-    return NextResponse.json({ error: "현재 플랜에서 AI 기능을 사용할 수 없습니다." }, { status: 403 })
   }
 
   let inquiryId = ""
@@ -64,6 +60,11 @@ export async function POST(req: Request) {
     }
   }
 
+  const quotaBlock = assertAiFeatureAllowed(auth)
+  if (quotaBlock) {
+    return NextResponse.json({ error: quotaBlock.message }, { status: quotaBlock.status })
+  }
+
   try {
     const analysis = await runInquiryAiAnalysis({
       title: inquiry.title,
@@ -78,6 +79,7 @@ export async function POST(req: Request) {
     })
 
     const saved = await updateInquiryAiAnalysisForOwner(inquiryId, analysis)
+    void bumpUserUsage(supabase, "ai")
     if (!saved.ok) {
       return NextResponse.json(
         { ok: true as const, analysis, saved: false as const, saveError: saved.error },
