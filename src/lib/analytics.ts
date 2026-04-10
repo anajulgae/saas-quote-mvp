@@ -276,11 +276,11 @@ type RangeBoundary = {
 }
 
 const RANGE_PRESET_LABEL: Record<Exclude<AnalyticsRangePreset, "custom">, string> = {
-  today: "Today",
-  "7d": "Last 7 days",
-  "30d": "Last 30 days",
-  this_month: "This month",
-  last_month: "Last month",
+  today: "오늘",
+  "7d": "최근 7일",
+  "30d": "최근 30일",
+  this_month: "이번 달",
+  last_month: "지난 달",
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -407,9 +407,7 @@ function resolveRange(input: AnalyticsQueryInput, canUseCustomRange: boolean): R
       label,
       startDate: formatInputDate(startAt),
       endDate: formatInputDate(endAt),
-      comparisonLabel: `vs ${toShortDate(formatInputDate(previousStartAt))} - ${toShortDate(formatInputDate(
-        previousEndAt
-      ))}`,
+      comparisonLabel: `${toShortDate(formatInputDate(previousStartAt))} ~ ${toShortDate(formatInputDate(previousEndAt))} 대비`,
       previousStartDate: formatInputDate(previousStartAt),
       previousEndDate: formatInputDate(previousEndAt),
       usesCustomRange: preset === "custom",
@@ -462,27 +460,27 @@ function normalizeInquiryChannel(raw: string | null | undefined) {
     .trim()
     .toLowerCase()
   if (!value) {
-    return { key: "manual", label: "Manual" }
+    return { key: "manual", label: "직접 입력" }
   }
   if (value.includes("portal")) {
-    return { key: "portal", label: "Customer portal" }
+    return { key: "portal", label: "고객 포털" }
   }
   if (value.includes("public") || value.includes("web") || value.includes("form")) {
-    return { key: "webform", label: "Web form" }
+    return { key: "webform", label: "웹 폼" }
   }
   if (value.includes("email")) {
-    return { key: "email", label: "Email" }
+    return { key: "email", label: "이메일" }
   }
   if (value.includes("phone") || value.includes("call")) {
-    return { key: "phone", label: "Phone" }
+    return { key: "phone", label: "전화" }
   }
   if (value.includes("kakao") || value.includes("sms") || value.includes("message")) {
-    return { key: "messaging", label: "Kakao / SMS" }
+    return { key: "messaging", label: "카카오 / 문자" }
   }
   if (value === "manual") {
-    return { key: "manual", label: "Manual" }
+    return { key: "manual", label: "직접 입력" }
   }
-  return { key: value.replace(/\s+/g, "_"), label: raw?.trim() || "Other" }
+  return { key: value.replace(/\s+/g, "_"), label: raw?.trim() || "기타" }
 }
 
 function invoiceStatusBucket(status: PaymentStatus): "pending" | "partially_paid" | "paid" | "overdue" {
@@ -501,41 +499,41 @@ function invoiceStatusBucket(status: PaymentStatus): "pending" | "partially_paid
 function invoiceStatusLabel(status: "pending" | "partially_paid" | "paid" | "overdue") {
   switch (status) {
     case "pending":
-      return "Pending"
+      return "미결제"
     case "partially_paid":
-      return "Partially paid"
+      return "부분 입금"
     case "paid":
-      return "Paid"
+      return "완납"
     case "overdue":
-      return "Overdue"
+      return "연체"
   }
 }
 
 function invoiceTypeLabel(type: InvoiceType) {
   switch (type) {
     case "deposit":
-      return "Deposit"
+      return "선금"
     case "balance":
-      return "Balance"
+      return "잔금"
     case "final":
-      return "Other / final"
+      return "기타·최종"
   }
 }
 
 function aiFeatureLabel(action: string) {
   switch (action) {
     case "ai.inquiry_structure":
-      return "Inquiry structure"
+      return "문의 구조화"
     case "ai.inquiry_analyze":
-      return "Inquiry analysis"
+      return "문의 분석"
     case "ai.quote_draft":
-      return "Quote draft"
+      return "견적 초안"
     case "ai.compose_message":
-      return "Message compose"
+      return "발송 문구 작성"
     case "ai.collection_advice":
-      return "Collection advice"
+      return "수금·추심 조언"
     case "ai.customer_insight":
-      return "Customer insight"
+      return "고객 인사이트"
     default:
       return action.replace(/^ai\./, "").replace(/_/g, " ")
   }
@@ -544,13 +542,13 @@ function aiFeatureLabel(action: string) {
 function documentSendLabel(channel: string) {
   switch (channel) {
     case "email":
-      return "Email send"
+      return "이메일 발송"
     case "share_link":
-      return "Share link"
+      return "공유 링크"
     case "pdf_download":
-      return "PDF download"
+      return "PDF 다운로드"
     case "kakao_byoa":
-      return "BYOA message"
+      return "알림톡(BYOA)"
     default:
       return channel
   }
@@ -558,10 +556,10 @@ function documentSendLabel(channel: string) {
 
 function documentKindLabel(kind: string) {
   if (kind === "quote") {
-    return "Quotes"
+    return "견적"
   }
   if (kind === "invoice") {
-    return "Invoices"
+    return "청구"
   }
   return kind
 }
@@ -587,7 +585,7 @@ function buildBuckets(startAt: Date, endAt: Date) {
     while (cursor.getTime() <= endAt.getTime()) {
       const bucketEnd = endOfDay(addDays(cursor, 6))
       buckets.push({
-        label: `${formatInputDate(cursor).slice(5)} wk`,
+        label: `${formatInputDate(cursor).slice(5)} 주차`,
         startAt: startOfDay(cursor),
         endAt: bucketEnd.getTime() > endAt.getTime() ? endAt : bucketEnd,
       })
@@ -833,8 +831,8 @@ function buildReport(input: {
   const kpis: AnalyticsKpi[] = [
     {
       key: "total_customers",
-      label: "Total customers",
-      description: "Current customer book size. Compared with customer count at the end of the previous comparison period.",
+      label: "전체 고객 수",
+      description: "등록된 고객 수입니다. 비교 기간 말 시점 고객 수와 비교합니다.",
       value: totalCustomers,
       previousValue: previousCustomerTotal,
       delta: totalCustomers - previousCustomerTotal,
@@ -843,8 +841,8 @@ function buildReport(input: {
     },
     {
       key: "new_inquiries",
-      label: "New inquiries",
-      description: "Inquiries created in the selected period.",
+      label: "신규 문의",
+      description: "선택 기간에 생성된 문의 건수입니다.",
       value: inquiriesInRange.length,
       previousValue: previousInquiries.length,
       delta: inquiriesInRange.length - previousInquiries.length,
@@ -853,8 +851,8 @@ function buildReport(input: {
     },
     {
       key: "created_quotes",
-      label: "Quotes created",
-      description: "Quotes created in the selected period.",
+      label: "생성된 견적",
+      description: "선택 기간에 생성된 견적 건수입니다.",
       value: quotesCreatedInRange.length,
       previousValue: previousQuotesCreated.length,
       delta: quotesCreatedInRange.length - previousQuotesCreated.length,
@@ -863,8 +861,8 @@ function buildReport(input: {
     },
     {
       key: "created_invoices",
-      label: "Invoices issued",
-      description: "Invoices created in the selected period.",
+      label: "발행된 청구",
+      description: "선택 기간에 생성된 청구 건수입니다.",
       value: invoicesCreatedInRange.length,
       previousValue: previousInvoicesCreated.length,
       delta: invoicesCreatedInRange.length - previousInvoicesCreated.length,
@@ -873,8 +871,8 @@ function buildReport(input: {
     },
     {
       key: "approved_quotes",
-      label: "Approved quotes",
-      description: "Quotes currently marked approved, counted by last status update time.",
+      label: "승인된 견적",
+      description: "현재 상태가 승인인 견적입니다. 승인 시각 필드가 없어 마지막 수정 시각(updated_at) 기준으로 집계합니다.",
       value: approvedQuotesInRange.length,
       previousValue: previousApprovedQuotes.length,
       delta: approvedQuotesInRange.length - previousApprovedQuotes.length,
@@ -883,8 +881,8 @@ function buildReport(input: {
     },
     {
       key: "paid_amount",
-      label: "Collected amount",
-      description: "Invoice face value whose paid_at landed in the selected period.",
+      label: "기간 입금액",
+      description: "선택 기간 안에 입금 완료(paid_at) 처리된 청구의 금액 합계입니다.",
       value: currentPaidAmount,
       previousValue: previousPaidAmount,
       delta: currentPaidAmount - previousPaidAmount,
@@ -893,8 +891,8 @@ function buildReport(input: {
     },
     {
       key: "outstanding_amount",
-      label: "Current outstanding",
-      description: "Current unpaid invoice face value. Partially paid invoices are counted at full invoice value because paid balance detail is not stored yet.",
+      label: "현재 미수금",
+      description: "아직 완납되지 않은 청구의 액면 금액 합계입니다. 부분 입금도 현재는 청구 전액 기준으로 잡습니다.",
       value: currentOutstanding,
       previousValue: previousOutstanding,
       delta: currentOutstanding - previousOutstanding,
@@ -903,8 +901,8 @@ function buildReport(input: {
     },
     {
       key: "overdue_count",
-      label: "Current overdue invoices",
-      description: "Invoices already past due and not fully paid.",
+      label: "연체 청구 건수",
+      description: "만기일이 지났고 아직 완납되지 않은 청구 건수입니다.",
       value: currentOverdueInvoices.length,
       previousValue: previousOverdueInvoices.length,
       delta: currentOverdueInvoices.length - previousOverdueInvoices.length,
@@ -944,48 +942,48 @@ function buildReport(input: {
   const funnelStages: AnalyticsFunnelStage[] = [
     {
       key: "new_inquiries",
-      label: "New inquiries",
-      description: "New inquiry opportunities created in the selected period.",
+      label: "신규 문의",
+      description: "선택 기간에 새로 들어온 문의입니다.",
       count: inquiriesInRange.length,
       conversionFromPrevious: null,
       conversionFromStart: safeRate(inquiriesInRange.length, inquiriesInRange.length),
     },
     {
       key: "quoted_inquiries",
-      label: "Converted to quote",
-      description: "Selected-period inquiries that already have at least one linked quote.",
+      label: "견적으로 전환",
+      description: "선택 기간 문의 중 최소 1건 이상 견적이 연결된 경우입니다.",
       count: inquiriesQuoted,
       conversionFromPrevious: safeRate(inquiriesQuoted, inquiriesInRange.length),
       conversionFromStart: safeRate(inquiriesQuoted, inquiriesInRange.length),
     },
     {
       key: "sent_quotes",
-      label: "Quote sent",
-      description: "Selected-period inquiries that reached a sent quote stage.",
+      label: "견적 발송",
+      description: "발송 처리되었거나 초안이 아닌 견적 단계에 도달한 문의입니다.",
       count: inquiriesSent,
       conversionFromPrevious: safeRate(inquiriesSent, inquiriesQuoted),
       conversionFromStart: safeRate(inquiriesSent, inquiriesInRange.length),
     },
     {
       key: "approved_quotes",
-      label: "Quote approved",
-      description: "Selected-period inquiries with at least one approved quote.",
+      label: "견적 승인",
+      description: "승인된 견적이 하나 이상 있는 문의입니다.",
       count: inquiriesApproved,
       conversionFromPrevious: safeRate(inquiriesApproved, inquiriesSent),
       conversionFromStart: safeRate(inquiriesApproved, inquiriesInRange.length),
     },
     {
       key: "created_invoices",
-      label: "Invoice created",
-      description: "Selected-period inquiries that reached invoice creation.",
+      label: "청구 생성",
+      description: "청구까지 이어진 문의입니다.",
       count: inquiriesInvoiced,
       conversionFromPrevious: safeRate(inquiriesInvoiced, inquiriesApproved),
       conversionFromStart: safeRate(inquiriesInvoiced, inquiriesInRange.length),
     },
     {
       key: "paid_invoices",
-      label: "Invoice paid",
-      description: "Selected-period inquiries with at least one fully collected invoice.",
+      label: "입금 완료",
+      description: "완납(또는 선금 완납) 청구가 있는 문의입니다.",
       count: inquiriesPaid,
       conversionFromPrevious: safeRate(inquiriesPaid, inquiriesInvoiced),
       conversionFromStart: safeRate(inquiriesPaid, inquiriesInRange.length),
@@ -1127,7 +1125,7 @@ function buildReport(input: {
       quoteId: quote.id,
       quoteNumber: quote.quoteNumber,
       title: quote.title,
-      customerLabel: customerMap.get(quote.customerId)?.label ?? "Unknown customer",
+      customerLabel: customerMap.get(quote.customerId)?.label ?? "알 수 없는 고객",
       total: quote.total,
       status: quote.status,
       createdAt: quote.createdAt,
@@ -1188,7 +1186,7 @@ function buildReport(input: {
   const aiBackfillNotice =
     billing.aiCallsThisMonth > aiActivitiesInRange.length &&
     range.startDate.slice(0, 7) === new Date().toISOString().slice(0, 7)
-      ? "Feature-level AI logs were added recently. Current-month quota is accurate, but older feature breakdown rows may be incomplete."
+      ? "기능별 AI 로그가 최근에 추가되었습니다. 이번 달 쿼터는 정확하지만, 과거 구간의 기능별 분해는 불완전할 수 있습니다."
       : null
 
   const documentSendEventsInRange = documentSendEvents.filter((row) => withinRange(row.createdAt, startMs, endMs))
@@ -1243,21 +1241,21 @@ function buildReport(input: {
 
   const highlights: string[] = []
   if (currentPaidAmount > previousPaidAmount) {
-    highlights.push("Collections improved compared with the previous comparison window.")
+    highlights.push("비교 기간보다 입금 실적이 개선된 흐름입니다.")
   } else if (currentPaidAmount < previousPaidAmount) {
-    highlights.push("Collected amount is trailing the previous comparison window.")
+    highlights.push("비교 기간 대비 입금액이 다소 부진합니다.")
   }
   if (weakestStageKey) {
     const stage = funnelStages.find((row) => row.key === weakestStageKey)
     if (stage) {
-      highlights.push(`Biggest drop-off is at "${stage.label}". This is the clearest leakage point in the pipeline.`)
+      highlights.push(`가장 이탈이 큰 단계는 「${stage.label}」입니다. 파이프라인에서 우선 점검할 구간으로 보입니다.`)
     }
   }
   if (currentOverdueInvoices.length > 0) {
-    highlights.push(`${currentOverdueInvoices.length} overdue invoice(s) need immediate follow-up.`)
+    highlights.push(`연체 청구 ${currentOverdueInvoices.length}건 — 즉시 팔로업이 필요합니다.`)
   }
   if (!highlights.length) {
-    highlights.push("No major negative signal was detected in the selected analytics window.")
+    highlights.push("선택한 기간에서 뚜렷한 부정 신호는 보이지 않습니다.")
   }
 
   return {
@@ -1333,13 +1331,13 @@ function buildReport(input: {
       documentRows,
     },
     definitions: [
-      "New inquiries = inquiries created in the selected period.",
-      "Inquiry to quote conversion = unique inquiries with at least one linked quote divided by selected-period inquiries.",
-      "Approved quotes = quotes whose current status is approved, counted by updated_at because approved_at is not stored yet.",
-      "Collected amount = invoice face value for invoices whose paid_at landed in the selected period.",
-      "Current outstanding = invoice face value not fully paid right now. Partially paid exposure is shown at full invoice value because exact remaining balance is not stored yet.",
-      "Average payment days = created_at to paid_at for invoices paid in the selected period.",
-      "Partially paid bucket includes both partially_paid and deposit_paid statuses.",
+      "신규 문의 = 선택 기간에 생성된 문의입니다.",
+      "문의→견적 전환 = 해당 기간 문의 중 견적이 1건 이상 연결된 고유 문의 비율입니다.",
+      "승인 견적 = 현재 상태가 승인인 견적이며, approved_at 미저장으로 updated_at 기준입니다.",
+      "기간 입금액 = 선택 기간 안에 paid_at이 찍힌 청구의 액면 합계입니다.",
+      "현재 미수금 = 아직 완납되지 않은 청구 액면 합계입니다. 부분 입금도 잔액 미저장으로 전액 기준 표시입니다.",
+      "평균 결제 일수 = 해당 기간 입금 완료 청구의 생성일~입금일 간격 평균입니다.",
+      "부분 입금 구간에는 partially_paid와 deposit_paid가 함께 포함됩니다.",
     ],
   }
 }
@@ -1417,7 +1415,7 @@ export async function getAnalyticsReportForCurrentUser(
 
   const supabase = await createServerSupabaseClient()
   if (!supabase) {
-    throw new Error("Analytics data source is not configured.")
+    throw new Error("통계 데이터 소스(Supabase)가 설정되지 않았습니다.")
   }
 
   const userId = session.user.id
@@ -1497,20 +1495,21 @@ export function buildAnalyticsHref(basePath: string, range: Pick<AnalyticsRange,
 }
 
 export function buildAnalyticsCsv(report: AnalyticsReport) {
+  const riskKo = (r: string) => (r === "watch" ? "관심" : r === "stable" ? "안정" : r)
   const rows: string[] = []
-  rows.push(buildCsvRow(["Bill-IO analytics export"]))
-  rows.push(buildCsvRow(["Range", report.range.label]))
-  rows.push(buildCsvRow(["Start", report.range.startDate]))
-  rows.push(buildCsvRow(["End", report.range.endDate]))
+  rows.push(buildCsvRow(["Bill-IO 통계보내기"]))
+  rows.push(buildCsvRow(["기간", report.range.label]))
+  rows.push(buildCsvRow(["시작일", report.range.startDate]))
+  rows.push(buildCsvRow(["종료일", report.range.endDate]))
   rows.push("")
 
-  rows.push(buildCsvRow(["KPI", "Value", "Previous", "Delta"]))
+  rows.push(buildCsvRow(["지표", "값", "이전", "차이"]))
   for (const kpi of report.kpis) {
     rows.push(buildCsvRow([kpi.label, kpi.value, kpi.previousValue, kpi.delta]))
   }
   rows.push("")
 
-  rows.push(buildCsvRow(["Funnel stage", "Count", "From previous", "From start"]))
+  rows.push(buildCsvRow(["퍼널 단계", "건수", "직전 대비 전환", "전체 대비 전환"]))
   for (const stage of report.funnel.stages) {
     rows.push(
       buildCsvRow([
@@ -1523,7 +1522,7 @@ export function buildAnalyticsCsv(report: AnalyticsReport) {
   }
   rows.push("")
 
-  rows.push(buildCsvRow(["Channel", "Count", "Quote conversion", "Approved rate", "Avg quote amount"]))
+  rows.push(buildCsvRow(["채널", "문의 수", "견적 전환율", "승인 비율", "평균 견적액"]))
   for (const row of report.channelRows) {
     rows.push(
       buildCsvRow([
@@ -1537,13 +1536,13 @@ export function buildAnalyticsCsv(report: AnalyticsReport) {
   }
   rows.push("")
 
-  rows.push(buildCsvRow(["Top customer", "Inquiries", "Quoted", "Invoiced", "Paid", "Risk"]))
+  rows.push(buildCsvRow(["상위 고객", "문의", "견적액", "청구액", "입금", "리스크"]))
   for (const row of report.customerSummary.topCustomers) {
-    rows.push(buildCsvRow([row.label, row.inquiryCount, row.totalQuoted, row.totalInvoiced, row.totalPaid, row.risk]))
+    rows.push(buildCsvRow([row.label, row.inquiryCount, row.totalQuoted, row.totalInvoiced, row.totalPaid, riskKo(row.risk)]))
   }
   rows.push("")
 
-  rows.push(buildCsvRow(["Period", "Inquiries", "Quotes", "Invoices", "Paid amount", "Outstanding amount", "AI calls"]))
+  rows.push(buildCsvRow(["구간", "문의", "견적", "청구", "입금액", "미수금", "AI 호출"]))
   for (const row of report.volumeSeries) {
     rows.push(
       buildCsvRow([
@@ -1559,13 +1558,13 @@ export function buildAnalyticsCsv(report: AnalyticsReport) {
   }
   rows.push("")
 
-  rows.push(buildCsvRow(["Document send action", "Count"]))
+  rows.push(buildCsvRow(["문서 발송 유형", "건수"]))
   for (const row of report.documentSendSummary.actionRows) {
     rows.push(buildCsvRow([row.label, row.count]))
   }
   rows.push("")
 
-  rows.push(buildCsvRow(["AI feature", "Count"]))
+  rows.push(buildCsvRow(["AI 기능", "건수"]))
   for (const row of report.aiSummary.featureRows) {
     rows.push(buildCsvRow([row.label, row.count]))
   }
