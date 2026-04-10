@@ -4,7 +4,7 @@ import { invoiceTypeOptions } from "@/lib/constants"
 import type { CollectionToneHint } from "@/types/domain"
 import { reportServerError } from "@/lib/observability"
 import { guardAiPost } from "@/lib/server/ai-route-guard"
-import { bumpUserUsage } from "@/lib/server/usage-bump"
+import { bumpUserUsage, logAiUsageActivity } from "@/lib/server/usage-bump"
 import { runCollectionAdviceAi } from "@/lib/server/collection-advice-core"
 import { OpenAiError } from "@/lib/server/openai-chat"
 import { openAiErrorUserPayload } from "@/lib/server/openai-user-errors"
@@ -77,6 +77,17 @@ export async function POST(req: Request) {
     })
 
     void bumpUserUsage(supabase, "ai")
+    void logAiUsageActivity(supabase, {
+      userId: auth.userId,
+      action: "ai.collection_advice",
+      description: `Generated AI collection advice for ${inv.invoice_number}.`,
+      invoiceId,
+      customerId: inv.customer_id,
+      metadata: {
+        paymentStatus: inv.payment_status,
+        reminderCount,
+      },
+    })
     return NextResponse.json({ ok: true as const, advice })
   } catch (e) {
     if (e instanceof OpenAiError) {

@@ -18,9 +18,11 @@ import { DashboardOperationalHub } from "@/components/app/dashboard-operational-
 import { MetricCard } from "@/components/app/metric-card"
 import { PageHeader } from "@/components/app/page-header"
 import { InquiryStageBadge, PaymentStatusBadge } from "@/components/app/status-badge"
+import { AnalyticsDashboardSection } from "@/components/analytics/analytics-report"
 import { OpsAgendaList } from "@/components/operations/ops-agenda-list"
 import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { getAnalyticsReportForCurrentUser } from "@/lib/analytics"
 import { planAllowsFeature } from "@/lib/plan-features"
 import { cn } from "@/lib/utils"
 import { resolveActivityHeadline, resolveActivityKind } from "@/lib/activity-presentation"
@@ -70,7 +72,12 @@ function emptyBadgeClass(tone: "positive" | "neutral" | "muted") {
   )
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>
+}) {
+  const sp = await searchParams
   const {
     metrics,
     followUps,
@@ -86,6 +93,7 @@ export default async function DashboardPage() {
     notificationPreview,
     taxInvoiceSignals,
   } = await getDashboardPageData()
+  const analyticsReport = await getAnalyticsReportForCurrentUser(sp)
   const siteOrigin = getSiteOrigin()
 
   const mainAction = resolveDashboardMainAction(counts)
@@ -182,6 +190,8 @@ export default async function DashboardPage() {
       />
 
       <DashboardOperationalHub hub={hub} notificationPreview={notificationPreview} siteOrigin={siteOrigin} />
+
+      {analyticsReport ? <AnalyticsDashboardSection report={analyticsReport} /> : null}
 
       <section className="grid gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 
 import { reportServerError } from "@/lib/observability"
 import { guardAiPost } from "@/lib/server/ai-route-guard"
-import { bumpUserUsage } from "@/lib/server/usage-bump"
+import { bumpUserUsage, logAiUsageActivity } from "@/lib/server/usage-bump"
 import {
   parseInquiryStructure,
   type InquiryStructuredPayload,
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   if (!g.ok) {
     return g.response
   }
-  const { supabase } = g.ctx
+  const { auth, supabase } = g.ctx
 
   let rawText = ""
   try {
@@ -51,6 +51,12 @@ export async function POST(req: Request) {
     }
 
     void bumpUserUsage(supabase, "ai")
+    void logAiUsageActivity(supabase, {
+      userId: auth.userId,
+      action: "ai.inquiry_structure",
+      description: "Structured a raw inquiry message with AI.",
+      metadata: { inputLength: rawText.length },
+    })
     return NextResponse.json({ ok: true as const, structured })
   } catch (e) {
     if (e instanceof OpenAiError) {

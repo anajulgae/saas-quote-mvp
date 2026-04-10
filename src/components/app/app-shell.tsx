@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
+  Activity,
   CreditCard,
   FileText,
   LayoutDashboard,
@@ -26,6 +27,7 @@ const navigation = [
   { href: "/quotes", label: "Quotes", icon: FileText },
   { href: "/invoices", label: "Invoices", icon: Receipt },
   { href: "/customers", label: "Customers", icon: Users },
+  { href: "/analytics", label: "Analytics", icon: Activity },
   { href: "/billing", label: "Billing", icon: CreditCard },
   { href: "/settings", label: "Settings", icon: Settings },
 ]
@@ -55,6 +57,11 @@ const HEADER_CONTEXT: { match: string; title: string; description: string }[] = 
     match: "/customers",
     title: "Customers",
     description: "Keep customer details, activity history, and delivery channels in one place.",
+  },
+  {
+    match: "/analytics",
+    title: "Analytics",
+    description: "Track conversion, collection, customer value, AI cost, and document delivery trends.",
   },
   {
     match: "/billing",

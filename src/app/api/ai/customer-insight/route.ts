@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 import { getCustomerDetailData } from "@/lib/data"
 import { reportServerError } from "@/lib/observability"
 import { guardAiPost } from "@/lib/server/ai-route-guard"
-import { bumpUserUsage } from "@/lib/server/usage-bump"
+import { bumpUserUsage, logAiUsageActivity } from "@/lib/server/usage-bump"
 import { runCustomerInsightAi } from "@/lib/server/customer-insight-core"
 import { OpenAiError } from "@/lib/server/openai-chat"
 import { openAiErrorUserPayload } from "@/lib/server/openai-user-errors"
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   if (!g.ok) {
     return g.response
   }
-  const { supabase } = g.ctx
+  const { auth, supabase } = g.ctx
 
   let customerId = ""
   try {
@@ -70,6 +70,17 @@ export async function POST(req: Request) {
     const insight = await runCustomerInsightAi(JSON.stringify(snapshot))
 
     void bumpUserUsage(supabase, "ai")
+    void logAiUsageActivity(supabase, {
+      userId: auth.userId,
+      action: "ai.customer_insight",
+      description: `Generated AI customer insight for ${c.companyName?.trim() || c.name}.`,
+      customerId,
+      metadata: {
+        inquiryCount: detail.inquiries.length,
+        quoteCount: detail.quotes.length,
+        invoiceCount: detail.invoices.length,
+      },
+    })
     return NextResponse.json({ ok: true as const, insight })
   } catch (e) {
     if (e instanceof OpenAiError) {

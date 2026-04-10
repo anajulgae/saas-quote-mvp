@@ -4,7 +4,7 @@ import { parseInquiryAiAnalysisFromJson } from "@/lib/inquiry-ai-analysis-parse"
 import { updateInquiryAiAnalysisForOwner } from "@/lib/data"
 import { reportServerError } from "@/lib/observability"
 import { assertAiFeatureAllowed, getAuthenticatedUserForApi } from "@/lib/server/api-auth"
-import { bumpUserUsage } from "@/lib/server/usage-bump"
+import { bumpUserUsage, logAiUsageActivity } from "@/lib/server/usage-bump"
 import { runInquiryAiAnalysis } from "@/lib/server/inquiry-analyze-core"
 import { OpenAiError } from "@/lib/server/openai-chat"
 import { openAiErrorUserPayload } from "@/lib/server/openai-user-errors"
@@ -80,6 +80,17 @@ export async function POST(req: Request) {
 
     const saved = await updateInquiryAiAnalysisForOwner(inquiryId, analysis)
     void bumpUserUsage(supabase, "ai")
+    void logAiUsageActivity(supabase, {
+      userId: auth.userId,
+      action: "ai.inquiry_analyze",
+      description: `Generated AI inquiry analysis for ${inquiry.title}.`,
+      inquiryId,
+      customerId: inquiry.customer_id,
+      metadata: {
+        serviceCategory: inquiry.service_category,
+        channel: inquiry.channel,
+      },
+    })
     if (!saved.ok) {
       return NextResponse.json(
         { ok: true as const, analysis, saved: false as const, saveError: saved.error },

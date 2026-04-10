@@ -279,3 +279,20 @@ npm run build
   - `BILLING_STRIPE_PRICE_STARTER_MONTHLY`
   - `BILLING_STRIPE_PRICE_PRO_MONTHLY`
   - `BILLING_STRIPE_PRICE_BUSINESS_MONTHLY`
+---
+
+## Analytics
+
+- `/dashboard` now includes an operations insight snapshot with shared period filters.
+- `/analytics` is the detailed reporting hub for inquiry -> quote -> invoice -> cash performance.
+- Supported filter presets: `today`, `last 7 days`, `last 30 days`, `this month`, `last month`, and custom date range.
+- KPI definitions are aligned in code and UI:
+  - `New inquiries` = inquiries created in the selected period.
+  - `Approved quotes` = quotes whose current status is `approved`, counted by `updated_at` because `approved_at` is not stored yet.
+  - `Collected amount` = invoice face value whose `paid_at` falls in the selected period.
+  - `Current outstanding` = invoice face value not fully paid right now. Partial-payment exposure is shown at full invoice face value because remaining balance detail is not stored yet.
+- Plan gates:
+  - `Starter`: preset ranges and KPI overview.
+  - `Pro`: custom range plus advanced channel/customer/usage breakdowns.
+  - `Business`: CSV export and full reporting access.
+- Export extension point: `/api/analytics/export` returns CSV for the current analytics filter.

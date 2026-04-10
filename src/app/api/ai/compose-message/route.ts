@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 
 import { reportServerError } from "@/lib/observability"
 import { guardAiPost } from "@/lib/server/ai-route-guard"
-import { bumpUserUsage } from "@/lib/server/usage-bump"
+import { bumpUserUsage, logAiUsageActivity } from "@/lib/server/usage-bump"
 import { completeJsonChatForFeature, OpenAiError } from "@/lib/server/openai-chat"
 import { openAiErrorUserPayload } from "@/lib/server/openai-user-errors"
 
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
   if (!g.ok) {
     return g.response
   }
-  const { supabase } = g.ctx
+  const { auth, supabase } = g.ctx
 
   let kind: Kind
   let tone: Tone
@@ -111,6 +111,15 @@ ${kindLine[kind]}`
     })
 
     void bumpUserUsage(supabase, "ai")
+    void logAiUsageActivity(supabase, {
+      userId: auth.userId,
+      action: "ai.compose_message",
+      description: `Generated an AI message for ${kind}.`,
+      metadata: {
+        kind,
+        tone,
+      },
+    })
     return NextResponse.json({ ok: true as const, message })
   } catch (e) {
     if (e instanceof OpenAiError) {

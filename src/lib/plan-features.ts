@@ -14,6 +14,9 @@ export type PlanFeature =
   | "kakao_byoa_messaging"
   | "customer_mini_portal"
   | "e_tax_invoice_asp"
+  | "analytics_custom_range"
+  | "analytics_breakdown"
+  | "analytics_export"
   /** Business — 고급 리포트·확장(향후 대시보드 심화와 연결) */
   | "advanced_reports"
 
@@ -29,6 +32,9 @@ export const FEATURE_GATES: Record<PlanFeature, BillingPlan[]> = {
   kakao_byoa_messaging: ["pro", "business"],
   customer_mini_portal: ["starter", "pro", "business"],
   e_tax_invoice_asp: ["business"],
+  analytics_custom_range: ["pro", "business"],
+  analytics_breakdown: ["pro", "business"],
+  analytics_export: ["business"],
   advanced_reports: ["business"],
 }
 

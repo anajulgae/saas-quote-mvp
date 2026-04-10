@@ -38,6 +38,9 @@ export const FEATURE_GATES_AFTER_PAYMENT: Record<PlanFeature, BillingPlan[]> = {
   kakao_byoa_messaging: ["pro", "business"],
   customer_mini_portal: ["starter", "pro", "business"],
   e_tax_invoice_asp: ["business"],
+  analytics_custom_range: ["pro", "business"],
+  analytics_breakdown: ["pro", "business"],
+  analytics_export: ["business"],
   advanced_reports: ["business"],
 }
 

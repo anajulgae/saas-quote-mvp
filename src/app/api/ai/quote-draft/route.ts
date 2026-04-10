@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 
 import { reportServerError } from "@/lib/observability"
 import { guardAiPost } from "@/lib/server/ai-route-guard"
-import { bumpUserUsage } from "@/lib/server/usage-bump"
+import { bumpUserUsage, logAiUsageActivity } from "@/lib/server/usage-bump"
 import {
   getFallbackModel,
   isQuoteDraftFallbackEnabled,
@@ -191,7 +191,7 @@ export async function POST(req: Request) {
   if (!g.ok) {
     return g.response
   }
-  const { supabase } = g.ctx
+  const { auth, supabase } = g.ctx
 
   let body: Body
   try {
@@ -247,6 +247,15 @@ export async function POST(req: Request) {
     }
 
     void bumpUserUsage(supabase, "ai")
+    void logAiUsageActivity(supabase, {
+      userId: auth.userId,
+      action: "ai.quote_draft",
+      description: `Generated an AI quote draft for ${serviceCategory}.`,
+      metadata: {
+        serviceCategory,
+        hasIndustryHint: Boolean(industryHint),
+      },
+    })
     return NextResponse.json({ ok: true as const, draft })
   } catch (e) {
     if (e instanceof OpenAiError) {
