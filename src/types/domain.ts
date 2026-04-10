@@ -27,6 +27,8 @@ export type SubscriptionStatus =
   | "active"
   | "past_due"
   | "canceled"
+  | "incomplete"
+  | "pending"
   | "trial_expired"
 
 export interface AppUser {

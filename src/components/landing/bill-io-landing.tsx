@@ -1,5 +1,6 @@
 import { LandingHeader } from "./landing-header"
 import { LandingJsonLd } from "./landing-json-ld"
+import { LandingPricingSaas } from "./landing-pricing-saas"
 import {
   LandingDifferentiators,
   LandingFaq,
@@ -8,7 +9,6 @@ import {
   LandingHero,
   LandingHowItWorks,
   LandingIndustries,
-  LandingPricing,
   LandingProblemSolution,
 } from "./landing-sections"
 
@@ -28,7 +28,7 @@ export function BillIoLanding() {
         <LandingDifferentiators />
         <LandingHowItWorks />
         <LandingIndustries />
-        <LandingPricing />
+        <LandingPricingSaas />
         <LandingFaq />
         <LandingFinalCta />
       </main>

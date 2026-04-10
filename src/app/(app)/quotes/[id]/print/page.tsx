@@ -26,7 +26,7 @@ export default async function QuotePrintPage({
         "print:min-h-0 print:bg-white"
       )}
     >
-      <QuotePrintToolbar />
+      <QuotePrintToolbar quoteId={id} />
       <div
         className={cn(
           "quote-document-print-wrap mx-auto max-w-[210mm] px-6 py-10",

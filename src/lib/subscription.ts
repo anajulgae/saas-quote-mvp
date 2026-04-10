@@ -5,10 +5,17 @@ import { normalizePlan } from "@/lib/plan-features"
 export type UserBillingSnapshot = {
   plan: BillingPlan
   subscriptionStatus: SubscriptionStatus
+  trialStartedAt: string | null
   trialEndsAt: string | null
   currentPeriodEnd: string | null
   cancelAtPeriodEnd: boolean
   pendingPlan: BillingPlan | null
+  billingProvider: string | null
+  billingProviderSubscriptionId: string | null
+  billingProviderPriceId: string | null
+  paymentMethodBrand: string | null
+  paymentMethodLast4: string | null
+  billingStatusUpdatedAt: string | null
   usageMonth: string | null
   aiCallsThisMonth: number
   documentSendsThisMonth: number
@@ -24,6 +31,8 @@ export function normalizeSubscriptionStatus(v: string | null | undefined): Subsc
     s === "active" ||
     s === "past_due" ||
     s === "canceled" ||
+    s === "incomplete" ||
+    s === "pending" ||
     s === "trial_expired"
   ) {
     return s
@@ -31,26 +40,30 @@ export function normalizeSubscriptionStatus(v: string | null | undefined): Subsc
   return "active"
 }
 
-/** 체험 중 Pro 수준 기능·한도 적용 */
-export function getEffectiveBillingPlan(snapshot: Pick<UserBillingSnapshot, "plan" | "subscriptionStatus" | "trialEndsAt">): BillingPlan {
+/** billing 상태를 실제 기능 게이트에 연결한다. */
+export function getEffectiveBillingPlan(
+  snapshot: Pick<UserBillingSnapshot, "plan" | "subscriptionStatus" | "trialEndsAt">
+): BillingPlan {
   const plan = normalizePlan(snapshot.plan)
   const status = snapshot.subscriptionStatus
 
   if (status === "trialing" && snapshot.trialEndsAt) {
     const end = new Date(snapshot.trialEndsAt).getTime()
     if (!Number.isNaN(end) && end > Date.now()) {
-      return "pro"
+      return plan
     }
   }
 
-  if (status === "trial_expired") {
+  if (status === "trial_expired" || status === "canceled" || status === "incomplete" || status === "pending") {
     return "starter"
   }
 
   return plan
 }
 
-export function isTrialActive(snapshot: Pick<UserBillingSnapshot, "subscriptionStatus" | "trialEndsAt">): boolean {
+export function isTrialActive(
+  snapshot: Pick<UserBillingSnapshot, "subscriptionStatus" | "trialEndsAt">
+): boolean {
   if (snapshot.subscriptionStatus !== "trialing" || !snapshot.trialEndsAt) {
     return false
   }
@@ -58,7 +71,9 @@ export function isTrialActive(snapshot: Pick<UserBillingSnapshot, "subscriptionS
   return !Number.isNaN(end) && end > Date.now()
 }
 
-export function trialRemainingLabel(snapshot: Pick<UserBillingSnapshot, "subscriptionStatus" | "trialEndsAt">): string | null {
+export function trialRemainingLabel(
+  snapshot: Pick<UserBillingSnapshot, "subscriptionStatus" | "trialEndsAt">
+): string | null {
   if (!isTrialActive(snapshot) || !snapshot.trialEndsAt) {
     return null
   }
@@ -76,6 +91,46 @@ export function trialRemainingLabel(snapshot: Pick<UserBillingSnapshot, "subscri
 
 export function defaultTrialEndsAtIso(): string {
   return new Date(Date.now() + TRIAL_MS).toISOString()
+}
+
+export function billingStatusLabel(status: SubscriptionStatus): string {
+  switch (status) {
+    case "trialing":
+      return "체험 중"
+    case "active":
+      return "정상 결제"
+    case "past_due":
+      return "결제 실패"
+    case "canceled":
+      return "해지됨"
+    case "incomplete":
+      return "결제 수단 확인 필요"
+    case "pending":
+      return "결제 진행 중"
+    case "trial_expired":
+      return "체험 종료"
+    default:
+      return status
+  }
+}
+
+export function billingStatusTone(
+  status: SubscriptionStatus
+): "positive" | "warning" | "danger" | "muted" {
+  switch (status) {
+    case "active":
+      return "positive"
+    case "trialing":
+    case "pending":
+      return "warning"
+    case "past_due":
+    case "canceled":
+    case "incomplete":
+    case "trial_expired":
+      return "danger"
+    default:
+      return "muted"
+  }
 }
 
 export const PLAN_USAGE_LIMITS: Record<

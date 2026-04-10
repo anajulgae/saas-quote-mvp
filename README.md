@@ -249,3 +249,33 @@ npm run build
 ## 라이선스
 
 비공개 프로젝트로 가정합니다. 필요 시 별도 명시하세요.
+
+---
+
+## Billing launch notes
+
+- Plans now map to real subscription state: `starter`, `pro`, and `business` are resolved from `users.plan` plus billing status.
+- Trial flow: every new account starts in `trialing`, and automatic billing continues after checkout if a payment method is saved before trial end.
+- Billing status flow: `trialing`, `active`, `past_due`, `canceled`, `incomplete`, `pending`, and `trial_expired`.
+- Billing provider abstraction lives under `src/lib/billing/` and currently supports `mock` and `stripe`.
+- Webhook processing is handled by `/api/billing/webhook`, with duplicate protection in `billing_webhook_events`.
+- Billing events are stored in `billing_events`; product activity stays in `activity_logs`.
+
+## document_send policy
+
+- `document_send` counts actual delivery behavior, not internal preview.
+- Counted actions: email send, share link copy/share, PDF download / print-to-PDF, and BYOA message send.
+- Count events are deduplicated through `document_send_events` and the `record_document_send` RPC.
+- PDF download is included because export/save behavior is treated as real document delivery or retention activity.
+
+## Billing environment
+
+- Add the billing variables from `.env.example`.
+- For Stripe mode, configure:
+  - `BILLING_PROVIDER=stripe`
+  - `BILLING_MODE=test` or `live`
+  - `BILLING_STRIPE_SECRET_KEY`
+  - `BILLING_STRIPE_WEBHOOK_SECRET`
+  - `BILLING_STRIPE_PRICE_STARTER_MONTHLY`
+  - `BILLING_STRIPE_PRICE_PRO_MONTHLY`
+  - `BILLING_STRIPE_PRICE_BUSINESS_MONTHLY`

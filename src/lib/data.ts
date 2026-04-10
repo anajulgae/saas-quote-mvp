@@ -41,6 +41,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { loadPlanContext } from "@/lib/user-plan"
 import type { BillingConsoleEventRow } from "@/lib/billing/console-types"
 import { getUsageLimitsForEffectivePlan, type UserBillingSnapshot } from "@/lib/subscription"
+import { getBillingRuntimeSnapshot } from "@/lib/server/billing-service"
 import { parseInquiryAiAnalysisFromJson } from "@/lib/inquiry-ai-analysis-parse"
 import type {
   ActivityLog,
@@ -4329,6 +4330,14 @@ export async function getBillingConsoleData(): Promise<{
   billing: UserBillingSnapshot
   effectivePlan: BillingPlan
   portalEnabledCount: number
+  publicInquiryFormCount: number
+  seatUsedCount: number
+  runtime: {
+    provider: string
+    mode: string
+    configured: boolean
+    configurationError: string | null
+  }
   events: BillingConsoleEventRow[]
 } | null> {
   const context = await getDataContext()
@@ -4337,6 +4346,14 @@ export async function getBillingConsoleData(): Promise<{
       billing: demoBillingSnapshot,
       effectivePlan: "business",
       portalEnabledCount: 2,
+      publicInquiryFormCount: 1,
+      seatUsedCount: 1,
+      runtime: {
+        provider: "mock",
+        mode: "test",
+        configured: true,
+        configurationError: null,
+      },
       events: [
         {
           id: "demo-ev-1",
@@ -4373,8 +4390,17 @@ export async function getBillingConsoleData(): Promise<{
     .select("portal_token")
     .eq("user_id", context.userId)
 
+  const { data: settingsRow } = await context.supabase
+    .from("business_settings")
+    .select("public_inquiry_form_enabled")
+    .eq("user_id", context.userId)
+    .maybeSingle()
+
   const portalList = (custRows ?? []) as { portal_token?: string | null }[]
   const portalEnabledCount = portalList.filter((r) => Boolean(r.portal_token?.trim())).length
+  const billingSettings = settingsRow as { public_inquiry_form_enabled?: boolean | null } | null
+  const publicInquiryFormCount = billingSettings?.public_inquiry_form_enabled ? 1 : 0
+  const runtime = await getBillingRuntimeSnapshot()
 
   const rawEv = (eventRows ?? []) as {
     id: string
@@ -4387,6 +4413,9 @@ export async function getBillingConsoleData(): Promise<{
     billing: planCtx.billing,
     effectivePlan: planCtx.effectivePlan,
     portalEnabledCount,
+    publicInquiryFormCount,
+    seatUsedCount: 1,
+    runtime,
     events: rawEv.map((r) => ({
       id: r.id,
       kind: r.kind,

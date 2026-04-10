@@ -16,11 +16,18 @@ export interface Database {
           business_name: string | null
           phone: string | null
           plan: string
+          trial_started_at: string | null
           trial_ends_at: string | null
           subscription_status: string | null
           current_period_end: string | null
           cancel_at_period_end: boolean
           pending_plan: string | null
+          billing_provider: string | null
+          billing_provider_subscription_id: string | null
+          billing_provider_price_id: string | null
+          payment_method_brand: string | null
+          payment_method_last4: string | null
+          billing_status_updated_at: string | null
           stripe_customer_id: string | null
           usage_month: string | null
           ai_calls_this_month: number
@@ -34,11 +41,18 @@ export interface Database {
           business_name?: string | null
           phone?: string | null
           plan?: string
+          trial_started_at?: string | null
           trial_ends_at?: string | null
           subscription_status?: string | null
           current_period_end?: string | null
           cancel_at_period_end?: boolean
           pending_plan?: string | null
+          billing_provider?: string | null
+          billing_provider_subscription_id?: string | null
+          billing_provider_price_id?: string | null
+          payment_method_brand?: string | null
+          payment_method_last4?: string | null
+          billing_status_updated_at?: string | null
           stripe_customer_id?: string | null
           usage_month?: string | null
           ai_calls_this_month?: number
@@ -52,11 +66,18 @@ export interface Database {
           business_name?: string | null
           phone?: string | null
           plan?: string
+          trial_started_at?: string | null
           trial_ends_at?: string | null
           subscription_status?: string | null
           current_period_end?: string | null
           cancel_at_period_end?: boolean
           pending_plan?: string | null
+          billing_provider?: string | null
+          billing_provider_subscription_id?: string | null
+          billing_provider_price_id?: string | null
+          payment_method_brand?: string | null
+          payment_method_last4?: string | null
+          billing_status_updated_at?: string | null
           stripe_customer_id?: string | null
           usage_month?: string | null
           ai_calls_this_month?: number
@@ -88,6 +109,72 @@ export interface Database {
           user_id?: string
           kind?: string
           message?: string
+          metadata?: Json
+          created_at?: string
+        }
+        Relationships: []
+      }
+      billing_webhook_events: {
+        Row: {
+          id: string
+          provider: string
+          event_id: string
+          event_type: string
+          payload: Json
+          processed: boolean
+          processed_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          provider: string
+          event_id: string
+          event_type: string
+          payload?: Json
+          processed?: boolean
+          processed_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          provider?: string
+          event_id?: string
+          event_type?: string
+          payload?: Json
+          processed?: boolean
+          processed_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      document_send_events: {
+        Row: {
+          id: string
+          user_id: string
+          document_kind: string
+          document_id: string
+          channel: string
+          dedupe_key: string
+          metadata: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          document_kind: string
+          document_id: string
+          channel: string
+          dedupe_key: string
+          metadata?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          document_kind?: string
+          document_id?: string
+          channel?: string
+          dedupe_key?: string
           metadata?: Json
           created_at?: string
         }
@@ -1040,6 +1127,16 @@ export interface Database {
       append_billing_event: {
         Args: { p_kind: string; p_message: string; p_metadata?: Json }
         Returns: undefined
+      }
+      record_document_send: {
+        Args: {
+          p_document_kind: string
+          p_document_id: string
+          p_channel: string
+          p_dedupe_key: string
+          p_metadata?: Json
+        }
+        Returns: Json
       }
     }
     Enums: {

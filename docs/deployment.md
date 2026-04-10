@@ -246,3 +246,49 @@ Preview 환경에만 `ENABLE_DEMO_LOGIN=true` 를 추가하고, Production에는
 - **실전 실행 순서(Runbook)**: [deploy-runbook.md](./deploy-runbook.md)  
 - 로컬 실행·보안 요약: 루트 [README.md](../README.md)  
 - 운영 스모크 체크리스트: [beta-qa-checklist.md](./beta-qa-checklist.md)
+
+## Billing rollout update
+
+### Subscription states
+
+- Source of truth: `users.plan` + `users.subscription_status` + provider ids on `users`.
+- Supported statuses: `trialing`, `active`, `past_due`, `canceled`, `incomplete`, `pending`, `trial_expired`.
+- Trial start/end and current billing period are persisted on `users` so Billing UI and feature gating stay aligned.
+
+### Provider and webhook flow
+
+- Provider abstraction: `src/lib/billing/provider.ts`
+- Providers: `mock`, `stripe`
+- Checkout entry: `/api/billing/checkout`
+- Portal entry: `/api/billing/portal`
+- Webhook entry: `/api/billing/webhook`
+- Duplicate protection: `billing_webhook_events` unique `(provider, event_id)`.
+- If a webhook was stored but not marked processed, retries continue processing instead of being silently skipped.
+
+### document_send policy
+
+- `document_send` counts these actions:
+  - email send
+  - share link copy/share
+  - PDF download / print-to-PDF
+  - BYOA message send
+- Internal preview does not count.
+- Deduped counts are stored in `document_send_events` via `record_document_send`.
+- Billing-visible count history is also recorded in `billing_events` with kind `document_send_counted`.
+
+### Required billing environment variables
+
+- `BILLING_PROVIDER`
+- `BILLING_MODE`
+- `BILLING_STRIPE_SECRET_KEY`
+- `BILLING_STRIPE_WEBHOOK_SECRET`
+- `BILLING_STRIPE_PRICE_STARTER_MONTHLY`
+- `BILLING_STRIPE_PRICE_PRO_MONTHLY`
+- `BILLING_STRIPE_PRICE_BUSINESS_MONTHLY`
+
+### Failure handling
+
+- `past_due`: Billing page shows a warning banner and prompts payment method recovery.
+- `trial_expired`: Paid access falls back until checkout is restarted.
+- `cancel_at_period_end`: Billing page shows the scheduled end date and allows resume.
+- Billing events remain separate from product activity logs.

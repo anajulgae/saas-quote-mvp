@@ -25,7 +25,7 @@ export default async function InvoicePrintPage({
         "print:min-h-0 print:bg-white"
       )}
     >
-      <InvoicePrintToolbar />
+      <InvoicePrintToolbar invoiceId={id} />
       <div
         className={cn(
           "invoice-document-print-wrap mx-auto max-w-[210mm] px-6 py-10",
