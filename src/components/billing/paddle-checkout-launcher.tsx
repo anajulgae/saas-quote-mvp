@@ -16,6 +16,12 @@ declare global {
       }) => void
       Checkout: {
         open: (opts: {
+          settings?: {
+            displayMode?: string
+            variant?: string
+            theme?: string
+            locale?: string
+          }
           items: { priceId: string; quantity: number }[]
           customer?: { email: string }
           customData?: Record<string, string>
@@ -66,6 +72,14 @@ export function PaddleCheckoutLauncher({
           await new Promise<void>((resolve, reject) => {
             const existing = document.querySelector(`script[src="${paddleScriptUrl()}"]`)
             if (existing) {
+              if (window.Paddle) {
+                resolve()
+                return
+              }
+              if ((existing as HTMLScriptElement).dataset.paddleLoaded === "1") {
+                resolve()
+                return
+              }
               existing.addEventListener("load", () => resolve(), { once: true })
               existing.addEventListener("error", () => reject(new Error("Paddle.js 로드 실패")), { once: true })
               return
@@ -73,7 +87,10 @@ export function PaddleCheckoutLauncher({
             const s = document.createElement("script")
             s.src = paddleScriptUrl()
             s.async = true
-            s.onload = () => resolve()
+            s.onload = () => {
+              s.dataset.paddleLoaded = "1"
+              resolve()
+            }
             s.onerror = () => reject(new Error("Paddle.js 로드 실패"))
             document.head.appendChild(s)
           })
@@ -92,7 +109,13 @@ export function PaddleCheckoutLauncher({
             }
           },
         })
+        // displayMode 미지정 시 오버레이가 뜨지 않을 수 있음 — Paddle 문서 권장
         window.Paddle.Checkout.open({
+          settings: {
+            displayMode: "overlay",
+            variant: "one-page",
+            theme: "light",
+          },
           items: [{ priceId, quantity: 1 }],
           customer: { email },
           customData: {
@@ -107,6 +130,7 @@ export function PaddleCheckoutLauncher({
     void run()
     return () => {
       cancelled = true
+      opened.current = false
     }
   }, [email, plan, priceId, token, userId])
 
