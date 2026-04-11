@@ -27,6 +27,7 @@ const EMPTY_SNAPSHOT = (plan: BillingPlan, missing: boolean): UserBillingSnapsho
   billingProvider: null,
   billingProviderSubscriptionId: null,
   billingProviderPriceId: null,
+  billingCustomerId: null,
   paymentMethodBrand: null,
   paymentMethodLast4: null,
   billingStatusUpdatedAt: null,
@@ -64,6 +65,7 @@ function rowToSnapshot(
         : null,
     billingProviderPriceId:
       typeof row.billing_provider_price_id === "string" ? row.billing_provider_price_id : null,
+    billingCustomerId: typeof row.stripe_customer_id === "string" ? row.stripe_customer_id : null,
     paymentMethodBrand: typeof row.payment_method_brand === "string" ? row.payment_method_brand : null,
     paymentMethodLast4: typeof row.payment_method_last4 === "string" ? row.payment_method_last4 : null,
     billingStatusUpdatedAt:
@@ -162,7 +164,7 @@ export async function fetchUserBillingState(
   const extended = await supabase
     .from("users")
     .select(
-      "plan, subscription_status, trial_started_at, trial_ends_at, current_period_end, cancel_at_period_end, pending_plan, billing_provider, billing_provider_subscription_id, billing_provider_price_id, payment_method_brand, payment_method_last4, billing_status_updated_at, usage_month, ai_calls_this_month, document_sends_this_month"
+      "plan, subscription_status, trial_started_at, trial_ends_at, current_period_end, cancel_at_period_end, pending_plan, billing_provider, billing_provider_subscription_id, billing_provider_price_id, stripe_customer_id, payment_method_brand, payment_method_last4, billing_status_updated_at, usage_month, ai_calls_this_month, document_sends_this_month"
     )
     .eq("id", userId)
     .maybeSingle()

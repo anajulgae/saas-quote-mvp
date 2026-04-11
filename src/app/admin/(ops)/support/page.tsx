@@ -13,7 +13,7 @@ export default async function AdminSupportPage({
   await requireAdminAccess()
   const sp = await searchParams
   const supabase = await createServerSupabaseClient()
-  if (!supabase) return <p className="text-red-400">DB 실패</p>
+  if (!supabase) return <p className="text-red-600">DB 실패</p>
 
   const { rows, error } = await listAdminSupportTickets(supabase, {
     status: sp.status,
@@ -23,8 +23,8 @@ export default async function AdminSupportPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-extrabold text-white">고객센터 운영</h1>
-        <p className="mt-1 text-sm text-zinc-400">티켓 상태·카테고리·내부 메모로 전화 없이도 처리 흐름을 유지합니다.</p>
+        <h1 className="text-xl font-extrabold text-zinc-900">고객센터 운영</h1>
+        <p className="mt-1 text-sm text-zinc-600">티켓 상태·카테고리·내부 메모로 전화 없이도 처리 흐름을 유지합니다.</p>
       </div>
 
       <form className="flex flex-wrap items-end gap-3" method="get">
@@ -33,7 +33,7 @@ export default async function AdminSupportPage({
           <select
             name="status"
             defaultValue={sp.status ?? "all"}
-            className="mt-0.5 block rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm text-white"
+            className="mt-0.5 block rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900"
           >
             <option value="all">전체</option>
             <option value="new">신규</option>
@@ -47,7 +47,7 @@ export default async function AdminSupportPage({
           <select
             name="cat"
             defaultValue={sp.cat ?? "all"}
-            className="mt-0.5 block rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm text-white"
+            className="mt-0.5 block rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900"
           >
             <option value="all">전체</option>
             <option value="general">일반</option>
@@ -63,36 +63,36 @@ export default async function AdminSupportPage({
         </button>
       </form>
 
-      {error ? <p className="text-sm text-red-400">{error}</p> : null}
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-      <div className="overflow-x-auto rounded-lg border border-zinc-800">
+      <div className="overflow-x-auto rounded-lg border border-zinc-200">
         <Table>
           <TableHeader>
-            <TableRow className="border-zinc-800 hover:bg-transparent">
-              <TableHead className="text-zinc-400">시각</TableHead>
-              <TableHead className="text-zinc-400">상태</TableHead>
-              <TableHead className="text-zinc-400">분류</TableHead>
-              <TableHead className="text-zinc-400">제목</TableHead>
-              <TableHead className="text-zinc-400">연락처</TableHead>
-              <TableHead className="text-zinc-400">액션</TableHead>
+            <TableRow className="border-zinc-200 hover:bg-transparent">
+              <TableHead className="text-zinc-600">시각</TableHead>
+              <TableHead className="text-zinc-600">상태</TableHead>
+              <TableHead className="text-zinc-600">분류</TableHead>
+              <TableHead className="text-zinc-600">제목</TableHead>
+              <TableHead className="text-zinc-600">연락처</TableHead>
+              <TableHead className="text-zinc-600">액션</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 ? (
-              <TableRow className="border-zinc-800">
+              <TableRow className="border-zinc-200">
                 <TableCell colSpan={6} className="py-10 text-center text-sm text-zinc-500">
                   티켓이 없습니다. 고객이 /help/contact 에서 제출하면 여기에 쌓입니다.
                 </TableCell>
               </TableRow>
             ) : (
               rows.map((t) => (
-                <TableRow key={t.id} className="border-zinc-800 text-sm text-zinc-300">
+                <TableRow key={t.id} className="border-zinc-200 text-sm text-zinc-700">
                   <TableCell className="whitespace-nowrap text-xs text-zinc-500">
                     {new Date(t.created_at).toLocaleString("ko-KR")}
                   </TableCell>
                   <TableCell>{SUPPORT_TICKET_STATUS_LABEL[t.status] ?? t.status}</TableCell>
                   <TableCell>{SUPPORT_CATEGORY_LABEL[t.category] ?? t.category}</TableCell>
-                  <TableCell className="max-w-[200px] truncate font-medium text-white">{t.subject}</TableCell>
+                  <TableCell className="max-w-[200px] truncate font-medium text-zinc-900">{t.subject}</TableCell>
                   <TableCell className="text-xs">{t.contact_email}</TableCell>
                   <TableCell>
                     <Link href={`/admin/support/${t.id}`} className="text-xs font-bold text-primary hover:underline">

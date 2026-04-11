@@ -22,21 +22,21 @@ export default async function AdminForbiddenPage({
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
-      <div className="max-w-md rounded-xl border border-zinc-800 bg-zinc-900/80 p-8 text-center shadow-xl">
-        <h1 className="text-lg font-bold text-white">접근 거부</h1>
-        <p className="mt-3 text-sm leading-relaxed text-zinc-400">{detail}</p>
+      <div className="max-w-md rounded-xl border border-zinc-200 bg-white p-8 text-center shadow-lg shadow-zinc-200/60">
+        <h1 className="text-lg font-bold text-zinc-900">접근 거부</h1>
+        <p className="mt-3 text-sm leading-relaxed text-zinc-600">{detail}</p>
         <div className="mt-8 flex flex-col gap-2 sm:flex-row sm:justify-center">
           <Link href="/dashboard" className={cn(buttonVariants({ variant: "secondary" }), "w-full sm:w-auto")}>
             앱으로 돌아가기
           </Link>
-          <Link href="/login" className={cn(buttonVariants({ variant: "outline" }), "w-full border-zinc-600 sm:w-auto")}>
+          <Link href="/login" className={cn(buttonVariants({ variant: "outline" }), "w-full border-zinc-300 sm:w-auto")}>
             로그인
           </Link>
         </div>
       </div>
-      <p className="text-center text-xs text-zinc-600">
+      <p className="text-center text-xs text-zinc-500">
         최초 운영자 지정: Supabase SQL —{" "}
-        <code className="rounded bg-zinc-900 px-1 py-0.5 text-zinc-400">
+        <code className="rounded bg-zinc-100 px-1 py-0.5 text-zinc-700">
           update public.users set is_admin = true, admin_role = &apos;owner&apos; where email = &apos;…&apos;;
         </code>
       </p>

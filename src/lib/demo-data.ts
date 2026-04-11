@@ -39,6 +39,7 @@ export const demoBillingSnapshot: UserBillingSnapshot = {
   billingProvider: "mock",
   billingProviderSubscriptionId: "mock_sub_demo",
   billingProviderPriceId: "mock_price_business",
+  billingCustomerId: null,
   paymentMethodBrand: "mock-card",
   paymentMethodLast4: "4242",
   billingStatusUpdatedAt: new Date().toISOString(),

@@ -6,10 +6,12 @@ import { toast } from "sonner"
 
 import {
   clearPendingPlanAction,
+  openBillingPortalAction,
   resumeSubscriptionAction,
   scheduleDowngradeAction,
   scheduleSubscriptionCancelAction,
   selectSubscriptionPlanAction,
+  startCheckoutAction,
 } from "@/app/(app)/billing/subscription-actions"
 import { buttonVariants } from "@/components/ui/button-variants"
 import { cn } from "@/lib/utils"
@@ -52,19 +54,36 @@ function billingEventKindKo(kind: string) {
     trial_ended: "체험 종료",
     payment_succeeded: "결제 완료",
     payment_failed: "결제 실패",
+    checkout_started: "체크아웃 시작",
+    portal_opened: "청구 포털",
+    payment_method_added: "결제 수단 등록",
   }
   return m[kind] ?? kind
+}
+
+function billingProviderLabel(provider: string) {
+  if (provider === "paddle") return "Paddle"
+  if (provider === "stripe") return "Stripe"
+  if (provider === "mock") return "시뮬레이션(mock)"
+  return provider
 }
 
 export function BillingConsoleClient({
   billing,
   effectivePlan,
   portalEnabledCount,
+  runtime,
   events,
 }: {
   billing: UserBillingSnapshot
   effectivePlan: BillingPlan
   portalEnabledCount: number
+  runtime: {
+    provider: string
+    mode: string
+    configured: boolean
+    configurationError: string | null
+  }
   events: BillingConsoleEventRow[]
 }) {
   const [pending, start] = useTransition()
@@ -95,6 +114,10 @@ export function BillingConsoleClient({
     limits.documentSendsPerMonth > 0
       ? Math.round((billing.documentSendsThisMonth / limits.documentSendsPerMonth) * 100)
       : 0
+
+  const pgEnabled = runtime.provider === "stripe" || runtime.provider === "paddle"
+  const showPgCheckout = pgEnabled && runtime.configured
+  const showPortal = showPgCheckout && Boolean(billing.billingCustomerId?.trim())
 
   return (
     <div className="space-y-8 rounded-2xl border border-border/70 bg-card p-5 shadow-sm sm:p-7">
@@ -142,11 +165,84 @@ export function BillingConsoleClient({
         </div>
         <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
           <p className="text-xs font-medium text-muted-foreground">결제 수단</p>
-          <p className="mt-1 text-sm text-foreground">
-            결제(PG) 연동 시 이 영역에 카드 마스킹·변경 버튼이 붙습니다. 지금은 운영 구조만 준비되어 있습니다.
-          </p>
+          {billing.paymentMethodLast4 ? (
+            <p className="mt-1 text-sm text-foreground">
+              {billing.paymentMethodBrand ? `${billing.paymentMethodBrand} · ` : null}끝자리{" "}
+              {billing.paymentMethodLast4}
+            </p>
+          ) : pgEnabled && billing.billingCustomerId ? (
+            <p className="mt-1 text-sm text-foreground">
+              고객 프로필이 연결되었습니다. 아래「청구 포털」에서 카드·청구서를 관리할 수 있습니다.
+            </p>
+          ) : pgEnabled ? (
+            <p className="mt-1 text-sm text-muted-foreground">
+              체크아웃을 완료하면 PG에 등록된 결제 수단이 여기에 반영됩니다(웹훅 동기화).
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-foreground">
+              시뮬레이션 모드입니다. 실제 카드는 저장되지 않습니다.
+            </p>
+          )}
         </div>
       </div>
+
+      {runtime.provider !== "mock" ? (
+        <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-4">
+          <h3 className="text-sm font-semibold text-foreground">실제 결제(PG)</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            제공자: <strong className="text-foreground">{billingProviderLabel(runtime.provider)}</strong> · 모드:{" "}
+            <strong className="text-foreground">{runtime.mode}</strong>
+          </p>
+          {!runtime.configured ? (
+            <p className="mt-2 text-sm text-destructive">
+              {runtime.configurationError ?? "환경 변수를 확인해 주세요."}
+            </p>
+          ) : (
+            <>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                {runtime.provider === "paddle"
+                  ? "플랜을 고르면 서버가 체크아웃 페이지로 보낸 뒤 Paddle 결제 창이 열립니다. 완료 후 웹훅으로 구독 상태가 갱신됩니다."
+                  : "플랜을 고르면 Stripe Checkout으로 이동합니다."}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {PLANS.map((p) =>
+                  runtime.provider === "paddle" ? (
+                    <Link
+                      key={`pg-${p}`}
+                      href={`/billing/checkout/paddle?plan=${encodeURIComponent(p)}`}
+                      className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9 inline-flex items-center")}
+                    >
+                      {PLAN_LABEL[p]} 결제 진행
+                    </Link>
+                  ) : (
+                    <button
+                      key={`pg-${p}`}
+                      type="button"
+                      disabled={pending}
+                      className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
+                      onClick={() => run(() => startCheckoutAction(p))}
+                    >
+                      {PLAN_LABEL[p]} 결제 진행
+                    </button>
+                  )
+                )}
+              </div>
+              {showPortal ? (
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    disabled={pending}
+                    className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}
+                    onClick={() => run(() => openBillingPortalAction())}
+                  >
+                    청구·결제 수단 관리(포털)
+                  </button>
+                </div>
+              ) : null}
+            </>
+          )}
+        </div>
+      ) : null}
 
       <div>
         <h3 className="text-sm font-semibold">이번 달 사용량</h3>
@@ -192,7 +288,13 @@ export function BillingConsoleClient({
       <div>
         <h3 className="text-sm font-semibold">플랜 변경</h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          실제 과금 전까지는 아래 버튼이 DB 플랜을 바꿉니다. PG 웹훅이 붙으면 Checkout·Customer Portal과 동기화하면 됩니다.
+          {runtime.provider === "mock"
+            ? "시뮬레이션: 아래 버튼은 DB 플랜만 바꿉니다."
+            : showPgCheckout && billing.billingProviderSubscriptionId
+              ? "활성 구독이 있으면 아래는 PG API로 플랜을 바꿉니다. 구독이 없거나 미완료면「실제 결제」에서 체크아웃을 먼저 진행하세요."
+              : showPgCheckout
+                ? "아직 PG 구독 ID가 없습니다. 위「실제 결제」에서 체크아웃을 완료한 뒤 웹훅으로 동기화되면 이 버튼으로 플랜 변경이 가능합니다."
+                : "PG가 설정되지 않았습니다. 환경 변수를 채운 뒤 다시 시도하세요."}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           {PLANS.map((p) => (

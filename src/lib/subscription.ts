@@ -13,6 +13,8 @@ export type UserBillingSnapshot = {
   billingProvider: string | null
   billingProviderSubscriptionId: string | null
   billingProviderPriceId: string | null
+  /** Stripe `cus_*` 또는 Paddle `ctm_*` — DB 컬럼 `stripe_customer_id` */
+  billingCustomerId: string | null
   paymentMethodBrand: string | null
   paymentMethodLast4: string | null
   billingStatusUpdatedAt: string | null

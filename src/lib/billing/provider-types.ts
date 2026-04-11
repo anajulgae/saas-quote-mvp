@@ -1,6 +1,6 @@
 import type { BillingPlan, SubscriptionStatus } from "@/types/domain"
 
-export type BillingProviderName = "mock" | "stripe"
+export type BillingProviderName = "mock" | "stripe" | "paddle"
 export type BillingProviderMode = "test" | "live"
 
 export type BillingCheckoutInput = {

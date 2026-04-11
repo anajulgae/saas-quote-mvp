@@ -28,9 +28,9 @@ export function AdminShell({
 
   return (
     <div className="flex min-h-screen">
-      <aside className="relative hidden w-52 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900/50 md:flex">
-        <div className="flex h-14 items-center border-b border-zinc-800 px-4">
-          <Link href="/admin" className="text-sm font-extrabold tracking-tight text-white">
+      <aside className="relative hidden w-52 shrink-0 flex-col border-r border-zinc-200 bg-white md:flex">
+        <div className="flex h-14 items-center border-b border-zinc-200 px-4">
+          <Link href="/admin" className="text-sm font-extrabold tracking-tight text-zinc-900">
             Bill-IO <span className="text-zinc-500">운영</span>
           </Link>
         </div>
@@ -43,7 +43,9 @@ export function AdminShell({
                 href={item.href}
                 className={cn(
                   "block rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  active ? "bg-zinc-800 text-white" : "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200"
+                  active
+                    ? "bg-zinc-200 text-zinc-900"
+                    : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
                 )}
               >
                 {item.label}
@@ -51,9 +53,9 @@ export function AdminShell({
             )
           })}
         </nav>
-        <div className="mt-auto border-t border-zinc-800 p-3 text-xs text-zinc-500">
-          <p className="truncate font-medium text-zinc-400">{adminEmail}</p>
-          {adminRole ? <p className="mt-0.5 text-zinc-600">역할: {adminRole}</p> : null}
+        <div className="mt-auto border-t border-zinc-200 p-3 text-xs text-zinc-500">
+          <p className="truncate font-medium text-zinc-700">{adminEmail}</p>
+          {adminRole ? <p className="mt-0.5 text-zinc-500">역할: {adminRole}</p> : null}
           <Link href="/dashboard" className="mt-2 inline-block text-primary underline-offset-2 hover:underline">
             사용자 앱
           </Link>
@@ -61,15 +63,15 @@ export function AdminShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between border-b border-zinc-800 bg-zinc-950/80 px-4 backdrop-blur md:hidden">
-          <Link href="/admin" className="text-sm font-bold text-white">
+        <header className="flex h-14 items-center justify-between border-b border-zinc-200 bg-white/90 px-4 backdrop-blur md:hidden">
+          <Link href="/admin" className="text-sm font-bold text-zinc-900">
             Bill-IO 운영
           </Link>
           <Link href="/dashboard" className="text-xs text-primary">
             앱
           </Link>
         </header>
-        <div className="border-b border-zinc-800 bg-zinc-900/30 md:hidden">
+        <div className="border-b border-zinc-200 bg-zinc-50 md:hidden">
           <nav className="flex gap-1 overflow-x-auto p-2">
             {NAV.map((item) => {
               const active = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href))
@@ -79,7 +81,7 @@ export function AdminShell({
                   href={item.href}
                   className={cn(
                     "shrink-0 rounded-md px-2.5 py-1.5 text-xs font-semibold",
-                    active ? "bg-zinc-800 text-white" : "text-zinc-400"
+                    active ? "bg-zinc-200 text-zinc-900" : "text-zinc-600"
                   )}
                 >
                   {item.label}

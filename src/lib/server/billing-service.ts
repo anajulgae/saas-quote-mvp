@@ -167,6 +167,18 @@ function webhookEventKind(
       return "payment_failed"
     case "customer.subscription.trial_will_end":
       return "trial_will_end"
+    case "subscription.created":
+    case "subscription.activated":
+      return "subscription_started"
+    case "subscription.updated":
+      return buildPlanChangeKind(currentPlan, nextPlan)
+    case "subscription.canceled":
+    case "subscription.cancelled":
+      return "subscription_canceled"
+    case "transaction.completed":
+      return "payment_succeeded"
+    case "transaction.payment_failed":
+      return "payment_failed"
     default:
       return event.eventType.replace(/\./g, "_")
   }
@@ -191,6 +203,18 @@ function webhookEventMessage(event: BillingWebhookEvent, nextPlan: BillingPlan) 
       return "Recurring payment failed."
     case "customer.subscription.trial_will_end":
       return "Trial will end soon."
+    case "subscription.created":
+    case "subscription.activated":
+      return `${PLAN_LABEL[nextPlan]} 구독이 시작되었습니다.`
+    case "subscription.updated":
+      return `${PLAN_LABEL[nextPlan]} 구독이 갱신되었습니다.`
+    case "subscription.canceled":
+    case "subscription.cancelled":
+      return "구독이 종료되었습니다."
+    case "transaction.completed":
+      return "결제가 완료되었습니다."
+    case "transaction.payment_failed":
+      return "결제에 실패했습니다."
     default:
       return "Billing state changed."
   }
@@ -386,7 +410,7 @@ export async function openBillingPortalForUser(input: {
   if (!stripeCustomerId) {
     return {
       ok: false,
-      error: "No saved billing customer was found. Please start checkout first.",
+      error: "저장된 결제 고객이 없습니다. 먼저 체크아웃으로 결제를 진행해 주세요.",
     }
   }
 
@@ -602,7 +626,9 @@ export async function handleBillingWebhook(request: Request) {
       const current = await fetchUserBillingState(supabase, user.id)
       const nextPlan = normalizePlan(parsed.event.plan ?? current.plan)
       const nextStatus =
-        parsed.event.eventType === "invoice.payment_succeeded" && current.subscriptionStatus === "past_due"
+        (parsed.event.eventType === "invoice.payment_succeeded" ||
+          parsed.event.eventType === "transaction.completed") &&
+        current.subscriptionStatus === "past_due"
           ? "active"
           : coerceStatus(current, parsed.event.subscriptionStatus)
 

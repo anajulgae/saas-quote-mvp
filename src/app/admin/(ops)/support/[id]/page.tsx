@@ -21,16 +21,16 @@ export default async function AdminSupportDetailPage({ params }: { params: Promi
         ← 티켓 목록
       </Link>
       <div>
-        <h1 className="text-xl font-extrabold text-white">{t.subject}</h1>
+        <h1 className="text-xl font-extrabold text-zinc-900">{t.subject}</h1>
         <p className="mt-1 text-sm text-zinc-500">
           {SUPPORT_TICKET_STATUS_LABEL[t.status] ?? t.status} · {SUPPORT_CATEGORY_LABEL[t.category] ?? t.category} ·{" "}
           {new Date(t.created_at).toLocaleString("ko-KR")}
         </p>
       </div>
 
-      <section className="rounded-lg border border-zinc-800 bg-zinc-900/30 p-4">
-        <h2 className="text-sm font-bold text-zinc-400">고객 본문</h2>
-        <pre className="mt-2 whitespace-pre-wrap text-sm text-zinc-200">{t.body}</pre>
+      <section className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+        <h2 className="text-sm font-bold text-zinc-600">고객 본문</h2>
+        <pre className="mt-2 whitespace-pre-wrap text-sm text-zinc-800">{t.body}</pre>
         <p className="mt-3 text-xs text-zinc-500">회신: {t.contact_email}</p>
         {t.user_id ? (
           <p className="mt-1 text-xs">
@@ -44,7 +44,7 @@ export default async function AdminSupportDetailPage({ params }: { params: Promi
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-bold text-zinc-300">처리</h2>
+        <h2 className="mb-2 text-sm font-bold text-zinc-800">처리</h2>
         <AdminTicketForm ticketId={t.id} initialStatus={t.status} initialNote={t.operator_note} />
       </section>
     </div>

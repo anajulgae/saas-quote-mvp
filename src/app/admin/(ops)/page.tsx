@@ -19,12 +19,12 @@ function Kpi({
   return (
     <div
       className={cn(
-        "rounded-lg border border-zinc-800 bg-zinc-900/40 p-4",
-        warn && "border-amber-900/60 bg-amber-950/20"
+        "rounded-lg border border-zinc-200 bg-white p-4 shadow-sm",
+        warn && "border-amber-300 bg-amber-50"
       )}
     >
       <p className="text-[11px] font-bold uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className="mt-1 text-2xl font-extrabold tabular-nums text-white">{value}</p>
+      <p className="mt-1 text-2xl font-extrabold tabular-nums text-zinc-900">{value}</p>
       {hint ? <p className="mt-1 text-xs text-zinc-500">{hint}</p> : null}
     </div>
   )
@@ -34,7 +34,7 @@ export default async function AdminDashboardPage() {
   await requireAdminAccess()
   const supabase = await createServerSupabaseClient()
   if (!supabase) {
-    return <p className="text-sm text-red-400">Supabase 클라이언트를 만들 수 없습니다.</p>
+    return <p className="text-sm text-red-600">Supabase 클라이언트를 만들 수 없습니다.</p>
   }
 
   const k = await getAdminDashboardKpis(supabase)
@@ -42,16 +42,16 @@ export default async function AdminDashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-xl font-extrabold text-white">운영 개요</h1>
-        <p className="mt-1 text-sm text-zinc-400">
+        <h1 className="text-xl font-extrabold text-zinc-900">운영 개요</h1>
+        <p className="mt-1 text-sm text-zinc-600">
           실시간 판단용 지표입니다. 화려한 차트보다 이상 징후·구독·문의·사용량을 우선합니다.
         </p>
       </div>
 
       {k.alerts.length > 0 ? (
-        <div className="rounded-lg border border-amber-800/50 bg-amber-950/30 px-4 py-3 text-sm text-amber-100">
-          <p className="font-bold text-amber-200">주의</p>
-          <ul className="mt-2 list-inside list-disc space-y-1 text-amber-100/90">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <p className="font-bold text-amber-900">주의</p>
+          <ul className="mt-2 list-inside list-disc space-y-1 text-amber-900/90">
             {k.alerts.map((a) => (
               <li key={a}>{a}</li>
             ))}
@@ -60,7 +60,7 @@ export default async function AdminDashboardPage() {
       ) : null}
 
       <section>
-        <h2 className="mb-3 text-sm font-bold text-zinc-300">사용자·구독</h2>
+        <h2 className="mb-3 text-sm font-bold text-zinc-800">사용자·구독</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Kpi label="전체 사용자" value={k.totals.users} />
           <Kpi label="구독 활성(체험+유료)" value={k.totals.activeSubscription} hint="trialing + active" />
@@ -80,7 +80,7 @@ export default async function AdminDashboardPage() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-sm font-bold text-zinc-300">기간 지표 (7일 / 30일)</h2>
+        <h2 className="mb-3 text-sm font-bold text-zinc-800">기간 지표 (7일 / 30일)</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Kpi
             label="신규 가입 7일"
@@ -98,7 +98,7 @@ export default async function AdminDashboardPage() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-sm font-bold text-zinc-300">이번 달 사용량 합계</h2>
+        <h2 className="mb-3 text-sm font-bold text-zinc-800">이번 달 사용량 합계</h2>
         <div className="grid gap-3 sm:grid-cols-3">
           <Kpi label="AI 호출 합계" value={k.usageMonth.aiCallsSum} hint={`월: ${k.usageMonth.month}`} />
           <Kpi label="문서 발송 합계" value={k.usageMonth.documentSendsSum} />
@@ -107,12 +107,12 @@ export default async function AdminDashboardPage() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-sm font-bold text-zinc-300">플랜 분포</h2>
+        <h2 className="mb-3 text-sm font-bold text-zinc-800">플랜 분포</h2>
         <div className="flex flex-wrap gap-2">
           {Object.entries(k.planDistribution).map(([plan, n]) => (
             <span
               key={plan}
-              className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs font-semibold text-zinc-200"
+              className="rounded-full border border-zinc-200 bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-800"
             >
               {formatPlanLabel(plan)} · {n}
             </span>
@@ -125,7 +125,7 @@ export default async function AdminDashboardPage() {
 
       <section>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-bold text-zinc-300">바로가기</h2>
+          <h2 className="text-sm font-bold text-zinc-800">바로가기</h2>
           <Link href="/admin/billing" className="text-xs font-semibold text-primary hover:underline">
             구독·결제 이슈 목록 →
           </Link>

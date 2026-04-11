@@ -69,6 +69,7 @@ export default async function BillingPage({
           billing={consoleData.billing}
           effectivePlan={consoleData.effectivePlan}
           portalEnabledCount={consoleData.portalEnabledCount}
+          runtime={consoleData.runtime}
           events={consoleData.events}
         />
       ) : (

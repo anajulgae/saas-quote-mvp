@@ -25,14 +25,14 @@ export function AdminUserActions({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="space-y-6 rounded-lg border border-zinc-800 bg-zinc-900/30 p-4">
-      <h3 className="text-sm font-bold text-white">운영 액션</h3>
+    <div className="space-y-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4 shadow-sm">
+      <h3 className="text-sm font-bold text-zinc-900">운영 액션</h3>
       <p className="text-xs text-zinc-500">파괴적 작업은 브라우저 확인 창을 통과해야 합니다.</p>
 
       <div className="flex flex-wrap gap-2">
         <select
           id="plan"
-          className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm text-white"
+          className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900"
           defaultValue="starter"
         >
           <option value="starter">스타터</option>
@@ -42,7 +42,7 @@ export function AdminUserActions({ userId }: { userId: string }) {
         <button
           type="button"
           disabled={pending}
-          className="rounded-md bg-zinc-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-zinc-600 disabled:opacity-50"
+          className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-semibold text-white hover:bg-zinc-800 disabled:opacity-50"
           onClick={() => {
             const el = document.getElementById("plan") as HTMLSelectElement
             if (!confirm(`플랜을 ${el.value}(으)로 변경할까요?`)) return
@@ -60,7 +60,7 @@ export function AdminUserActions({ userId }: { userId: string }) {
       <div className="flex flex-wrap items-center gap-2">
         <select
           id="substatus"
-          className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm text-white"
+          className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900"
           defaultValue="active"
         >
           <option value="trialing">trialing</option>
@@ -72,7 +72,7 @@ export function AdminUserActions({ userId }: { userId: string }) {
         <button
           type="button"
           disabled={pending}
-          className="rounded-md bg-zinc-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-zinc-600 disabled:opacity-50"
+          className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-semibold text-white hover:bg-zinc-800 disabled:opacity-50"
           onClick={() => {
             const el = document.getElementById("substatus") as HTMLSelectElement
             if (!confirm(`구독 상태를 ${el.value}(으)로 설정할까요?`)) return
@@ -96,13 +96,13 @@ export function AdminUserActions({ userId }: { userId: string }) {
           <input
             value={trialDays}
             onChange={(e) => setTrialDays(e.target.value)}
-            className="mt-0.5 w-20 rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm text-white"
+            className="mt-0.5 w-20 rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900"
           />
         </div>
         <button
           type="button"
           disabled={pending}
-          className="rounded-md bg-emerald-900/50 px-3 py-1.5 text-sm font-semibold text-emerald-100 hover:bg-emerald-900/70"
+          className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700"
           onClick={() => {
             const d = parseInt(trialDays, 10)
             if (!confirm(`체험을 ${d}일 연장할까요?`)) return
@@ -118,7 +118,7 @@ export function AdminUserActions({ userId }: { userId: string }) {
         <button
           type="button"
           disabled={pending}
-          className="rounded-md bg-amber-900/40 px-3 py-1.5 text-sm font-semibold text-amber-100 hover:bg-amber-900/60"
+          className="rounded-md bg-amber-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber-600"
           onClick={() => {
             if (!confirm("체험을 즉시 종료(trial_expired) 처리할까요?")) return
             start(async () => {
@@ -136,7 +136,7 @@ export function AdminUserActions({ userId }: { userId: string }) {
         <button
           type="button"
           disabled={pending}
-          className="rounded-md border border-red-900/50 bg-red-950/30 px-3 py-1.5 text-sm font-semibold text-red-200"
+          className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-800 hover:bg-red-100"
           onClick={() => {
             if (!confirm("이 계정을 비활성화할까요? 로그인이 차단됩니다.")) return
             start(async () => {
@@ -151,7 +151,7 @@ export function AdminUserActions({ userId }: { userId: string }) {
         <button
           type="button"
           disabled={pending}
-          className="rounded-md border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-sm font-semibold text-white"
+          className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-900 hover:bg-zinc-50"
           onClick={() => {
             if (!confirm("계정을 다시 활성화할까요?")) return
             start(async () => {
@@ -171,7 +171,7 @@ export function AdminUserActions({ userId }: { userId: string }) {
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={3}
-          className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+          className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900"
         />
         <button
           type="button"
@@ -198,12 +198,12 @@ export function AdminUserActions({ userId }: { userId: string }) {
           value={billingNote}
           onChange={(e) => setBillingNote(e.target.value)}
           rows={2}
-          className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+          className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900"
         />
         <button
           type="button"
           disabled={pending}
-          className="mt-2 rounded-md bg-zinc-700 px-3 py-1.5 text-sm font-semibold text-white"
+          className="mt-2 rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-semibold text-white hover:bg-zinc-800"
           onClick={() => {
             start(async () => {
               const r = await adminAppendBillingNoteAction({ userId, message: billingNote })

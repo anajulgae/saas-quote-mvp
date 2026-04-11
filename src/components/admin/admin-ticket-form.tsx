@@ -19,7 +19,7 @@ export function AdminTicketForm({
 
   return (
     <form
-      className="space-y-4 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4"
+      className="space-y-4 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm"
       action={(fd) => {
         start(async () => {
           const status = String(fd.get("status") ?? "")
@@ -40,7 +40,7 @@ export function AdminTicketForm({
           name="status"
           defaultValue={initialStatus === "open" ? "new" : initialStatus}
           disabled={pending}
-          className="mt-1 block w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+          className="mt-1 block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900"
         >
           <option value="new">신규</option>
           <option value="open">open (레거시)</option>
@@ -56,7 +56,7 @@ export function AdminTicketForm({
           rows={5}
           defaultValue={initialNote ?? ""}
           disabled={pending}
-          className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+          className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900"
         />
       </div>
       <button
