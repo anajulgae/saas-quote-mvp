@@ -18,6 +18,7 @@ export function LoginForm({
   authCallbackError,
   passwordResetNotice,
   showAccountLinks,
+  redirectAfterLogin = "/dashboard",
 }: {
   defaultEmail: string
   defaultPassword: string
@@ -29,6 +30,8 @@ export function LoginForm({
   passwordResetNotice?: boolean
   /** Supabase 가입·재설정 링크 (운영 경로) */
   showAccountLinks?: boolean
+  /** 로그인 성공 후 이동 (서버에서 sanitize 된 경로만 전달) */
+  redirectAfterLogin?: string
 }) {
   const [state, formAction, isPending] = useActionState(loginAction, undefined)
 
@@ -57,6 +60,7 @@ export function LoginForm({
           </p>
         ) : null}
         <form action={formAction} className="space-y-4 sm:space-y-5">
+          <input type="hidden" name="next" value={redirectAfterLogin} readOnly />
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium text-foreground">
               이메일

@@ -8,6 +8,7 @@ import { buttonVariants } from "@/components/ui/button-variants"
 import { getDemoCredentials, isSupabaseConfigured } from "@/lib/auth"
 import { isDemoLoginEnabled, showLoginReviewHints } from "@/lib/demo-flags"
 import { authSplitOuterClass } from "@/lib/auth-ui"
+import { sanitizeLoginNextPath } from "@/lib/safe-login-redirect"
 import { cn } from "@/lib/utils"
 
 export const metadata: Metadata = {
@@ -30,11 +31,12 @@ const valueBullets = [
 ]
 
 type LoginPageProps = {
-  searchParams?: Promise<{ error?: string; reset?: string }>
+  searchParams?: Promise<{ error?: string; reset?: string; next?: string }>
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const sp = (await searchParams) ?? {}
+  const redirectAfterLogin = sanitizeLoginNextPath(sp.next)
   const demoCredentials = getDemoCredentials()
   const supabaseConfigured = isSupabaseConfigured()
   const demoAllowed = isDemoLoginEnabled()
@@ -163,6 +165,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 authCallbackError={authCallbackError}
                 passwordResetNotice={passwordResetDone}
                 showAccountLinks={showAccountLinks}
+                redirectAfterLogin={redirectAfterLogin}
               />
               {!showAccountLinks && contactEmail ? (
                 <p className="text-center text-xs text-muted-foreground">

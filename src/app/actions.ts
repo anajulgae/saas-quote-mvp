@@ -13,11 +13,14 @@ import {
   getDemoSessionCookieName,
   isSupabaseConfigured,
 } from "@/lib/auth"
+import { bumpUserUsage } from "@/lib/server/usage-bump"
 import { maskEmailForDisplay } from "@/lib/mask-email"
 import { getSiteOrigin } from "@/lib/site-url"
 import { toPasswordResetEmailError, toUserFacingActionError } from "@/lib/action-errors"
 import { consumePasswordResetRateSlot } from "@/lib/password-reset-rate-limit"
 import { isDemoLoginEnabled, isDemoPasswordStrongEnoughForProduction } from "@/lib/demo-flags"
+import { sanitizeLoginNextPath } from "@/lib/safe-login-redirect"
+import { buildDocumentSendDedupeKey, recordDocumentSendUsage } from "@/lib/server/document-send"
 import {
   createActivityLog,
   createCustomerRecord,
@@ -61,10 +64,6 @@ import {
   updateCustomerTaxProfile,
   updateInvoiceTaxFlags,
 } from "@/lib/server/tax-invoice-service"
-import {
-  buildDocumentSendDedupeKey,
-  recordDocumentSendUsage,
-} from "@/lib/server/document-send"
 import { planAllowsFeature } from "@/lib/plan-features"
 import { isResendConfigured, sendHtmlEmailViaResend } from "@/lib/send-resend"
 import { OpenAiError, runLandingDraftAi } from "@/lib/server/landing-draft-core"
@@ -271,6 +270,7 @@ function normalizeInvoiceInput(input: {
 export async function loginAction(_: { error?: string } | undefined, formData: FormData) {
   const email = String(formData.get("email") ?? "").trim()
   const password = String(formData.get("password") ?? "").trim()
+  const afterLogin = sanitizeLoginNextPath(String(formData.get("next") ?? "").trim() || undefined)
 
   if (!email || !password) {
     return {
@@ -298,7 +298,7 @@ export async function loginAction(_: { error?: string } | undefined, formData: F
         maxAge: 60 * 60 * 24 * 14,
       })
 
-      redirect("/dashboard")
+      redirect(afterLogin)
     }
   }
 
@@ -358,7 +358,7 @@ export async function loginAction(_: { error?: string } | undefined, formData: F
     })
   }
 
-  redirect("/dashboard")
+  redirect(afterLogin)
 }
 
 export async function logoutAction() {
@@ -1113,12 +1113,6 @@ export async function logQuoteShareLinkCopiedAction(quoteId: string) {
       quoteId: id,
       customerId: snap.customerId,
     })
-    await recordDocumentSendForCurrentUser({
-      documentKind: "quote",
-      documentId: id,
-      channel: "share_link",
-      metadata: { quoteNumber: snap.quoteNumber },
-    })
     return { ok: true as const }
   } catch (error) {
     return {
@@ -1185,77 +1179,6 @@ export async function saveSealSettingsAction(input: z.infer<typeof sealSettingsS
   }
 }
 
-async function recordDocumentSendForCurrentUser(input: {
-  documentKind: "quote" | "invoice"
-  documentId: string
-  channel: "email" | "share_link" | "pdf_download" | "kakao_byoa"
-  fingerprint?: string
-  metadata?: Record<string, string | number | boolean | null | undefined>
-}) {
-  const supabase = await createSupabaseServerClient()
-  if (!supabase) {
-    return { ok: false as const, counted: false }
-  }
-  return recordDocumentSendUsage(supabase as never, {
-    documentKind: input.documentKind,
-    documentId: input.documentId,
-    channel: input.channel,
-    dedupeKey: buildDocumentSendDedupeKey({
-      documentKind: input.documentKind,
-      documentId: input.documentId,
-      channel: input.channel,
-      fingerprint: input.fingerprint,
-    }),
-    metadata: input.metadata ?? {},
-  })
-}
-
-export async function recordDocumentPdfDownloadAction(input: {
-  documentKind: "quote" | "invoice"
-  documentId: string
-}) {
-  try {
-    const documentKind =
-      input.documentKind === "invoice" ? "invoice" : "quote"
-    const documentId = z.string().trim().min(1).parse(input.documentId)
-
-    const countResult = await recordDocumentSendForCurrentUser({
-      documentKind,
-      documentId,
-      channel: "pdf_download",
-    })
-
-    if (documentKind === "quote") {
-      const snap = await getQuoteOutboundSnapshot(documentId)
-      if (snap) {
-        await createActivityLog({
-          action: "quote.pdf_download_prepared",
-          description: `Prepared quote PDF download for ${snap.quoteNumber}.`,
-          quoteId: documentId,
-          customerId: snap.customerId,
-        })
-      }
-    } else {
-      const snap = await getInvoiceOutboundSnapshot(documentId)
-      if (snap) {
-        await createActivityLog({
-          action: "invoice.pdf_download_prepared",
-          description: `Prepared invoice PDF download for ${snap.invoiceNumber}.`,
-          invoiceId: documentId,
-          customerId: snap.customerId,
-        })
-      }
-    }
-
-    return { ok: true as const, counted: countResult.counted }
-  } catch (error) {
-    return {
-      ok: false as const,
-      error: toUserFacingActionError(error, "PDF 사용량을 기록하지 못했습니다."),
-    }
-  }
-}
-
 export async function sendQuoteEmailAction(input: z.infer<typeof sendQuoteEmailInputSchema>) {
   try {
     const parsed = sendQuoteEmailInputSchema.parse(input)
@@ -1306,16 +1229,11 @@ export async function sendQuoteEmailAction(input: z.infer<typeof sendQuoteEmailI
       fromEmail: sender.email || undefined,
       replyTo: sender.email || undefined,
     })
-    await recordDocumentSendForCurrentUser({
-      documentKind: "quote",
-      documentId: parsed.quoteId,
-      channel: "email",
-      fingerprint: `${parsed.to}|${parsed.subject}|${bodyText}`,
-      metadata: {
-        recipient: parsed.to,
-        includePublicLink: parsed.includePublicLink,
-      },
-    })
+
+    const supabaseForUsage = await createSupabaseServerClient()
+    if (supabaseForUsage) {
+      void bumpUserUsage(supabaseForUsage, "document_send")
+    }
 
     await createActivityLog({
       action: "quote.email_sent",
@@ -1372,12 +1290,6 @@ export async function logInvoiceShareLinkCopiedAction(invoiceId: string) {
       invoiceId: id,
       customerId: snap.customerId,
     })
-    await recordDocumentSendForCurrentUser({
-      documentKind: "invoice",
-      documentId: id,
-      channel: "share_link",
-      metadata: { invoiceNumber: snap.invoiceNumber },
-    })
     return { ok: true as const }
   } catch (error) {
     return {
@@ -1405,6 +1317,53 @@ export async function logInvoiceKakaoTemplateCopiedAction(invoiceId: string) {
     return {
       ok: false as const,
       error: toUserFacingActionError(error, "활동 기록에 실패했습니다."),
+    }
+  }
+}
+
+const recordDocumentPdfDownloadInputSchema = z.object({
+  documentKind: z.enum(["quote", "invoice"]),
+  documentId: z.string().trim().min(1),
+})
+
+/** 인쇄/PDF 저장 시 document_send 집계(일 1회 dedupe) */
+export async function recordDocumentPdfDownloadAction(input: z.infer<typeof recordDocumentPdfDownloadInputSchema>) {
+  try {
+    const parsed = recordDocumentPdfDownloadInputSchema.parse(input)
+    const session = await getAppSession()
+    if (session?.mode === "demo") {
+      return { ok: true as const, demo: true as const }
+    }
+    if (!session) {
+      return { ok: false as const, error: "로그인이 필요합니다." }
+    }
+    const supabase = await createSupabaseServerClient()
+    if (!supabase) {
+      return { ok: false as const, error: "데이터베이스 연결을 확인해 주세요." }
+    }
+    const dedupeKey = buildDocumentSendDedupeKey({
+      documentKind: parsed.documentKind,
+      documentId: parsed.documentId,
+      channel: "pdf_download",
+    })
+    const r = await recordDocumentSendUsage(supabase, {
+      documentKind: parsed.documentKind,
+      documentId: parsed.documentId,
+      channel: "pdf_download",
+      dedupeKey,
+      metadata: { source: "print_toolbar" },
+    })
+    if (!r.ok) {
+      return { ok: false as const, error: "문서 발송 사용량을 기록하지 못했습니다." }
+    }
+    return { ok: true as const }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { ok: false as const, error: error.issues[0]?.message ?? "입력값을 확인해 주세요." }
+    }
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "처리하지 못했습니다."),
     }
   }
 }
@@ -1467,16 +1426,11 @@ export async function sendInvoiceEmailAction(input: z.infer<typeof sendInvoiceEm
       fromEmail: sender.email || undefined,
       replyTo: sender.email || undefined,
     })
-    await recordDocumentSendForCurrentUser({
-      documentKind: "invoice",
-      documentId: parsed.invoiceId,
-      channel: "email",
-      fingerprint: `${parsed.to}|${parsed.subject}|${bodyText}`,
-      metadata: {
-        recipient: parsed.to,
-        includePublicLink: parsed.includePublicLink,
-      },
-    })
+
+    const supabaseForUsage = await createSupabaseServerClient()
+    if (supabaseForUsage) {
+      void bumpUserUsage(supabaseForUsage, "document_send")
+    }
 
     await createActivityLog({
       action: "invoice.email_sent",
@@ -1552,13 +1506,6 @@ export async function sendInvoiceKakaoByoaAction(input: {
     if (!result.ok) {
       return { ok: false as const, error: result.error }
     }
-    await recordDocumentSendForCurrentUser({
-      documentKind: "invoice",
-      documentId: invoiceId,
-      channel: "kakao_byoa",
-      fingerprint: phone,
-      metadata: { recipientPhone: phone || "customer-card" },
-    })
     revalidatePath("/invoices")
     return { ok: true as const }
   } catch (error) {
@@ -1580,13 +1527,6 @@ export async function sendQuoteKakaoByoaAction(input: {
     if (!result.ok) {
       return { ok: false as const, error: result.error }
     }
-    await recordDocumentSendForCurrentUser({
-      documentKind: "quote",
-      documentId: quoteId,
-      channel: "kakao_byoa",
-      fingerprint: phone,
-      metadata: { recipientPhone: phone || "customer-card" },
-    })
     revalidatePath("/quotes")
     return { ok: true as const }
   } catch (error) {
