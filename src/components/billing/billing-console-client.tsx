@@ -119,7 +119,10 @@ export function BillingConsoleClient({
 
   const pgEnabled = runtime.provider === "stripe" || runtime.provider === "paddle"
   const showPgCheckout = pgEnabled && runtime.configured
-  const hasSubscription = Boolean(billing.billingProviderSubscriptionId?.trim())
+  const hasPaddleSubscription =
+    runtime.provider === "paddle" &&
+    Boolean(billing.billingProviderSubscriptionId?.trim()) &&
+    billing.billingProvider === "paddle"
   const hasCustomerId = Boolean(billing.billingCustomerId?.trim())
   const showPortal = showPgCheckout && hasCustomerId
   const showPaymentMethodArea = showPgCheckout
@@ -190,7 +193,7 @@ export function BillingConsoleClient({
           )}
           {showPaymentMethodArea ? (
             <div className="mt-3 flex flex-wrap gap-2">
-              {runtime.provider === "paddle" && hasSubscription ? (
+              {hasPaddleSubscription ? (
                 <button
                   type="button"
                   disabled={pending}
