@@ -16,9 +16,9 @@ declare global {
       }) => void
       Checkout: {
         open: (opts: {
-          settings?: { displayMode?: string; theme?: string }
+          settings?: { displayMode?: string; theme?: string; locale?: string }
           items?: { priceId: string; quantity: number }[]
-          customer?: { email: string }
+          customer?: { email: string; address?: { countryCode: string } }
           customData?: Record<string, string>
           transactionId?: string
         }) => void
@@ -129,9 +129,15 @@ export function PaddleCheckoutLauncher({
           settings: {
             displayMode: "overlay",
             theme: "light",
+            locale: "ko",
           },
           items: [{ priceId, quantity: 1 }],
-          customer: { email },
+          customer: {
+            email,
+            address: {
+              countryCode: "KR",
+            },
+          },
           customData: { user_id: userId, plan },
         })
         setPhase("open")
