@@ -57,6 +57,7 @@ function billingEventKindKo(kind: string) {
     checkout_started: "체크아웃 시작",
     portal_opened: "청구 포털",
     payment_method_added: "결제 수단 등록",
+    trial_started: "무료 체험 시작",
   }
   return m[kind] ?? kind
 }

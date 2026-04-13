@@ -146,6 +146,16 @@ function firstSubscriptionItemPriceId(sub: JsonObject): string | null {
   return null
 }
 
+/** Paddle 체험 구독: 첫 과금(체험 종료) 시점은 보통 next_billed_at — 단일 기준으로 DB trial_ends_at 동기화 */
+function paddleTrialEndsAtFromSubscription(sub: JsonObject, paddleStatus: string): string | null {
+  const s = paddleStatus.toLowerCase()
+  if (s !== "trialing") return null
+  if (typeof sub.next_billed_at === "string") return sub.next_billed_at
+  const period = sub.current_billing_period as JsonObject | undefined
+  if (period && typeof period.ends_at === "string") return period.ends_at
+  return null
+}
+
 function subscriptionPayloadToEvent(
   base: Omit<BillingWebhookEvent, "userId" | "plan" | "subscriptionStatus" | "providerPriceId" | "providerSubscriptionId" | "providerCustomerId" | "currentPeriodEnd" | "trialEndsAt" | "trialStartedAt" | "cancelAtPeriodEnd" | "message">,
   sub: JsonObject,
@@ -160,6 +170,10 @@ function subscriptionPayloadToEvent(
       ? scheduled.action === "cancel"
       : Boolean(sub.cancel_at_period_end)
 
+  const rawStatus = typeof sub.status === "string" ? sub.status : ""
+  const subscriptionStatus = normalizePaddleSubscriptionStatus(sub.status)
+  const trialEndsAt = paddleTrialEndsAtFromSubscription(sub, rawStatus)
+
   const event: BillingWebhookEvent = {
     ...base,
     userId: custom.userId,
@@ -167,10 +181,10 @@ function subscriptionPayloadToEvent(
     providerSubscriptionId: typeof sub.id === "string" ? sub.id : null,
     providerPriceId: priceId,
     plan,
-    subscriptionStatus: normalizePaddleSubscriptionStatus(sub.status),
+    subscriptionStatus,
     currentPeriodEnd: typeof sub.next_billed_at === "string" ? sub.next_billed_at : null,
     trialStartedAt: typeof sub.started_at === "string" ? sub.started_at : null,
-    trialEndsAt: null,
+    trialEndsAt,
     cancelAtPeriodEnd: cancelAtPeriodEnd,
     message,
   }

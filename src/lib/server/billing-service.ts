@@ -170,6 +170,8 @@ function webhookEventKind(
     case "subscription.created":
     case "subscription.activated":
       return "subscription_started"
+    case "subscription.trialing":
+      return "trial_started"
     case "subscription.updated":
       return buildPlanChangeKind(currentPlan, nextPlan)
     case "subscription.canceled":
@@ -206,6 +208,8 @@ function webhookEventMessage(event: BillingWebhookEvent, nextPlan: BillingPlan) 
     case "subscription.created":
     case "subscription.activated":
       return `${PLAN_LABEL[nextPlan]} 구독이 시작되었습니다.`
+    case "subscription.trialing":
+      return `${PLAN_LABEL[nextPlan]} 무료 체험이 시작되었습니다. 체험 종료 후 등록된 결제 수단으로 청구됩니다.`
     case "subscription.updated":
       return `${PLAN_LABEL[nextPlan]} 구독이 갱신되었습니다.`
     case "subscription.canceled":
@@ -636,7 +640,10 @@ export async function handleBillingWebhook(request: Request) {
         plan: nextPlan,
         subscription_status: nextStatus,
         trial_started_at: parsed.event.trialStartedAt ?? current.trialStartedAt,
-        trial_ends_at: parsed.event.trialEndsAt ?? current.trialEndsAt,
+        trial_ends_at:
+          provider.name === "paddle" && nextStatus === "active"
+            ? null
+            : (parsed.event.trialEndsAt ?? current.trialEndsAt),
         current_period_end: parsed.event.currentPeriodEnd ?? current.currentPeriodEnd,
         cancel_at_period_end: parsed.event.cancelAtPeriodEnd ?? current.cancelAtPeriodEnd,
         pending_plan: null,
