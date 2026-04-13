@@ -118,7 +118,9 @@ export function BillingConsoleClient({
 
   const pgEnabled = runtime.provider === "stripe" || runtime.provider === "paddle"
   const showPgCheckout = pgEnabled && runtime.configured
+  // 고객 ID가 있으면 포털(결제 수단 변경), 없으면 체크아웃(결제 수단 등록)으로 안내
   const showPortal = showPgCheckout && Boolean(billing.billingCustomerId?.trim())
+  const showPaymentMethodArea = showPgCheckout
 
   return (
     <div className="space-y-8 rounded-2xl border border-border/70 bg-card p-5 shadow-sm sm:p-7">
@@ -173,17 +175,47 @@ export function BillingConsoleClient({
             </p>
           ) : pgEnabled && billing.billingCustomerId ? (
             <p className="mt-1 text-sm text-foreground">
-              고객 프로필이 연결되었습니다. 아래「청구 포털」에서 카드·청구서를 관리할 수 있습니다.
+              고객 프로필 연결됨. 아래「결제 수단 변경」으로 카드·청구서를 관리하세요.
             </p>
           ) : pgEnabled ? (
             <p className="mt-1 text-sm text-muted-foreground">
-              체크아웃을 완료하면 PG에 등록된 결제 수단이 여기에 반영됩니다(웹훅 동기화).
+              아직 등록된 카드가 없습니다. 아래「결제 수단 등록」을 눌러 카드를 추가하세요.
             </p>
           ) : (
             <p className="mt-1 text-sm text-foreground">
               시뮬레이션 모드입니다. 실제 카드는 저장되지 않습니다.
             </p>
           )}
+          {showPaymentMethodArea ? (
+            <div className="mt-3">
+              {showPortal ? (
+                <button
+                  type="button"
+                  disabled={pending}
+                  className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
+                  onClick={() => run(() => openBillingPortalAction())}
+                >
+                  결제 수단 변경
+                </button>
+              ) : runtime.provider === "paddle" ? (
+                <Link
+                  href={`/billing/checkout/paddle?plan=${encodeURIComponent(billing.plan)}`}
+                  className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9 inline-flex items-center")}
+                >
+                  결제 수단 등록 (카드 입력)
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled={pending}
+                  className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
+                  onClick={() => run(() => startCheckoutAction(billing.plan))}
+                >
+                  결제 수단 등록
+                </button>
+              )}
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -236,7 +268,7 @@ export function BillingConsoleClient({
                     className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}
                     onClick={() => run(() => openBillingPortalAction())}
                   >
-                    청구·결제 수단 관리(포털)
+                    청구서·구독 관리(포털)
                   </button>
                 </div>
               ) : null}
