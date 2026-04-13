@@ -12,17 +12,11 @@ declare global {
       Environment: { set: (env: "sandbox" | "production") => void }
       Initialize: (opts: {
         token: string
-        pwCustomer?: Record<string, never>
-        checkout?: {
-          settings?: {
-            displayMode?: string
-            theme?: string
-          }
-        }
         eventCallback?: (data: { name?: string; detail?: unknown }) => void
       }) => void
       Checkout: {
         open: (opts: {
+          settings?: { displayMode?: string; theme?: string }
           items: { priceId: string; quantity: number }[]
           customer?: { email: string }
           customData?: Record<string, string>
@@ -113,13 +107,6 @@ export function PaddleCheckoutLauncher({
         if (!paddleReady) {
           window.Paddle.Initialize({
             token,
-            pwCustomer: {},
-            checkout: {
-              settings: {
-                displayMode: "overlay",
-                theme: "light",
-              },
-            },
             eventCallback: (data) => {
               const name = data.name ?? ""
               console.log("[Paddle event]", name, data)
@@ -134,6 +121,10 @@ export function PaddleCheckoutLauncher({
         // ── 3. 체크아웃 오버레이 열기 ─────────────────────────
         setPhase("opening")
         window.Paddle.Checkout.open({
+          settings: {
+            displayMode: "overlay",
+            theme: "light",
+          },
           items: [{ priceId, quantity: 1 }],
           customer: { email },
           customData: { user_id: userId, plan },
