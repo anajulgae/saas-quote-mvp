@@ -6,6 +6,7 @@ import { toast } from "sonner"
 
 import {
   clearPendingPlanAction,
+  getPaymentMethodUpdateTransactionAction,
   openBillingPortalAction,
   resumeSubscriptionAction,
   scheduleDowngradeAction,
@@ -118,8 +119,9 @@ export function BillingConsoleClient({
 
   const pgEnabled = runtime.provider === "stripe" || runtime.provider === "paddle"
   const showPgCheckout = pgEnabled && runtime.configured
-  // 고객 ID가 있으면 포털(결제 수단 변경), 없으면 체크아웃(결제 수단 등록)으로 안내
-  const showPortal = showPgCheckout && Boolean(billing.billingCustomerId?.trim())
+  const hasSubscription = Boolean(billing.billingProviderSubscriptionId?.trim())
+  const hasCustomerId = Boolean(billing.billingCustomerId?.trim())
+  const showPortal = showPgCheckout && hasCustomerId
   const showPaymentMethodArea = showPgCheckout
 
   return (
@@ -187,13 +189,23 @@ export function BillingConsoleClient({
             </p>
           )}
           {showPaymentMethodArea ? (
-            <div className="mt-3">
-              {showPortal ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {runtime.provider === "paddle" && hasSubscription ? (
                 <button
                   type="button"
                   disabled={pending}
                   className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
-                  onClick={() => run(() => openBillingPortalAction())}
+                  onClick={() => {
+                    start(async () => {
+                      const r = await getPaymentMethodUpdateTransactionAction()
+                      if (!r.ok) {
+                        toast.error(r.error)
+                        return
+                      }
+                      const { openPaddleUpdatePayment } = await import("@/components/billing/paddle-update-payment")
+                      openPaddleUpdatePayment(r.transactionId)
+                    })
+                  }}
                 >
                   결제 수단 변경
                 </button>
@@ -204,6 +216,15 @@ export function BillingConsoleClient({
                 >
                   결제 수단 등록 (카드 입력)
                 </Link>
+              ) : showPortal ? (
+                <button
+                  type="button"
+                  disabled={pending}
+                  className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
+                  onClick={() => run(() => openBillingPortalAction())}
+                >
+                  결제 수단 변경
+                </button>
               ) : (
                 <button
                   type="button"

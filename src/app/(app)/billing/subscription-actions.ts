@@ -8,6 +8,7 @@ import { normalizePlan } from "@/lib/plan-features"
 import {
   beginCheckoutForPlan,
   changePlanOrCheckout,
+  getPaymentMethodUpdateTransaction,
   openBillingPortalForUser,
   resumeUserSubscription,
   scheduleUserSubscriptionCancel,
@@ -115,6 +116,16 @@ export async function scheduleDowngradeAction(
   targetRaw: string
 ): Promise<{ ok: true; redirectUrl?: string } | { ok: false; error: string }> {
   return selectSubscriptionPlanAction(targetRaw)
+}
+
+export async function getPaymentMethodUpdateTransactionAction(): Promise<
+  { ok: true; transactionId: string } | { ok: false; error: string }
+> {
+  const session = await requireBillingSession()
+  if (!session) {
+    return { ok: false, error: "로그인이 필요합니다." }
+  }
+  return getPaymentMethodUpdateTransaction({ userId: session.user.id })
 }
 
 export async function clearPendingPlanAction(): Promise<{ ok: true }> {

@@ -232,6 +232,27 @@ export class PaddleBillingProvider implements BillingProvider {
     }
   }
 
+  /**
+   * Paddle 구독의 결제 수단 업데이트용 트랜잭션 ID를 반환.
+   * 프론트에서 Paddle.Checkout.open({ transactionId }) 로 열 수 있음.
+   */
+  async getUpdatePaymentMethodTransactionId(
+    subscriptionId: string
+  ): Promise<{ ok: true; transactionId: string } | { ok: false; error: string }> {
+    const result = await paddleRequest<{ data?: JsonObject }>(
+      `/subscriptions/${encodeURIComponent(subscriptionId)}/update-payment-method-transaction`,
+      { method: "GET" }
+    )
+    if (!result.ok) {
+      return { ok: false, error: result.error }
+    }
+    const txnId = result.data.data?.id
+    if (typeof txnId !== "string") {
+      return { ok: false, error: "Paddle 결제 수단 업데이트 트랜잭션을 받지 못했습니다." }
+    }
+    return { ok: true, transactionId: txnId }
+  }
+
   async createPortalSession(input: BillingPortalInput): Promise<BillingProviderPortalResult> {
     const customerId = input.customerId
     if (!customerId.startsWith("ctm_")) {

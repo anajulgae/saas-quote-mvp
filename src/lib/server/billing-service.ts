@@ -432,6 +432,38 @@ export async function openBillingPortalForUser(input: {
   return { ok: true, redirectUrl: portal.redirectUrl }
 }
 
+/**
+ * Paddle 구독의 결제 수단 업데이트용 트랜잭션 ID를 가져온다.
+ * 프론트에서 Paddle.Checkout.open({ transactionId }) 로 카드 변경 창을 연다.
+ */
+export async function getPaymentMethodUpdateTransaction(input: {
+  userId: string
+}): Promise<{ ok: true; transactionId: string } | { ok: false; error: string }> {
+  const provider = getBillingProvider()
+  if (provider.name !== "paddle") {
+    return { ok: false, error: "Paddle 전용 기능입니다." }
+  }
+
+  const supabase = await resolveWritableSupabase()
+  if (!supabase) {
+    return { ok: false, error: "서버 오류" }
+  }
+
+  const billing = await fetchUserBillingState(supabase, input.userId)
+  const subId = billing.billingProviderSubscriptionId
+  if (!subId) {
+    return { ok: false, error: "활성 구독이 없습니다. 먼저 체크아웃에서 결제를 진행해 주세요." }
+  }
+
+  const paddle = provider as import("@/lib/billing/providers/paddle-provider").PaddleBillingProvider
+  const result = await paddle.getUpdatePaymentMethodTransactionId(subId)
+  if (!result.ok) {
+    return { ok: false, error: result.error }
+  }
+
+  return { ok: true, transactionId: result.transactionId }
+}
+
 export async function changeUserSubscriptionPlan(input: {
   userId: string
   plan: BillingPlan

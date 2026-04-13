@@ -17,9 +17,10 @@ declare global {
       Checkout: {
         open: (opts: {
           settings?: { displayMode?: string; theme?: string }
-          items: { priceId: string; quantity: number }[]
+          items?: { priceId: string; quantity: number }[]
           customer?: { email: string }
           customData?: Record<string, string>
+          transactionId?: string
         }) => void
       }
     }
