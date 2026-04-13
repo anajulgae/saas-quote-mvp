@@ -457,7 +457,9 @@ export async function signupAction(_: { error?: string } | undefined, formData: 
       description: "회원가입이 완료되었습니다.",
       metadata: { source: "password" },
     })
-    redirect("/dashboard")
+    // Supabase 자동 확인(auto-confirm) 환경에서는 이메일 없이 세션이 바로 생김.
+    // 이 경우에도 결제 체크아웃(또는 대시보드)으로 이동.
+    redirect(pathAfterEmailVerification())
   }
 
   redirect(`/signup/check-email?email=${encodeURIComponent(email)}`)
