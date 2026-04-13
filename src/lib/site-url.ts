@@ -56,14 +56,26 @@ export function getSiteOrigin(): string {
   return "http://localhost:3000"
 }
 
-/** open redirect 방지: 상대 경로만 허용 */
+/**
+ * open redirect 방지: 같은 사이트로만 이동.
+ * `?plan=starter` 등 쿼리는 유지(회원가입 인증 후 체크아웃 딥링크용).
+ */
 export function safeAuthNextPath(raw: string | null | undefined): string {
   if (!raw || typeof raw !== "string") {
     return "/dashboard"
   }
-  const path = raw.split("?")[0] ?? ""
-  if (!path.startsWith("/") || path.startsWith("//") || path.includes("://")) {
+  const trimmed = raw.trim()
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//") || trimmed.includes("://")) {
     return "/dashboard"
   }
-  return path
+  const q = trimmed.indexOf("?")
+  const pathname = q === -1 ? trimmed : trimmed.slice(0, q)
+  const search = q === -1 ? "" : trimmed.slice(q)
+  if (pathname.includes("//")) {
+    return "/dashboard"
+  }
+  if (search && (/(?:^|[?&])url=/i.test(search) || /https?:\/\//i.test(search))) {
+    return "/dashboard"
+  }
+  return pathname + search
 }

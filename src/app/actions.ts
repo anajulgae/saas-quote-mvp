@@ -15,6 +15,7 @@ import {
 } from "@/lib/auth"
 import { bumpUserUsage } from "@/lib/server/usage-bump"
 import { maskEmailForDisplay } from "@/lib/mask-email"
+import { pathAfterEmailVerification } from "@/lib/billing/signup-verify-redirect"
 import { getSiteOrigin } from "@/lib/site-url"
 import { toPasswordResetEmailError, toUserFacingActionError } from "@/lib/action-errors"
 import { consumePasswordResetRateSlot } from "@/lib/password-reset-rate-limit"
@@ -431,7 +432,7 @@ export async function signupAction(_: { error?: string } | undefined, formData: 
     email,
     password,
     options: {
-      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/dashboard")}`,
+      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(pathAfterEmailVerification())}`,
       data: {
         full_name: fullName,
         business_name: resolvedBusiness,
@@ -488,7 +489,7 @@ export async function resendSignupConfirmationAction(
     type: "signup",
     email,
     options: {
-      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/dashboard")}`,
+      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(pathAfterEmailVerification())}`,
     },
   })
 
