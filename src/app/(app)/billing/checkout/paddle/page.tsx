@@ -5,7 +5,10 @@ import { PaddleCheckoutLauncher } from "@/components/billing/paddle-checkout-lau
 import { buttonVariants } from "@/components/ui/button-variants"
 import { getAppSession } from "@/lib/auth"
 import { getBillingProvider, getBillingProviderName } from "@/lib/billing/provider"
-import { getPaddlePriceIdForPlan } from "@/lib/billing/providers/paddle-provider"
+import {
+  createPaddleTransaction,
+  getPaddlePriceIdForPlan,
+} from "@/lib/billing/providers/paddle-provider"
 import { normalizePlan } from "@/lib/plan-features"
 
 export const metadata = {
@@ -16,24 +19,21 @@ export const metadata = {
 export default async function PaddleCheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ plan?: string; error?: string }>
+  searchParams: Promise<{ plan?: string }>
 }) {
   const sp = await searchParams
   const plan = normalizePlan(sp.plan)
   const checkoutPath = `/billing/checkout/paddle?plan=${encodeURIComponent(plan)}`
 
-  // ── 1. 로그인 체크 ──────────────────────────────────────────────
   const session = await getAppSession()
   if (!session?.user?.id || session.mode !== "supabase") {
     redirect(`/login?next=${encodeURIComponent(checkoutPath)}`)
   }
 
-  // ── 2. Paddle이 선택된 PG인지 체크 ──────────────────────────────
   if (getBillingProviderName() !== "paddle") {
     redirect("/billing")
   }
 
-  // ── 3. 설정 완료 여부 체크 ──────────────────────────────────────
   const provider = getBillingProvider()
   if (!provider.isConfigured()) {
     return (
@@ -49,16 +49,13 @@ export default async function PaddleCheckoutPage({
     )
   }
 
-  // ── 4. Price ID 확인 ─────────────────────────────────────────────
   const priceId = getPaddlePriceIdForPlan(plan)
   if (!priceId) {
     return (
       <div className="mx-auto max-w-lg space-y-4 p-6">
         <h1 className="text-lg font-semibold text-destructive">가격 정보 오류</h1>
         <p className="text-sm text-muted-foreground">
-          <strong>{plan}</strong> 플랜의 Paddle Price ID가 .env.local에 없습니다.
-          <br />
-          <code className="text-xs">BILLING_PADDLE_PRICE_{plan.toUpperCase()}_MONTHLY</code> 를 확인하세요.
+          <strong>{plan}</strong> 플랜의 Price ID가 없습니다.
         </p>
         <Link href="/billing" className={buttonVariants({ variant: "outline", size: "sm" })}>
           요금 페이지로
@@ -67,13 +64,31 @@ export default async function PaddleCheckoutPage({
     )
   }
 
-  // ── 5. 이메일 확인 ───────────────────────────────────────────────
   const email = session.user.email?.trim() ?? ""
   if (!email) {
     redirect("/settings")
   }
 
-  // ── 6. 체크아웃 렌더링 (Paddle.js 오버레이) ──────────────────────
+  // 서버에서 트랜잭션 생성 → transactionId를 클라이언트에 전달
+  const txn = await createPaddleTransaction({
+    priceId,
+    email,
+    userId: session.user.id,
+    plan,
+  })
+
+  if (!txn.ok) {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 p-6">
+        <h1 className="text-lg font-semibold text-destructive">결제 준비 오류</h1>
+        <p className="text-sm text-muted-foreground">{txn.error}</p>
+        <Link href="/billing" className={buttonVariants({ variant: "outline", size: "sm" })}>
+          요금 페이지로
+        </Link>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-[50vh]">
       <PaddleCheckoutLauncher
@@ -81,6 +96,7 @@ export default async function PaddleCheckoutPage({
         priceId={priceId}
         userId={session.user.id}
         email={email}
+        transactionId={txn.transactionId}
       />
     </div>
   )

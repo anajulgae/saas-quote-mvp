@@ -49,6 +49,32 @@ export function getPaddlePriceIdForPlan(plan: BillingPlan): string {
   return getPriceId(plan)
 }
 
+/** 서버에서 Paddle 트랜잭션을 생성하고 transactionId를 반환 */
+export async function createPaddleTransaction(input: {
+  priceId: string
+  email: string
+  userId: string
+  plan: string
+}): Promise<{ ok: true; transactionId: string } | { ok: false; error: string }> {
+  const result = await paddleRequest<{ data?: JsonObject }>("/transactions", {
+    method: "POST",
+    body: {
+      items: [{ price_id: input.priceId, quantity: 1 }],
+      customer_email: input.email,
+      address: { country_code: "KR" },
+      custom_data: { user_id: input.userId, plan: input.plan },
+    },
+  })
+  if (!result.ok) {
+    return { ok: false, error: result.error }
+  }
+  const txnId = result.data.data?.id
+  if (typeof txnId !== "string") {
+    return { ok: false, error: "Paddle 트랜잭션 ID를 받지 못했습니다." }
+  }
+  return { ok: true, transactionId: txnId }
+}
+
 function planFromPriceId(priceId: string | null | undefined): BillingPlan | null {
   const starter = process.env.BILLING_PADDLE_PRICE_STARTER_MONTHLY?.trim()
   const pro = process.env.BILLING_PADDLE_PRICE_PRO_MONTHLY?.trim()
