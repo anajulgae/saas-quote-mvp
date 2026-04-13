@@ -110,9 +110,13 @@ export function PaddleCheckoutLauncher({
             token,
             eventCallback: (data) => {
               const name = data.name ?? ""
-              console.log("[Paddle event]", name, data)
+              console.log("[Paddle event]", name, JSON.stringify(data))
               if (name === "checkout.completed") {
                 window.location.href = `/billing?plan=${encodeURIComponent(plan)}`
+              }
+              if (name === "checkout.error" || name === "checkout.warning" || name === "checkout.closed") {
+                setError(`Paddle 이벤트: ${name} — ${JSON.stringify(data.detail ?? data)}`)
+                setPhase("error")
               }
             },
           })
@@ -150,9 +154,16 @@ export function PaddleCheckoutLauncher({
     error: "",
   }
 
+  const debugInfo = `env=${env} | token=${token.slice(0, 12)}…(${token.length}자) | priceId=${priceId} | email=${email}`
+
   return (
     <div className="mx-auto max-w-lg space-y-5 p-6">
       <h1 className="text-xl font-semibold">카드 정보 입력</h1>
+
+      <details className="rounded border border-border/50 p-2 text-[10px] text-muted-foreground">
+        <summary>디버그 정보 (문제 해결 후 제거)</summary>
+        <pre className="mt-1 whitespace-pre-wrap break-all">{debugInfo}</pre>
+      </details>
 
       {phase === "error" && error ? (
         <div className="space-y-3 rounded-xl border border-destructive/40 bg-destructive/5 p-4">
