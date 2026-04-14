@@ -1343,6 +1343,141 @@ export async function deleteQuoteRecord(quoteId: string) {
   }
 }
 
+export async function deleteInquiryRecord(inquiryId: string) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    throw new Error("DEMO_MODE")
+  }
+
+  const { data: row, error: fetchErr } = await context.supabase
+    .from("inquiries")
+    .select("id, title, customer_id")
+    .eq("id", inquiryId)
+    .eq("user_id", context.userId)
+    .maybeSingle()
+
+  if (fetchErr) throw fetchErr
+  if (!row) throw new Error("INQUIRY_NOT_FOUND")
+
+  const inq = row as { id: string; title: string; customer_id: string }
+
+  await createActivityLog({
+    action: "inquiry.deleted",
+    description: `「${inq.title}」 문의를 삭제했습니다.`,
+    customerId: inq.customer_id,
+    inquiryId,
+  })
+
+  const { error: delErr } = await context.supabase
+    .from("inquiries")
+    .delete()
+    .eq("id", inquiryId)
+    .eq("user_id", context.userId)
+
+  if (delErr) throw delErr
+
+  return { mode: "supabase" as const, customerId: inq.customer_id }
+}
+
+export async function deleteInvoiceRecord(invoiceId: string) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    throw new Error("DEMO_MODE")
+  }
+
+  const { data: row, error: fetchErr } = await context.supabase
+    .from("invoices")
+    .select("id, invoice_number, customer_id")
+    .eq("id", invoiceId)
+    .eq("user_id", context.userId)
+    .maybeSingle()
+
+  if (fetchErr) throw fetchErr
+  if (!row) throw new Error("INVOICE_NOT_FOUND")
+
+  const inv = row as { id: string; invoice_number: string; customer_id: string }
+
+  await createActivityLog({
+    action: "invoice.deleted",
+    description: `「${inv.invoice_number}」 청구를 삭제했습니다.`,
+    customerId: inv.customer_id,
+    invoiceId,
+  })
+
+  // 연결된 리마인더 삭제
+  await context.supabase.from("reminders").delete().eq("invoice_id", invoiceId)
+
+  const { error: delErr } = await context.supabase
+    .from("invoices")
+    .delete()
+    .eq("id", invoiceId)
+    .eq("user_id", context.userId)
+
+  if (delErr) throw delErr
+
+  return { mode: "supabase" as const, customerId: inv.customer_id }
+}
+
+export async function deleteCustomerRecord(customerId: string) {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    throw new Error("DEMO_MODE")
+  }
+
+  const { data: row, error: fetchErr } = await context.supabase
+    .from("customers")
+    .select("id, name, company_name")
+    .eq("id", customerId)
+    .eq("user_id", context.userId)
+    .maybeSingle()
+
+  if (fetchErr) throw fetchErr
+  if (!row) throw new Error("CUSTOMER_NOT_FOUND")
+
+  const cust = row as { id: string; name: string; company_name: string | null }
+  const label = cust.company_name?.trim() || cust.name
+
+  // 연결된 데이터 삭제 (리마인더 → 청구 → 견적항목 → 견적 → 문의 → 활동 → 고객)
+  const { data: invoiceIds } = await context.supabase
+    .from("invoices")
+    .select("id")
+    .eq("customer_id", customerId)
+  for (const inv of (invoiceIds ?? []) as { id: string }[]) {
+    await context.supabase.from("reminders").delete().eq("invoice_id", inv.id)
+  }
+  await context.supabase.from("invoices").delete().eq("customer_id", customerId)
+
+  const { data: quoteIds } = await context.supabase
+    .from("quotes")
+    .select("id")
+    .eq("customer_id", customerId)
+  for (const q of (quoteIds ?? []) as { id: string }[]) {
+    await context.supabase.from("quote_items").delete().eq("quote_id", q.id)
+  }
+  await context.supabase.from("quotes").delete().eq("customer_id", customerId)
+
+  await context.supabase.from("inquiries").delete().eq("customer_id", customerId)
+  await context.supabase.from("activity_logs").delete().eq("customer_id", customerId)
+
+  await createActivityLog({
+    action: "customer.deleted",
+    description: `「${label}」 고객과 연결된 모든 데이터를 삭제했습니다.`,
+  })
+
+  const { error: delErr } = await context.supabase
+    .from("customers")
+    .delete()
+    .eq("id", customerId)
+    .eq("user_id", context.userId)
+
+  if (delErr) throw delErr
+
+  return { mode: "supabase" as const }
+}
+
 export async function getQuotePrintPageData(quoteId: string): Promise<{
   quote: QuoteWithItems
   issuer: {
@@ -1356,6 +1491,7 @@ export async function getQuotePrintPageData(quoteId: string): Promise<{
     sealImageUrl?: string
     sealEnabled: boolean
   }
+  hideWatermark: boolean
 } | null> {
   const context = await getDataContext()
 
@@ -1383,6 +1519,7 @@ export async function getQuotePrintPageData(quoteId: string): Promise<{
         sealImageUrl: demoBusinessSettings.sealImageUrl,
         sealEnabled: demoBusinessSettings.sealEnabled,
       },
+      hideWatermark: true,
     }
   }
 
@@ -1427,6 +1564,11 @@ export async function getQuotePrintPageData(quoteId: string): Promise<{
     ? mapBusinessSettings(settingsRow as BusinessSettingsRow)
     : null
 
+  const { effectivePlan: quotePrintPlan } = await loadPlanContext(
+    context.supabase as unknown as SupabaseClient<Database>,
+    context.userId
+  )
+
   return {
     quote: {
       ...mapped,
@@ -1444,6 +1586,7 @@ export async function getQuotePrintPageData(quoteId: string): Promise<{
       sealImageUrl: settings?.sealImageUrl,
       sealEnabled: settings?.sealEnabled ?? false,
     },
+    hideWatermark: planAllowsFeature(quotePrintPlan, "white_label_pdf"),
   }
 }
 
@@ -1462,6 +1605,7 @@ export async function getInvoicePrintPageData(invoiceId: string): Promise<{
     sealImageUrl?: string
     sealEnabled: boolean
   }
+  hideWatermark: boolean
 } | null> {
   const context = await getDataContext()
 
@@ -1487,6 +1631,7 @@ export async function getInvoicePrintPageData(invoiceId: string): Promise<{
         sealImageUrl: demoBusinessSettings.sealImageUrl,
         sealEnabled: demoBusinessSettings.sealEnabled,
       },
+      hideWatermark: true,
     }
   }
 
@@ -1535,6 +1680,11 @@ export async function getInvoicePrintPageData(invoiceId: string): Promise<{
     ? mapBusinessSettings(settingsRow as BusinessSettingsRow)
     : null
 
+  const { effectivePlan: invoicePrintPlan } = await loadPlanContext(
+    context.supabase as unknown as SupabaseClient<Database>,
+    context.userId
+  )
+
   return {
     invoice: mapInvoice(invRow),
     customer: customerRow ? mapCustomer(customerRow as CustomerRow) : undefined,
@@ -1550,6 +1700,7 @@ export async function getInvoicePrintPageData(invoiceId: string): Promise<{
       sealImageUrl: settings?.sealImageUrl,
       sealEnabled: settings?.sealEnabled ?? false,
     },
+    hideWatermark: planAllowsFeature(invoicePrintPlan, "white_label_pdf"),
   }
 }
 
@@ -4423,4 +4574,79 @@ export async function getBillingConsoleData(): Promise<{
       createdAt: r.created_at,
     })),
   }
+}
+
+export type AuditLogEntry = {
+  id: string
+  action: string
+  description: string
+  customerId?: string
+  customerName?: string
+  quoteId?: string
+  invoiceId?: string
+  createdAt: string
+}
+
+/** Business 플랜 전용 — 전체 활동 감사 로그 */
+export async function getAuditLogData(opts?: {
+  limit?: number
+  offset?: number
+}): Promise<{ entries: AuditLogEntry[]; total: number; effectivePlan: BillingPlan } | null> {
+  const context = await getDataContext()
+
+  if (context.mode === "demo") {
+    return { entries: [], total: 0, effectivePlan: "business" }
+  }
+
+  if (!context.supabase) return null
+
+  const { effectivePlan } = await loadPlanContext(
+    context.supabase as unknown as SupabaseClient<Database>,
+    context.userId
+  )
+
+  if (!planAllowsFeature(effectivePlan, "audit_log")) {
+    return { entries: [], total: 0, effectivePlan }
+  }
+
+  const limit = opts?.limit ?? 100
+  const offset = opts?.offset ?? 0
+
+  const [logResult, { data: custRows }] = await Promise.all([
+    context.supabase
+      .from("activity_logs")
+      .select("*")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false })
+      .limit(limit),
+    context.supabase
+      .from("customers")
+      .select("id, name, company_name")
+      .eq("user_id", context.userId),
+  ])
+
+  const { data: rows, error } = logResult
+
+  if (error) {
+    console.warn("[getAuditLogData]", error.message)
+    return { entries: [], total: 0, effectivePlan }
+  }
+
+  const customerMap = new Map<string, string>()
+  for (const c of (custRows ?? []) as { id: string; name: string; company_name: string | null }[]) {
+    customerMap.set(c.id, c.company_name?.trim() || c.name)
+  }
+
+  const entries: AuditLogEntry[] = ((rows ?? []) as ActivityLogRow[]).map((r) => ({
+    id: r.id,
+    action: r.action,
+    description: r.description,
+    customerId: r.customer_id ?? undefined,
+    customerName: r.customer_id ? customerMap.get(r.customer_id) : undefined,
+    quoteId: r.quote_id ?? undefined,
+    invoiceId: r.invoice_id ?? undefined,
+    createdAt: r.created_at,
+  }))
+
+  return { entries, total: entries.length, effectivePlan }
 }

@@ -103,7 +103,7 @@ export function SettingsTaxInvoiceAspCard({
         {!allowed ? (
           <div className="rounded-lg border border-dashed border-border/70 bg-muted/15 p-4 text-sm">
             <p className="text-muted-foreground">
-              이 기능은 Business 플랜에서 사용할 수 있습니다. 플랜을 올리면 설정 저장·연결 테스트·청구 발행 흐름이
+              이 기능은 Pro 이상 플랜에서 사용할 수 있습니다. 플랜을 올리면 설정 저장·연결 테스트·청구 발행 흐름이
               활성화됩니다.
             </p>
             <Link

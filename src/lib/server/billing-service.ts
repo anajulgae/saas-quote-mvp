@@ -299,6 +299,61 @@ export async function getBillingRuntimeSnapshot() {
   }
 }
 
+/**
+ * Dodo 체크아웃 완료 후 return URL에서 subscription_id를 캡처해
+ * DB에 저장하고 Dodo API로 구독 상태를 동기화한다.
+ */
+export async function syncDodoCheckoutReturn(userId: string, subscriptionId: string) {
+  if (!subscriptionId) return
+  const provider = getBillingProvider()
+  if (provider.name !== "dodo") return
+
+  const supabase = await resolveWritableSupabase()
+  if (!supabase) return
+
+  const billing = await fetchUserBillingState(supabase, userId)
+
+  // subscription_id가 없거나 다른 값이면 업데이트
+  if (billing.billingProviderSubscriptionId !== subscriptionId) {
+    await updateUserBillingState(supabase, userId, {
+      billing_provider_subscription_id: subscriptionId,
+    })
+  }
+
+  // pending/incomplete 상태이면 Dodo API로 확인
+  if (
+    billing.subscriptionStatus === "pending" ||
+    billing.subscriptionStatus === "incomplete"
+  ) {
+    try {
+      const { fetchDodoSubscriptionStatus } = await import(
+        "@/lib/billing/providers/dodo-provider"
+      )
+      const result = await fetchDodoSubscriptionStatus(subscriptionId)
+      if (result.ok && result.snapshot.status === "active") {
+        await updateUserBillingState(supabase, userId, {
+          plan: result.snapshot.plan,
+          subscription_status: result.snapshot.status,
+          current_period_end: result.snapshot.currentPeriodEnd ?? billing.currentPeriodEnd,
+          cancel_at_period_end: result.snapshot.cancelAtPeriodEnd,
+          billing_provider_price_id:
+            result.snapshot.productId ?? billing.billingProviderPriceId,
+          billing_provider_subscription_id: subscriptionId,
+        })
+        await insertBillingEvent(
+          supabase,
+          userId,
+          "subscription_started",
+          `Dodo 결제 확인: ${result.snapshot.plan} 구독이 활성화되었습니다.`,
+          { provider: "dodo", subscriptionId }
+        )
+      }
+    } catch (err) {
+      console.warn("[syncDodoCheckoutReturn] Dodo sync failed:", err)
+    }
+  }
+}
+
 export async function beginCheckoutForPlan(input: {
   userId: string
   email: string

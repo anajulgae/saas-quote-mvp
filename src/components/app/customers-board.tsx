@@ -7,15 +7,17 @@ import {
   ArrowRight,
   ExternalLink,
   FileText,
+  Loader2,
   MessageSquare,
   MoreHorizontal,
   Plus,
   Receipt,
+  Trash2,
   UserPlus,
 } from "lucide-react"
 import { toast } from "sonner"
 
-import { createCustomerAction } from "@/app/actions"
+import { createCustomerAction, deleteCustomerAction } from "@/app/actions"
 import { CoreCapabilityStrip } from "@/components/app/core-capability-strip"
 import { resolveActivityHeadline } from "@/lib/activity-presentation"
 import { EmptyState } from "@/components/app/empty-state"
@@ -164,6 +166,7 @@ export function CustomersBoard({
   const [registerOpen, setRegisterOpen] = useState(false)
   const [regForm, setRegForm] = useState(emptyRegisterForm)
   const [regError, setRegError] = useState("")
+  const [deleteTarget, setDeleteTarget] = useState<CustomerSummary | null>(null)
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -266,6 +269,21 @@ export function CustomersBoard({
       toast.success("고객이 등록되었습니다.")
       setRegForm(emptyRegisterForm)
       setRegisterOpen(false)
+      router.refresh()
+    })
+  }
+
+  const runDeleteCustomer = () => {
+    if (!deleteTarget) return
+    const id = deleteTarget.id
+    startTransition(async () => {
+      const result = await deleteCustomerAction(id)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      setDeleteTarget(null)
+      toast.success("고객과 연결된 데이터를 삭제했습니다.")
       router.refresh()
     })
   }
@@ -583,6 +601,14 @@ export function CustomersBoard({
                               <ArrowRight className="size-4" />
                               {quick.label}
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="gap-2 text-destructive focus:text-destructive"
+                              onClick={() => setDeleteTarget(customer)}
+                            >
+                              <Trash2 className="size-4" />
+                              삭제
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </td>
@@ -780,6 +806,40 @@ export function CustomersBoard({
           </div>
         ) : null}
       </OpsDetailSheet>
+
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null)
+        }}
+      >
+        <DialogContent className="max-w-md sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>고객 삭제</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
+              {deleteTarget ? (
+                <>
+                  「{deleteTarget.companyName?.trim() || deleteTarget.name}」 고객과 연결된 모든 문의·견적·청구 데이터를 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+                </>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>
+              취소
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={isPending}
+              onClick={runDeleteCustomer}
+            >
+              {isPending ? <Loader2 className="mr-1 size-4 animate-spin" /> : null}
+              삭제
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

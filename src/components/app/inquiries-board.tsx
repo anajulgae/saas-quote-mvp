@@ -14,11 +14,12 @@ import {
   Plus,
   Share2,
   Sparkles,
+  Trash2,
   UserPlus,
 } from "lucide-react"
 import { toast } from "sonner"
 
-import { createInquiryAction, updateInquiryAction } from "@/app/actions"
+import { createInquiryAction, deleteInquiryAction, updateInquiryAction } from "@/app/actions"
 import { InquiryAiAnalysisPanel } from "@/components/app/inquiry-ai-analysis-panel"
 import { CoreCapabilityStrip } from "@/components/app/core-capability-strip"
 import { EmptyState } from "@/components/app/empty-state"
@@ -162,6 +163,7 @@ export function InquiriesBoard({
   const [customerFilterId, setCustomerFilterId] = useState<string | "all">("all")
   const [structureBusy, setStructureBusy] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<InquiryWithCustomer | null>(null)
   const [flashHighlightInquiryId, setFlashHighlightInquiryId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<InquiryViewMode>("list")
   const deepLinkAppliedRef = useRef(false)
@@ -476,6 +478,21 @@ export function InquiriesBoard({
         toast.error(result.error)
         return
       }
+      router.refresh()
+    })
+  }
+
+  const runDeleteInquiry = () => {
+    if (!deleteTarget) return
+    const id = deleteTarget.id
+    startTransition(async () => {
+      const result = await deleteInquiryAction(id)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      setDeleteTarget(null)
+      toast.success("문의를 삭제했습니다.")
       router.refresh()
     })
   }
@@ -1268,6 +1285,14 @@ export function InquiriesBoard({
                                 단계 → {o.label}
                               </DropdownMenuItem>
                             ))}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="gap-2 text-destructive focus:text-destructive"
+                              onClick={() => setDeleteTarget(inquiry)}
+                            >
+                              <Trash2 className="size-4" />
+                              삭제
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </td>
@@ -1477,6 +1502,40 @@ export function InquiriesBoard({
         formUrl={publicFormUrl}
         businessName={publicInquiryForm?.businessName ?? ""}
       />
+
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null)
+        }}
+      >
+        <DialogContent className="max-w-md sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>문의 삭제</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
+              {deleteTarget ? (
+                <>
+                  「{deleteTarget.title}」 문의를 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+                </>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>
+              취소
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={isPending}
+              onClick={runDeleteInquiry}
+            >
+              {isPending ? <Loader2 className="mr-1 size-4 animate-spin" /> : null}
+              삭제
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

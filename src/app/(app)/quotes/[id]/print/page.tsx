@@ -16,7 +16,7 @@ export default async function QuotePrintPage({
     notFound()
   }
 
-  const { quote, issuer } = data
+  const { quote, issuer, hideWatermark } = data
   const customer = quote.customer
 
   return (
@@ -50,6 +50,7 @@ export default async function QuotePrintPage({
           customer={customer}
           issuer={issuer}
           variant="internal"
+          hideWatermark={hideWatermark}
         />
       </div>
     </div>

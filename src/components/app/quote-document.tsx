@@ -60,11 +60,13 @@ export function QuoteDocument({
   customer,
   issuer,
   variant,
+  hideWatermark,
 }: {
   quote: QuoteDocumentQuote
   customer?: Customer
   issuer: QuoteDocumentIssuer
   variant: "internal" | "customer"
+  hideWatermark?: boolean
 }) {
   const primary = customerPrimaryLabel(customer)
   const showDraftBanner = variant === "internal" && quote.status === "draft"
@@ -310,7 +312,9 @@ export function QuoteDocument({
           <li>결제 및 착수는 별도 합의 또는 계약에 따릅니다.</li>
           <li>문의는 상단 연락처로 부탁드립니다. 검토해 주셔서 감사합니다.</li>
         </ul>
-        <p className="mt-4 text-center text-neutral-400">— Bill-IO 견적서 —</p>
+        {!hideWatermark ? (
+          <p className="mt-4 text-center text-neutral-400">— Bill-IO 견적서 —</p>
+        ) : null}
       </footer>
     </article>
   )

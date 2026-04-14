@@ -27,8 +27,8 @@ export const PLAN_PRICE_USD_MONTH: Record<BillingPlan, number | null> = {
 
 export const PLAN_TAGLINE: Record<BillingPlan, string> = {
   starter: "1인·핵심 운영 — 문의부터 수금까지 기본 흐름",
-  pro: "소규모 팀 — AI·포털·랜딩·카카오·추심 고도화",
-  business: "다인 팀 — 세금계산서·리포트·대량 AI·우선 지원",
+  pro: "소규모 팀 — AI·포털·랜딩·카카오·세금계산서·추심 고도화",
+  business: "다인 팀 — 감사 로그·화이트 라벨·대량 AI·우선 지원",
 }
 
 export const BILLING_UPGRADE_CONTACT_COPY =

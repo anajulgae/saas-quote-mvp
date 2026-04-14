@@ -125,6 +125,48 @@ function verifyDodoSignature(
   }
 }
 
+export type DodoSubscriptionSnapshot = {
+  status: SubscriptionStatus
+  plan: BillingPlan
+  productId: string | null
+  subscriptionId: string | null
+  currentPeriodEnd: string | null
+  cancelAtPeriodEnd: boolean
+}
+
+/**
+ * Dodo API에서 구독 상태를 직접 조회한다.
+ * 웹훅 수신이 누락되었을 때 billing 페이지 로드 시 fallback으로 사용.
+ */
+export async function fetchDodoSubscriptionStatus(
+  subscriptionId: string
+): Promise<{ ok: true; snapshot: DodoSubscriptionSnapshot } | { ok: false; error: string }> {
+  if (!subscriptionId) return { ok: false, error: "subscriptionId가 없습니다." }
+  const result = await dodoRequest<JsonObject>(
+    `/subscriptions/${encodeURIComponent(subscriptionId)}`
+  )
+  if (!result.ok) return { ok: false, error: result.error }
+
+  const d = result.data
+  const status = normalizeDodoStatus(d.status) ?? "active"
+  const productId = typeof d.product_id === "string" ? d.product_id : null
+  const plan = planFromProductId(productId) ?? "starter"
+  const nextBilling = typeof d.next_billing_date === "string" ? d.next_billing_date : null
+  const cancelAtNext = d.cancel_at_next_billing_date === true
+
+  return {
+    ok: true,
+    snapshot: {
+      status,
+      plan,
+      productId,
+      subscriptionId,
+      currentPeriodEnd: nextBilling,
+      cancelAtPeriodEnd: cancelAtNext,
+    },
+  }
+}
+
 export class DodoBillingProvider implements BillingProvider {
   readonly name = "dodo" as const
   readonly mode = getBillingMode()
@@ -132,7 +174,6 @@ export class DodoBillingProvider implements BillingProvider {
   isConfigured() {
     return Boolean(
       getApiKey() &&
-        getWebhookSecret() &&
         getProductId("starter") &&
         getProductId("pro") &&
         getProductId("business")
@@ -141,7 +182,7 @@ export class DodoBillingProvider implements BillingProvider {
 
   getConfigurationError() {
     if (this.isConfigured()) return null
-    return "Dodo: BILLING_DODO_API_KEY, BILLING_DODO_WEBHOOK_SECRET, BILLING_DODO_PRODUCT_*를 설정하세요."
+    return "Dodo: BILLING_DODO_API_KEY, BILLING_DODO_PRODUCT_STARTER/PRO/BUSINESS를 설정하세요."
   }
 
   async createCheckoutSession(
@@ -262,12 +303,15 @@ export class DodoBillingProvider implements BillingProvider {
     const whTs = request.headers.get("webhook-timestamp") ?? ""
     const whSig = request.headers.get("webhook-signature") ?? ""
 
-    if (!secret || !whId || !whTs || !whSig) {
-      return { ok: false as const, status: 400, error: "Dodo webhook 헤더가 누락되었습니다." }
-    }
-
-    if (!verifyDodoSignature(rawBody, { id: whId, timestamp: whTs, signature: whSig }, secret)) {
-      return { ok: false as const, status: 400, error: "Dodo webhook 서명 검증에 실패했습니다." }
+    if (secret) {
+      if (!whId || !whTs || !whSig) {
+        return { ok: false as const, status: 400, error: "Dodo webhook 헤더가 누락되었습니다." }
+      }
+      if (!verifyDodoSignature(rawBody, { id: whId, timestamp: whTs, signature: whSig }, secret)) {
+        return { ok: false as const, status: 400, error: "Dodo webhook 서명 검증에 실패했습니다." }
+      }
+    } else {
+      console.warn("[DodoBillingProvider] BILLING_DODO_WEBHOOK_SECRET이 없어 서명 검증을 건너뜁니다. 프로덕션에서는 반드시 설정하세요.")
     }
 
     let envelope: JsonObject

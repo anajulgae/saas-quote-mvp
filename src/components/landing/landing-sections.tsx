@@ -27,7 +27,7 @@ import { LandingFlowMock } from "./landing-flow-mock"
 export function LandingHero() {
   const trust = [
     "공개 링크만 걸면 문의가 쌓입니다 — 카톡·인스타 바이오에 그대로",
-    "견적·청구·미수 상태를 한 화면에서 — 다시 헤매지 않음",
+    "견적·청구·미수·세금계산서까지 한 화면에서 — 다시 헤매지 않음",
     "AI가 문의·견적·청구까지 ‘빈 화면’ 시간을 줄입니다 — 운영 분석·풀 초안·수금 문구",
   ]
 
@@ -56,7 +56,7 @@ export function LandingHero() {
                 <span className="text-primary">문의부터 입금까지 한 흐름.</span>
               </h1>
               <p className="max-w-xl text-pretty text-[15px] font-semibold leading-relaxed text-muted-foreground sm:text-[1.05rem] sm:leading-relaxed">
-                접수 → 정리 → 견적 발송 → 청구 → 수금·리마인드까지{" "}
+                접수 → 정리 → 견적 발송 → 청구 → 세금계산서 → 수금·리마인드까지{" "}
                 <span className="font-bold text-foreground">끊기지 않게</span> 이어집니다. AI는 문의 유형·다음 액션,
                 견적 항목·옵션·납기, 입금 상황별 안내 문구까지 보조합니다. 카톡·전화에 흩어진 걸 다시 찾느라 쓰던
                 시간을 줄입니다.
@@ -180,7 +180,7 @@ export function LandingProblemSolution() {
         </div>
         <p className="mx-auto mt-12 max-w-2xl text-center text-sm font-semibold text-foreground">
           단순 견적표가 아니라,{" "}
-          <span className="text-primary">문의 접수 → 발송 → 청구 → 수금·리마인드</span>까지 잇는 운영 플랫폼입니다.
+          <span className="text-primary">문의 접수 → 발송 → 청구 → 세금계산서 → 수금·리마인드</span>까지 잇는 운영 플랫폼입니다.
         </p>
       </div>
     </section>
@@ -332,7 +332,7 @@ export function LandingDifferentiators() {
           <Link href="/signup" className="font-bold text-primary underline-offset-4 hover:underline">
             무료로 시작
           </Link>
-          해 흐름을 먼저 밟아 보세요. Pro에서 랜딩·포털·향상된 AI 운영 보조가 열립니다.
+          해 흐름을 먼저 밟아 보세요. Pro에서 랜딩·포털·세금계산서·향상된 AI 운영 보조가 열리고, Business에서는 감사 로그·화이트 라벨 PDF까지 추가됩니다.
         </p>
       </div>
     </section>
@@ -474,9 +474,9 @@ export function LandingHowItWorks() {
     },
     {
       step: "5",
-      title: "승인 후 청구",
+      title: "승인 후 청구 · 세금계산서",
       scene: "선금·잔금 나눠 청구",
-      desc: "공개 청구 URL로 요청하고 입금 단계를 기록합니다.",
+      desc: "공개 청구 URL로 요청하고 입금 단계를 기록합니다. Pro에서는 전자세금계산서도 같은 흐름에서 발행합니다.",
     },
     {
       step: "6",
@@ -559,12 +559,14 @@ export function LandingPricing() {
     "스타터 대비 AI·발송·포털 한도 확대",
     "업체 소개 랜딩(`/biz`)·고객 포털 본격 활용",
     "카카오 채널(BYOA)·추심·리마인드 고도화",
+    "전자세금계산서 ASP 연동·발행·상태 추적",
     "문의·견적·청구·고객 AI 보조(운영 분석·풀 초안·수금 문구)",
   ]
   const businessHighlights = [
     "다인 팀·좌석 확장(제품 로드맵과 연동)",
-    "전자세금계산서 ASP·고급 리포트",
-    "AI 대량 사용·API/웹훅 확장 여지",
+    "감사 로그 — 모든 견적·청구·수금 변경 이력 추적",
+    "화이트 라벨 PDF — 고객용 문서에서 Bill-IO 브랜드 제거",
+    "우선순위 AI 할당·API/웹훅 확장 여지",
     "우선 지원·맞춤 온보딩",
   ]
 
@@ -581,7 +583,7 @@ export function LandingPricing() {
   }[] = [
     {
       name: PLAN_LABEL.starter,
-      price: "₩29,000",
+      price: "$22",
       period: "/월",
       blurb: "1인 핵심 운영",
       who: "혼자 견적·청구까지 끊지 않게 쓰는 사장님",
@@ -592,24 +594,24 @@ export function LandingPricing() {
     },
     {
       name: PLAN_LABEL.pro,
-      price: "₩59,000",
+      price: "$45",
       period: "/월",
-      blurb: "소규모 팀·유입·자동화",
-      who: "링크 유입·포털·AI·카카오까지 쓰고 싶은 팀",
-      tagline: "랜딩·포털·AI·추심까지 — 장사 운영에 필요한 자동화가 모입니다.",
+      blurb: "소규모 팀·유입·자동화·세금계산서",
+      who: "링크 유입·포털·AI·카카오·전자세금계산서까지 쓰고 싶은 팀",
+      tagline: "랜딩·포털·AI·세금계산서·추심까지 — 장사 운영에 필요한 자동화가 모입니다.",
       cta: "프로 자세히",
       href: "/billing?plan=pro",
       highlight: true,
     },
     {
       name: PLAN_LABEL.business,
-      price: "₩129,000",
+      price: "$99",
       period: "/월",
-      blurb: "팀·세금계산서·대량",
-      who: "여러 명 협업·전자세금계산서·맞춤 한도",
-      tagline: "더 큰 한도와 우선 지원이 필요하면 비즈니스 또는 맞춤 견적을 선택하세요.",
-      cta: "비즈니스·맞춤 문의",
-      href: "/billing#business",
+      blurb: "감사 로그·화이트 라벨·대량 AI",
+      who: "여러 명 협업·감사 로그·화이트 라벨·우선 지원",
+      tagline: "더 큰 한도와 우선 지원이 필요하면 비즈니스를 선택하세요.",
+      cta: "비즈니스 선택",
+      href: "/billing?plan=business",
       highlight: false,
     },
   ]
@@ -763,19 +765,27 @@ const faqItems = [
   },
   {
     q: "체험 기간이 끝나면 어떻게 되나요?",
-    a: "7일 Pro 체험이 끝나면 구독을 선택하지 않은 계정은 trial_expired 상태가 되고, Starter 기준 기능·AI 한도로 돌아갑니다. /billing 에서 언제든 플랜을 고를 수 있습니다.",
+    a: "7일 프로 체험이 끝나면 구독을 선택하지 않은 계정은 스타터 기준 기능·AI 한도로 돌아갑니다. 요금 페이지에서 언제든 플랜을 선택할 수 있습니다.",
   },
   {
     q: "플랜은 어떻게 바꾸나요? 구독 해지는요?",
-    a: "로그인 후 /billing 구독 콘솔에서 업그레이드·다운그레이드 예약·해지 예약을 할 수 있습니다. PG가 붙기 전까지는 DB 플랜이 즉시 바뀌는 시뮬레이션이며, 이벤트는 billing_events에 남습니다.",
+    a: "로그인 후 /billing 구독 콘솔에서 업그레이드·다운그레이드·해지를 할 수 있습니다. 결제는 실시간으로 처리되며, 해지 시 현재 결제 주기가 끝날 때까지 기존 플랜을 유지합니다.",
   },
   {
     q: "전자세금계산서는 어떻게 발행하나요?",
-    a: "Business 플랜에서 ASP(발급대행) 연동을 설정한 뒤, 청구 상세에서 발행 흐름을 진행합니다. 설정·플랜은 /settings 과 /billing 을 참고하세요.",
+    a: "Pro 이상 플랜에서 ASP(발급대행) 연동을 설정한 뒤, 청구 상세에서 발행 흐름을 진행합니다. 설정·플랜은 /settings 과 /billing 을 참고하세요.",
   },
   {
     q: "카카오 연동은 어떻게 하나요?",
     a: "Pro 이상에서 알림톡 BYOA 엔드포인트를 설정에 저장합니다. 무료 체험 중에도 Pro 기능을 쓸 수 있어 동일하게 시험해 볼 수 있습니다.",
+  },
+  {
+    q: "비즈니스 플랜에서만 되는 건 뭔가요?",
+    a: "감사 로그(모든 견적·청구·수금 변경 이력 추적), 화이트 라벨 PDF(고객용 문서에서 Bill-IO 브랜드 제거), 대량 AI 할당, 우선 지원이 비즈니스 전용입니다. 프로 기능은 모두 포함됩니다.",
+  },
+  {
+    q: "데이터를 삭제할 수 있나요?",
+    a: "네. 고객·문의·견적·청구 모두 점 세 개(⋯) 메뉴에서 삭제할 수 있습니다. 고객을 삭제하면 연결된 문의·견적·청구도 함께 삭제됩니다. 삭제는 되돌릴 수 없으니 주의하세요.",
   },
 ]
 
@@ -846,7 +856,7 @@ export function LandingFinalCta() {
         </h2>
         <p className="mx-auto mt-4 max-w-lg text-sm font-semibold leading-relaxed text-primary-foreground/92 sm:text-base">
           <strong className="font-extrabold text-primary-foreground">무료로 시작</strong>하고 첫 문의를 받아 보세요.
-          문의·견적·청구가 한 줄로 이어지고, Pro에서는 AI 운영 분석·풀 초안·수금 문구까지 같은 맥락에서 켜집니다.
+          문의·견적·청구·세금계산서가 한 줄로 이어지고, Pro에서는 AI 운영 분석·풀 초안·수금 문구·전자세금계산서까지 같은 맥락에서 켜집니다.
         </p>
         <div className="mt-10 flex flex-col items-stretch gap-3 sm:items-center">
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-center sm:gap-4">
@@ -912,8 +922,8 @@ export function LandingFooter() {
             Bill-IO
           </div>
           <p className="mt-3 text-sm font-medium leading-relaxed text-muted-foreground">
-            문의 접수부터 견적·청구·수금·리마인드까지. AI 운영 보조로 빈 화면 시간을 줄이고, 소규모 사업자가 놓치기
-            쉬운 흐름을 한 제품에서 잇습니다.
+            문의 접수부터 견적·청구·세금계산서·수금·리마인드까지. AI 운영 보조로 빈 화면 시간을 줄이고, 소규모
+            사업자가 놓치기 쉬운 흐름을 한 제품에서 잇습니다.
           </p>
         </div>
         <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label="푸터 링크">

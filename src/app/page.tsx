@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(site),
   title: "Bill-IO — 문의부터 수금까지 링크 하나로 | 소규모 사업자 운영 플랫폼",
   description:
-    "문의→견적→청구→수금까지 한 흐름. AI가 문의 유형·긴급도·다음 액션을 제안하고, 견적은 항목·옵션·납기까지, 청구는 입금 상황별 문구까지 보조합니다. 공개 문의·PDF·직인·리마인드·고객 포털(Pro). 무료로 시작.",
+    "문의→견적→청구→세금계산서→수금까지 한 흐름. AI가 문의 유형·긴급도·다음 액션을 제안하고, 견적은 항목·옵션·납기까지, 청구는 입금 상황별 문구까지 보조합니다. 공개 문의·PDF·직인·리마인드·고객 포털(Pro)·전자세금계산서(Pro). 무료로 시작.",
   keywords: [
     "견적 프로그램",
     "청구 관리",
@@ -24,6 +24,7 @@ export const metadata: Metadata = {
     "견적서 작성",
     "인보이스",
     "수금 관리",
+    "전자세금계산서",
   ],
   alternates: {
     canonical: "/",
@@ -32,7 +33,7 @@ export const metadata: Metadata = {
     url: `${site}/`,
     title: "Bill-IO — 문의 접수부터 입금 확인까지 한 흐름",
     description:
-      "문의 AI 분석·견적 풀 초안·청구·수금 추천 문구까지. 링크 접수·공개 청구·미수 추적. 소규모 사업자 운영 플랫폼.",
+      "문의 AI 분석·견적 풀 초안·청구·세금계산서·수금 추천 문구까지. 링크 접수·공개 청구·미수 추적. 소규모 사업자 운영 플랫폼.",
     type: "website",
     locale: "ko_KR",
     siteName: "Bill-IO",
@@ -40,7 +41,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Bill-IO — 문의~수금 한 플랫폼",
-    description: "문의 운영 분석·AI 견적·청구 추심 보조·리마인드·알림. 무료로 시작.",
+    description: "문의 운영 분석·AI 견적·청구·세금계산서·추심 보조·리마인드·알림. 무료로 시작.",
   },
   robots: { index: true, follow: true },
 }

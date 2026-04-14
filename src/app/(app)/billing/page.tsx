@@ -13,6 +13,7 @@ import {
   SUPPORT_EMAIL_ENV,
 } from "@/lib/billing/catalog"
 import { getBillingConsoleData } from "@/lib/data"
+import { syncDodoCheckoutReturn } from "@/lib/server/billing-service"
 import { cn } from "@/lib/utils"
 import type { BillingPlan } from "@/types/domain"
 
@@ -26,7 +27,7 @@ const tiers: BillingPlan[] = ["starter", "pro", "business"]
 export default async function BillingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ plan?: string }>
+  searchParams: Promise<{ plan?: string; subscription_id?: string }>
 }) {
   const sp = await searchParams
   const highlight = sp.plan === "pro" || sp.plan === "business" || sp.plan === "starter"
@@ -34,6 +35,12 @@ export default async function BillingPage({
   const supportEmail = process.env[SUPPORT_EMAIL_ENV]?.trim()
 
   const session = await getAppSession()
+
+  // Dodo 체크아웃 완료 후 return URL에서 subscription_id를 캡처하여 DB 동기화
+  if (sp.subscription_id && session?.user?.id) {
+    await syncDodoCheckoutReturn(session.user.id, sp.subscription_id)
+  }
+
   const consoleData =
     session?.mode === "supabase" || session?.mode === "demo" ? await getBillingConsoleData() : null
 

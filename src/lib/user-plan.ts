@@ -6,6 +6,7 @@ import {
   normalizeSubscriptionStatus,
   type UserBillingSnapshot,
 } from "@/lib/subscription"
+import { getBillingProviderName } from "@/lib/billing/provider"
 import type { BillingPlan } from "@/types/domain"
 import type { Database } from "@/types/supabase"
 
@@ -207,7 +208,55 @@ export async function fetchUserPlanRow(
 }
 
 export async function loadPlanContext(supabase: SupabaseClient<Database>, userId: string) {
-  const billing = await fetchUserBillingState(supabase, userId)
+  let billing = await fetchUserBillingState(supabase, userId)
+
+  // Dodo 결제 후 웹훅이 누락된 경우 API에서 직접 구독 상태를 확인하여 DB 동기화
+  if (
+    getBillingProviderName() === "dodo" &&
+    (billing.subscriptionStatus === "pending" || billing.subscriptionStatus === "incomplete") &&
+    billing.billingProviderSubscriptionId
+  ) {
+    try {
+      const { fetchDodoSubscriptionStatus } = await import(
+        "@/lib/billing/providers/dodo-provider"
+      )
+      const result = await fetchDodoSubscriptionStatus(billing.billingProviderSubscriptionId)
+      if (result.ok && result.snapshot.status === "active") {
+        const { error: syncErr } = await supabase
+          .from("users")
+          .update({
+            plan: result.snapshot.plan,
+            subscription_status: result.snapshot.status,
+            current_period_end: result.snapshot.currentPeriodEnd ?? billing.currentPeriodEnd,
+            cancel_at_period_end: result.snapshot.cancelAtPeriodEnd,
+            billing_provider_price_id: result.snapshot.productId ?? billing.billingProviderPriceId,
+            billing_status_updated_at: new Date().toISOString(),
+          })
+          .eq("id", userId)
+        if (syncErr) {
+          console.warn("[loadPlanContext] Dodo sync failed:", syncErr.message)
+        } else {
+          await appendBillingEvent(
+            supabase,
+            userId,
+            "subscription_started",
+            `Dodo 결제 확인: ${result.snapshot.plan} 구독이 활성화되었습니다.`
+          )
+          billing = {
+            ...billing,
+            plan: result.snapshot.plan,
+            subscriptionStatus: result.snapshot.status,
+            currentPeriodEnd: result.snapshot.currentPeriodEnd ?? billing.currentPeriodEnd,
+            cancelAtPeriodEnd: result.snapshot.cancelAtPeriodEnd,
+            billingProviderPriceId: result.snapshot.productId ?? billing.billingProviderPriceId,
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("[loadPlanContext] Dodo subscription check failed:", err)
+    }
+  }
+
   return {
     billing,
     plan: billing.plan,

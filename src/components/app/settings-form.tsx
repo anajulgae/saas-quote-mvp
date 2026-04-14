@@ -340,13 +340,13 @@ export function SettingsForm({
               href={BILLING_PAGE_PATH}
               className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
             >
-              구독 콘솔 열기
+              援щ룆 肄섏넄 ?닿린
             </Link>
             <Link
               href="/help"
               className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}
             >
-              결제·구독 가이드
+              寃곗젣쨌援щ룆 媛?대뱶
             </Link>
           </div>
         </CardContent>
@@ -615,6 +615,83 @@ export function SettingsForm({
       <section id="notifications-prefs">
         <SettingsNotificationPreferencesCard initial={initialNotificationPreferences} />
       </section>
+
+      <div className="relative py-1">
+        <div className="absolute inset-0 flex items-center" aria-hidden>
+          <span className="w-full border-t border-border/60" />
+        </div>
+        <div className="relative flex justify-center">
+          <span className="bg-background px-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            Business 전용
+          </span>
+        </div>
+      </div>
+
+      <Card className="border-border/70" id="audit-log">
+        <CardHeader className="space-y-1 pb-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle className="text-base font-semibold">감사 로그</CardTitle>
+            <SectionBadge>Business</SectionBadge>
+          </div>
+          <CardDescription className="text-xs leading-relaxed">
+            모든 견적·청구·고객·설정 변경 이력을 타임라인으로 추적합니다. 컴플라이언스 및 내부 감사에 활용할 수 있습니다.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center gap-2">
+          {planAllowsFeature(currentPlan, "audit_log") ? (
+            <Link
+              href="/settings/audit-log"
+              className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
+            >
+              감사 로그 보기
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/billing?plan=business"
+                className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
+              >
+                Business로 업그레이드
+              </Link>
+              <p className="text-xs text-muted-foreground">Business 플랜에서 모든 변경 이력을 추적할 수 있습니다.</p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/70" id="white-label">
+        <CardHeader className="space-y-1 pb-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle className="text-base font-semibold">화이트 라벨 PDF</CardTitle>
+            <SectionBadge>Business</SectionBadge>
+          </div>
+          <CardDescription className="text-xs leading-relaxed">
+            고객에게 보내는 견적서·청구서 PDF 하단의 Bill-IO 브랜드 워터마크를 제거합니다.
+            Business 플랜에서는 자동으로 적용됩니다.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {planAllowsFeature(currentPlan, "white_label_pdf") ? (
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+                <span className="size-1.5 rounded-full bg-emerald-500" />
+                활성화됨
+              </span>
+              <span className="text-xs text-muted-foreground">견적서·청구서 인쇄 시 Bill-IO 로고가 표시되지 않습니다.</span>
+            </div>
+          ) : (
+            <>
+              <Link
+                href="/billing?plan=business"
+                className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
+              >
+                Business로 업그레이드
+              </Link>
+              <p className="mt-2 text-xs text-muted-foreground">Business 플랜에서 브랜드 없는 깔끔한 문서를 고객에게 전달할 수 있습니다.</p>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="relative py-1">
         <div className="absolute inset-0 flex items-center" aria-hidden>

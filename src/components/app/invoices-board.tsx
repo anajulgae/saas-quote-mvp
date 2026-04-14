@@ -23,6 +23,7 @@ import {
   Plus,
   Receipt,
   Sparkles,
+  Trash2,
 } from "lucide-react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
@@ -32,6 +33,7 @@ import {
   createReminderAction,
   updateInvoiceAction,
   updateInvoiceCollectionFieldsAction,
+  deleteInvoiceAction,
   updateInvoicePaymentStatusAction,
 } from "@/app/actions"
 import { InvoiceTaxInvoiceSection } from "@/components/app/invoice-tax-invoice-section"
@@ -70,6 +72,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -524,6 +527,7 @@ function InvoicesBoardPanel({
   const [drawerInvoiceId, setDrawerInvoiceId] = useState<string | null>(null)
   const [flashHighlightInvoiceId, setFlashHighlightInvoiceId] = useState<string | null>(null)
   const [sendInvoiceTarget, setSendInvoiceTarget] = useState<InvoiceWithReminders | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<InvoiceWithReminders | null>(null)
   const [quickQuoteId, setQuickQuoteId] = useState(quotes[0]?.id ?? "")
   const [form, setForm] = useState<InvoiceFormState>(() => createEmptyInvoiceForm(customers))
   /** true면 견적·청구 타입 변경 시 금액 제안을 자동 반영, false면 사용자가 금액을 직접 조정한 상태 */
@@ -870,6 +874,22 @@ function InvoicesBoardPanel({
     setForm(createEmptyInvoiceForm(customers))
     setEditingInvoiceId(null)
     setErrorMessage("")
+  }
+
+  const runDeleteInvoice = () => {
+    if (!deleteTarget) return
+    const id = deleteTarget.id
+    startTransition(async () => {
+      const result = await deleteInvoiceAction(id)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      setDeleteTarget(null)
+      toast.success("청구를 삭제했습니다.")
+      if (editingInvoiceId === id) setEditingInvoiceId(null)
+      router.refresh()
+    })
   }
 
   const openEdit = (invoice: InvoiceWithReminders) => {
@@ -2232,6 +2252,14 @@ function InvoicesBoardPanel({
                               <ExternalLink className="size-4" />
                               인쇄·PDF
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="gap-2 text-destructive focus:text-destructive"
+                              onClick={() => setDeleteTarget(invoice)}
+                            >
+                              <Trash2 className="size-4" />
+                              삭제
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </td>
@@ -2797,6 +2825,40 @@ function InvoicesBoardPanel({
         kakaoByoaAllowed={planAllowsFeature(currentPlan, "kakao_byoa_messaging")}
         onAfterSend={() => router.refresh()}
       />
+
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null)
+        }}
+      >
+        <DialogContent className="max-w-md sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>청구 삭제</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
+              {deleteTarget ? (
+                <>
+                  「{deleteTarget.invoiceNumber}」 청구를 삭제합니다. 연결된 리마인더도 함께 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+                </>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>
+              취소
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={isPending}
+              onClick={runDeleteInvoice}
+            >
+              {isPending ? <Loader2 className="mr-1 size-4 animate-spin" /> : null}
+              삭제
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

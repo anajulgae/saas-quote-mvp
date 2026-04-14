@@ -16,7 +16,7 @@ export default async function InvoicePrintPage({
     notFound()
   }
 
-  const { invoice, customer, issuer, linkedQuote } = data
+  const { invoice, customer, issuer, linkedQuote, hideWatermark } = data
 
   return (
     <div
@@ -48,6 +48,7 @@ export default async function InvoicePrintPage({
           issuer={issuer}
           linkedQuote={linkedQuote}
           variant="internal"
+          hideWatermark={hideWatermark}
         />
       </div>
     </div>

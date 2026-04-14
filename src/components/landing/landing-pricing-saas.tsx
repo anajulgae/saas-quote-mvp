@@ -2,15 +2,15 @@ import Link from "next/link"
 import { CheckCircle2 } from "lucide-react"
 
 import { buttonVariants } from "@/components/ui/button-variants"
-import { PLAN_LABEL, PLAN_PRICE_KRW_MONTH, PLAN_TAGLINE } from "@/lib/billing/catalog"
+import { PLAN_LABEL, PLAN_PRICE_USD_MONTH, PLAN_TAGLINE } from "@/lib/billing/catalog"
 import { cn } from "@/lib/utils"
 import type { BillingPlan } from "@/types/domain"
 
 const comparisonRows = [
   {
-    starter: "1석 · 문의·견적·청구·추심까지 핵심 흐름",
-    pro: "공개 랜딩, AI 보조, 문서 발송 한도 확대",
-    business: "분석 리포트, ASP(세금계산서) 연동, 팀·대규모 운영",
+    starter: "1석 · 문의→견적→청구→수금 핵심 흐름",
+    pro: "AI 고도화·랜딩·카카오·세금계산서 ASP·추심",
+    business: "감사 로그·화이트 라벨 PDF·대량 AI·우선 지원",
   },
   {
     starter: "문서 발송: 이메일·링크 공유·PDF 다운로드",
@@ -20,7 +20,7 @@ const comparisonRows = [
   {
     starter: "유료 전환 전 7일 무료 체험",
     pro: "결제 수단 등록 시 체험 후 자동 갱신",
-    business: "고급 운영·도입 협의를 위한 세일즈·맞춤 경로",
+    business: "다인 팀·맞춤 온보딩·우선 지원 경로",
   },
 ]
 
@@ -41,22 +41,22 @@ const plans: Array<{
   {
     plan: "pro",
     highlight: true,
-    summary: "AI 보조, 공개 랜딩, 고객 전달 채널을 넓히려는 팀에 맞습니다.",
+    summary: "AI 운영 보조·랜딩·카카오·전자세금계산서·추심까지, 매출 흐름을 넓히는 팀에 맞습니다.",
     cta: "프로 선택",
     href: "/billing?plan=pro",
   },
   {
     plan: "business",
     highlight: false,
-    summary: "고급 리포트, 전자세금계산서 ASP, 다인 조직·대규모 운영에 맞습니다.",
+    summary: "감사 로그·화이트 라벨 PDF·대량 AI·우선 지원이 필요한 다인 팀에 맞습니다.",
     cta: "영업 문의",
     href: "/billing?plan=business#business",
   },
 ]
 
 function priceLabel(plan: BillingPlan) {
-  const value = PLAN_PRICE_KRW_MONTH[plan]
-  return value == null ? "문의" : `₩${value.toLocaleString("ko-KR")}`
+  const value = PLAN_PRICE_USD_MONTH[plan]
+  return value == null ? "문의" : `$${value}`
 }
 
 export function LandingPricingSaas() {

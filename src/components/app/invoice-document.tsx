@@ -35,12 +35,14 @@ export function InvoiceDocument({
   issuer,
   linkedQuote,
   variant,
+  hideWatermark,
 }: {
   invoice: InvoiceDocumentInvoice
   customer?: Customer
   issuer: QuoteDocumentIssuer
   linkedQuote?: { quoteNumber: string; title: string }
   variant: "internal" | "customer"
+  hideWatermark?: boolean
 }) {
   const primary = customerPrimaryLabel(customer)
   const showSeal = Boolean(issuer.sealEnabled && issuer.sealImageUrl?.trim())
@@ -214,7 +216,9 @@ export function InvoiceDocument({
           <li>입금 후 입금자명·금액이 다를 경우 반드시 알려 주시기 바랍니다.</li>
           <li>세금계산서·현금영수증이 필요하시면 담당자에게 요청해 주세요.</li>
         </ul>
-        <p className="mt-4 text-center text-neutral-400">— Bill-IO 청구서 —</p>
+        {!hideWatermark ? (
+          <p className="mt-4 text-center text-neutral-400">— Bill-IO 청구서 —</p>
+        ) : null}
       </footer>
     </article>
   )

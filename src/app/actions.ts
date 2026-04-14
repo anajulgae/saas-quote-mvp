@@ -29,6 +29,9 @@ import {
   createInvoiceRecord,
   createQuoteRecord,
   createReminderRecord,
+  deleteCustomerRecord,
+  deleteInquiryRecord,
+  deleteInvoiceRecord,
   deleteQuoteRecord,
   duplicateQuoteRecord,
   ensureInvoiceShareTokenForInvoice,
@@ -862,6 +865,52 @@ export async function deleteQuoteAction(quoteId: string) {
     return {
       ok: false as const,
       error: quoteMutationErrorMessage(error, "견적 삭제에 실패했습니다."),
+    }
+  }
+}
+
+export async function deleteInquiryAction(inquiryId: string) {
+  try {
+    const result = await deleteInquiryRecord(inquiryId)
+    const customerId = result.mode === "supabase" ? result.customerId : undefined
+    revalidateBusinessPages(customerId)
+    revalidatePath("/inquiries")
+    return { ok: true as const }
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "문의 삭제에 실패했습니다."),
+    }
+  }
+}
+
+export async function deleteInvoiceAction(invoiceId: string) {
+  try {
+    const result = await deleteInvoiceRecord(invoiceId)
+    const customerId = result.mode === "supabase" ? result.customerId : undefined
+    revalidateBusinessPages(customerId)
+    revalidatePath("/invoices")
+    return { ok: true as const }
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "청구 삭제에 실패했습니다."),
+    }
+  }
+}
+
+export async function deleteCustomerAction(customerId: string) {
+  try {
+    await deleteCustomerRecord(customerId)
+    revalidateBusinessPages(customerId)
+    revalidatePath("/inquiries")
+    revalidatePath("/quotes")
+    revalidatePath("/invoices")
+    return { ok: true as const }
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: toUserFacingActionError(error, "고객 삭제에 실패했습니다."),
     }
   }
 }
@@ -1868,7 +1917,7 @@ async function requireTaxInvoiceSupabase(): Promise<
   if (!planAllowsFeature(eff, "e_tax_invoice_asp")) {
     return {
       error:
-        "전자세금계산서 ASP 연동은 Business 플랜에서 이용할 수 있습니다. 요금 페이지에서 플랜을 확인해 주세요.",
+        "전자세금계산서 ASP 연동은 Pro 이상 플랜에서 이용할 수 있습니다. 요금 페이지에서 플랜을 확인해 주세요.",
     }
   }
   const supabase = await createSupabaseServerClient()
