@@ -169,17 +169,26 @@ function webhookEventKind(
       return "trial_will_end"
     case "subscription.created":
     case "subscription.activated":
+    case "subscription.active":
       return "subscription_started"
     case "subscription.trialing":
       return "trial_started"
     case "subscription.updated":
+    case "subscription.plan_changed":
       return buildPlanChangeKind(currentPlan, nextPlan)
     case "subscription.canceled":
     case "subscription.cancelled":
+    case "subscription.expired":
       return "subscription_canceled"
+    case "subscription.on_hold":
+      return "payment_failed"
+    case "subscription.renewed":
+      return "payment_succeeded"
     case "transaction.completed":
+    case "payment.succeeded":
       return "payment_succeeded"
     case "transaction.payment_failed":
+    case "payment.failed":
       return "payment_failed"
     default:
       return event.eventType.replace(/\./g, "_")
@@ -207,17 +216,26 @@ function webhookEventMessage(event: BillingWebhookEvent, nextPlan: BillingPlan) 
       return "Trial will end soon."
     case "subscription.created":
     case "subscription.activated":
+    case "subscription.active":
       return `${PLAN_LABEL[nextPlan]} 구독이 시작되었습니다.`
     case "subscription.trialing":
       return `${PLAN_LABEL[nextPlan]} 무료 체험이 시작되었습니다. 체험 종료 후 등록된 결제 수단으로 청구됩니다.`
     case "subscription.updated":
+    case "subscription.plan_changed":
       return `${PLAN_LABEL[nextPlan]} 구독이 갱신되었습니다.`
     case "subscription.canceled":
     case "subscription.cancelled":
+    case "subscription.expired":
       return "구독이 종료되었습니다."
+    case "subscription.on_hold":
+      return "결제 실패로 구독이 보류되었습니다."
+    case "subscription.renewed":
+      return `${PLAN_LABEL[nextPlan]} 구독이 갱신되었습니다.`
     case "transaction.completed":
+    case "payment.succeeded":
       return "결제가 완료되었습니다."
     case "transaction.payment_failed":
+    case "payment.failed":
       return "결제에 실패했습니다."
     default:
       return "Billing state changed."

@@ -2,7 +2,7 @@ import { getBillingProvider } from "@/lib/billing/provider"
 
 /**
  * 이메일 인증(회원가입 확인) 직후 첫 랜딩 URL.
- * Paddle이 켜져 있으면 카드 수집 체크아웃으로 보냄(플랜은 기본 스타터).
+ * PG가 켜져 있으면 빌링 페이지로 보냄(체크아웃 진행 가능).
  */
 export function pathAfterEmailVerification(): string {
   try {
@@ -10,7 +10,7 @@ export function pathAfterEmailVerification(): string {
     if (p.name === "paddle" && p.isConfigured()) {
       return "/billing/checkout/paddle?plan=starter"
     }
-    if (p.name === "stripe" && p.isConfigured()) {
+    if ((p.name === "dodo" || p.name === "stripe") && p.isConfigured()) {
       return "/billing"
     }
   } catch {

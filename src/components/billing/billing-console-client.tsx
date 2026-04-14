@@ -20,6 +20,7 @@ import {
   BILLING_PAGE_PATH,
   PLAN_LABEL,
   PLAN_PRICE_KRW_MONTH,
+  PLAN_PRICE_USD_MONTH,
   PLAN_TAGLINE,
 } from "@/lib/billing/catalog"
 import {
@@ -64,6 +65,7 @@ function billingEventKindKo(kind: string) {
 }
 
 function billingProviderLabel(provider: string) {
+  if (provider === "dodo") return "Dodo Payments"
   if (provider === "paddle") return "Paddle"
   if (provider === "stripe") return "Stripe"
   if (provider === "mock") return "시뮬레이션(mock)"
@@ -117,7 +119,7 @@ export function BillingConsoleClient({
       ? Math.round((billing.documentSendsThisMonth / limits.documentSendsPerMonth) * 100)
       : 0
 
-  const pgEnabled = runtime.provider === "stripe" || runtime.provider === "paddle"
+  const pgEnabled = runtime.provider === "stripe" || runtime.provider === "paddle" || runtime.provider === "dodo"
   const showPgCheckout = pgEnabled && runtime.configured
   const hasPaddleSubscription =
     runtime.provider === "paddle" &&
@@ -219,7 +221,7 @@ export function BillingConsoleClient({
                 >
                   결제 수단 등록 (카드 입력)
                 </Link>
-              ) : showPortal ? (
+              ) : showPortal && runtime.provider === "stripe" ? (
                 <button
                   type="button"
                   disabled={pending}
@@ -258,8 +260,10 @@ export function BillingConsoleClient({
             <>
               <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
                 {runtime.provider === "paddle"
-                  ? "플랜을 고르면 서버가 체크아웃 페이지로 보낸 뒤 Paddle 결제 창이 열립니다. 완료 후 웹훅으로 구독 상태가 갱신됩니다."
-                  : "플랜을 고르면 Stripe Checkout으로 이동합니다."}
+                  ? "플랜을 고르면 Paddle 결제 창이 열립니다. 완료 후 웹훅으로 구독 상태가 갱신됩니다."
+                  : runtime.provider === "dodo"
+                    ? "플랜을 고르면 Dodo Payments 결제 페이지로 이동합니다. 완료 후 웹훅으로 구독 상태가 갱신됩니다."
+                    : "플랜을 고르면 Stripe Checkout으로 이동합니다."}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {PLANS.map((p) =>
@@ -366,9 +370,11 @@ export function BillingConsoleClient({
               onClick={() => run(() => selectSubscriptionPlanAction(p))}
             >
               {PLAN_LABEL[p]} ·{" "}
-              {PLAN_PRICE_KRW_MONTH[p] != null
-                ? `₩${PLAN_PRICE_KRW_MONTH[p]!.toLocaleString("ko-KR")}/월`
-                : "—"}
+              {runtime.provider === "dodo" && PLAN_PRICE_USD_MONTH[p] != null
+                ? `$${PLAN_PRICE_USD_MONTH[p]}/월`
+                : PLAN_PRICE_KRW_MONTH[p] != null
+                  ? `₩${PLAN_PRICE_KRW_MONTH[p]!.toLocaleString("ko-KR")}/월`
+                  : "—"}
             </button>
           ))}
         </div>
