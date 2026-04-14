@@ -37,7 +37,7 @@ const EMPTY_SNAPSHOT = (plan: BillingPlan, missing: boolean): UserBillingSnapsho
   billingColumnsMissing: missing,
 })
 
-function rowToSnapshot(
+export function rowToSnapshot(
   row: Record<string, unknown> | null | undefined,
   columnMissing: boolean
 ): UserBillingSnapshot {
@@ -95,7 +95,7 @@ async function appendBillingEvent(
   }
 }
 
-async function syncExpiredStates(
+export async function syncExpiredStates(
   supabase: SupabaseClient<Database>,
   userId: string,
   snap: UserBillingSnapshot

@@ -1,10 +1,11 @@
+import { cache } from "react"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
 import { demoUser } from "@/lib/demo-data"
 import { isDemoLoginEnabled } from "@/lib/demo-flags"
 import { getEffectiveBillingPlan } from "@/lib/subscription"
-import { fetchUserBillingState } from "@/lib/user-plan"
+import { rowToSnapshot, syncExpiredStates } from "@/lib/user-plan"
 import { FLOWBILL_DEMO_SESSION_COOKIE } from "@/lib/demo-session"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 
@@ -128,7 +129,11 @@ export async function ensureUserProfile(
   }
 }
 
-export async function getAppSession() {
+/**
+ * 세션 + 프로필 + 빌링 상태를 한 번에 조회.
+ * React cache()로 같은 렌더 요청 내에서 중복 호출을 방지.
+ */
+export const getAppSession = cache(async () => {
   const cookieStore = await cookies()
   const demoSession = cookieStore.get(FLOWBILL_DEMO_SESSION_COOKIE)?.value
 
@@ -138,8 +143,6 @@ export async function getAppSession() {
       user: demoUser,
     }
   }
-  // 데모가 꺼졌는데 데모 쿠키만 남은 경우: Server Component에서는 쿠키 삭제 불가(런타임 오류) → 무시하고 아래로 진행.
-  // 무효 쿠키 제거는 middleware.ts 에서 처리합니다.
 
   const supabase = await createSupabaseServerClient()
 
@@ -155,22 +158,25 @@ export async function getAppSession() {
     try {
       await supabase.auth.signOut()
     } catch {
-      // 쿠키 정리 실패는 무시; 다음 요청에서 미들웨어·로그인 흐름으로 복구
+      // ignore
     }
     return null
   }
 
-  const profile = await ensureUserProfile(supabase, user)
-
-  const { data: gateRow, error: gateErr } = await supabase
+  // 프로필 + account_disabled + 빌링 상태를 단일 쿼리로 조회
+  const { data: row, error: rowErr } = await supabase
     .from("users")
-    .select("account_disabled")
+    .select(
+      "full_name, business_name, phone, account_disabled, plan, subscription_status, trial_started_at, trial_ends_at, current_period_end, cancel_at_period_end, pending_plan, billing_provider, billing_provider_subscription_id, billing_provider_price_id, stripe_customer_id, payment_method_brand, payment_method_last4, billing_status_updated_at, usage_month, ai_calls_this_month, document_sends_this_month"
+    )
     .eq("id", user.id)
     .maybeSingle()
 
-  if (gateErr) {
-    console.warn("[getAppSession] account_disabled lookup:", gateErr.message)
-  } else if (gateRow && (gateRow as { account_disabled?: boolean }).account_disabled) {
+  if (rowErr) {
+    console.warn("[getAppSession] user row lookup:", rowErr.message)
+  }
+
+  if (row && (row as Record<string, unknown>).account_disabled) {
     try {
       await supabase.auth.signOut()
     } catch {
@@ -179,24 +185,48 @@ export async function getAppSession() {
     return null
   }
 
-  const billing = await fetchUserBillingState(supabase as never, user.id)
+  // 프로필이 아직 없으면(최초 가입 직후) ensureUserProfile로 생성
+  if (!row) {
+    const profile = await ensureUserProfile(supabase, user)
+    return {
+      mode: "supabase" as const,
+      user: {
+        id: user.id,
+        fullName: profile.fullName,
+        businessName: profile.businessName,
+        email: user.email ?? "",
+        phone: profile.phone ?? "",
+        plan: "starter" as const,
+        effectivePlan: "starter" as const,
+        subscriptionStatus: "active" as const,
+        trialEndsAt: null as string | null,
+      },
+    }
+  }
+
+  // 이미 가져온 row로 빌링 스냅샷 생성 (추가 DB 쿼리 없음)
+  const snap = rowToSnapshot(row as Record<string, unknown>, false)
+  const billing = await syncExpiredStates(supabase as never, user.id, snap)
   const effectivePlan = getEffectiveBillingPlan(billing)
+
+  const fullName = typeof row.full_name === "string" ? row.full_name : user.email ?? "사용자"
+  const businessName = typeof row.business_name === "string" ? row.business_name : fullName
 
   return {
     mode: "supabase" as const,
     user: {
       id: user.id,
-      fullName: profile.fullName ?? user.email ?? "사용자",
-      businessName: profile.businessName ?? "내 사업장",
+      fullName,
+      businessName,
       email: user.email ?? "",
-      phone: profile.phone ?? "",
+      phone: typeof row.phone === "string" ? row.phone : "",
       plan: billing.plan,
       effectivePlan,
       subscriptionStatus: billing.subscriptionStatus,
       trialEndsAt: billing.trialEndsAt,
     },
   }
-}
+})
 
 export async function requireAppSession() {
   const session = await getAppSession()
