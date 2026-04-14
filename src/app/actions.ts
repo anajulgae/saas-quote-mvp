@@ -97,7 +97,7 @@ const inquiryFormSchema = z.object({
   details: z.string().trim().default(""),
   budgetMin: z.number().int().nonnegative().optional(),
   budgetMax: z.number().int().nonnegative().optional(),
-  stage: z.custom<InquiryStage>(),
+  stage: z.enum(["new", "qualified", "quoted", "won", "lost"] as const),
   followUpAt: z.string().datetime().optional(),
 })
 
@@ -148,7 +148,7 @@ const quoteFormSchema = z.object({
   inquiryId: z.string().trim().optional(),
   title: z.string().trim().min(1, "견적 제목을 입력해 주세요."),
   summary: z.string().trim().default(""),
-  status: z.custom<QuoteStatus>(),
+  status: z.enum(["draft", "sent", "approved", "rejected", "expired"] as const),
   validUntil: z.string().optional(),
   sentAt: z.string().optional(),
   items: z.array(quoteItemSchema).min(1, "최소 1개 항목을 입력해 주세요."),
@@ -159,7 +159,7 @@ const invoiceFormSchema = z.object({
   quoteId: z.string().trim().optional(),
   invoiceType: z.enum(["deposit", "balance", "final"]),
   amount: z.number().positive("청구 금액을 입력해 주세요."),
-  paymentStatus: z.custom<PaymentStatus>(),
+  paymentStatus: z.enum(["pending", "deposit_paid", "partially_paid", "paid", "overdue"] as const),
   dueDate: z.string().optional(),
   requestedAt: z.string().optional(),
   paidAt: z.string().optional(),
@@ -171,7 +171,7 @@ const invoiceFormSchema = z.object({
 
 const reminderFormSchema = z.object({
   invoiceId: z.string().trim().min(1),
-  channel: z.custom<ReminderChannel>(),
+  channel: z.enum(["sms", "kakao", "email", "manual"] as const),
   message: z.string().trim().min(1, "리마인드 내용을 입력해 주세요."),
 })
 
@@ -1033,42 +1033,95 @@ export async function saveTemplatesSettingsAction(input: {
   }
 }
 
-/** 사업자 설정과 템플릿을 한 번에 저장 (필요 시 호출용) */
-export async function saveSettingsAction(input: {
-  businessName: string
-  ownerName: string
-  businessRegistrationNumber: string
-  email: string
-  phone: string
-  paymentTerms: string
-  bankAccount: string
-  reminderMessage: string
-  templates: Array<{
-    id?: string
-    type: "quote" | "reminder"
-    name: string
-    content: string
-    isDefault: boolean
-  }>
-}) {
-  const biz = await saveBusinessSettingsOnlyAction({
-    businessName: input.businessName,
-    ownerName: input.ownerName,
-    businessRegistrationNumber: input.businessRegistrationNumber,
-    email: input.email,
-    phone: input.phone,
-    paymentTerms: input.paymentTerms,
-    bankAccount: input.bankAccount,
-    reminderMessage: input.reminderMessage,
+async function sendDocumentEmail(params: {
+  documentId: string
+  documentKind: "quote" | "invoice"
+  to: string
+  subject: string
+  body: string
+  includePublicLink: boolean
+  markAsSent: boolean
+}): Promise<{ ok: true; demo?: true } | { ok: false; error: string }> {
+  const { documentKind } = params
+
+  const snap =
+    documentKind === "quote"
+      ? await getQuoteOutboundSnapshot(params.documentId)
+      : await getInvoiceOutboundSnapshot(params.documentId)
+  if (!snap) {
+    return { ok: false, error: documentKind === "quote" ? "견적을 찾을 수 없습니다." : "청구를 찾을 수 없습니다." }
+  }
+
+  const ensureFn = documentKind === "quote" ? ensureQuoteShareTokenForQuote : ensureInvoiceShareTokenForInvoice
+  const { token } = await ensureFn(params.documentId)
+  const viewPath = documentKind === "quote" ? "quote-view" : "invoice-view"
+  const shareUrl = `${getSiteOrigin()}/${viewPath}/${encodeURIComponent(token)}`
+
+  let bodyText = params.body
+  if (params.includePublicLink) {
+    const label = documentKind === "quote" ? "견적서" : "청구서"
+    bodyText += `\n\n${label} 보기 (링크):\n${shareUrl}`
+  }
+
+  const session = await getAppSession()
+  if (session?.mode === "demo") {
+    revalidatePath(documentKind === "quote" ? "/quotes" : "/invoices")
+    return { ok: true, demo: true }
+  }
+  if (!session) {
+    return { ok: false, error: "로그인이 필요합니다." }
+  }
+
+  if (!isResendConfigured()) {
+    return {
+      ok: false,
+      error: "메일 발송 API(Resend)가 설정되지 않았습니다. 배포 환경에 RESEND_API_KEY를 넣고, 가능하면 RESEND_FROM(인증된 발신 주소)도 설정해 주세요.",
+    }
+  }
+
+  const sender = await getBusinessFromIdentity()
+  const senderLine =
+    sender.email.trim().length > 0
+      ? `발신: ${escapeHtmlForEmail(sender.displayName)} · ${escapeHtmlForEmail(sender.email)}`
+      : `발신: ${escapeHtmlForEmail(sender.displayName)} (설정에서 이메일을 등록해 주세요)`
+
+  const bodyHtml = escapeHtmlForEmail(bodyText).replace(/\n/g, "<br/>")
+  const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.6;color:#111"><p style="margin:0 0 14px;color:#555;font-size:13px;border-bottom:1px solid #eee;padding-bottom:10px">${senderLine}</p>${bodyHtml}</div>`
+
+  await sendHtmlEmailViaResend({
+    to: params.to,
+    subject: params.subject,
+    html,
+    fromDisplayName: sender.displayName,
+    fromEmail: sender.email || undefined,
+    replyTo: sender.email || undefined,
   })
-  if (!biz.ok) {
-    return biz
+
+  const supabaseForUsage = await createSupabaseServerClient()
+  if (supabaseForUsage) {
+    void bumpUserUsage(supabaseForUsage, "document_send")
   }
-  const tpl = await saveTemplatesSettingsAction({ templates: input.templates })
-  if (!tpl.ok) {
-    return tpl
+
+  const title = "title" in snap ? snap.title : ""
+  const number = documentKind === "quote"
+    ? (snap as { quoteNumber?: string }).quoteNumber ?? ""
+    : (snap as { invoiceNumber?: string }).invoiceNumber ?? ""
+  const label = documentKind === "quote" ? "견적서" : "청구서"
+
+  await createActivityLog({
+    action: documentKind === "quote" ? "quote.email_sent" : "invoice.email_sent",
+    description: `「${title || number}」${number && title ? `(${number})` : ""} ${label}를 이메일로 보냈습니다. (${params.to})`,
+    ...(documentKind === "quote" ? { quoteId: params.documentId } : { invoiceId: params.documentId }),
+    customerId: snap.customerId,
+    metadata: { include_public_link: params.includePublicLink ? "yes" : "no" },
+  })
+
+  if (params.markAsSent && documentKind === "quote" && "status" in snap && snap.status === "draft") {
+    await updateQuoteStatusRecord(params.documentId, "sent")
   }
-  return { ok: true as const, settings: biz.settings }
+
+  revalidatePath(documentKind === "quote" ? "/quotes" : "/invoices")
+  return { ok: true }
 }
 
 function escapeHtmlForEmail(text: string) {
@@ -1185,75 +1238,15 @@ export async function saveSealSettingsAction(input: z.infer<typeof sealSettingsS
 export async function sendQuoteEmailAction(input: z.infer<typeof sendQuoteEmailInputSchema>) {
   try {
     const parsed = sendQuoteEmailInputSchema.parse(input)
-    const snap = await getQuoteOutboundSnapshot(parsed.quoteId)
-    if (!snap) {
-      return { ok: false as const, error: "견적을 찾을 수 없습니다." }
-    }
-
-    const { token } = await ensureQuoteShareTokenForQuote(parsed.quoteId)
-    const shareUrl = `${getSiteOrigin()}/quote-view/${encodeURIComponent(token)}`
-
-    let bodyText = parsed.body
-    if (parsed.includePublicLink) {
-      bodyText += `\n\n견적서 보기 (링크):\n${shareUrl}`
-    }
-
-    const session = await getAppSession()
-    if (session?.mode === "demo") {
-      revalidatePath("/quotes")
-      return { ok: true as const, demo: true as const }
-    }
-    if (!session) {
-      return { ok: false as const, error: "로그인이 필요합니다." }
-    }
-
-    if (!isResendConfigured()) {
-      return {
-        ok: false as const,
-        error:
-          "견적 메일 발송 API(Resend)가 설정되지 않았습니다. 배포 환경에 RESEND_API_KEY를 넣고, 가능하면 RESEND_FROM(인증된 발신 주소)도 설정해 주세요.",
-      }
-    }
-
-    const sender = await getBusinessFromIdentity()
-    const senderLine =
-      sender.email.trim().length > 0
-        ? `발신: ${escapeHtmlForEmail(sender.displayName)} · ${escapeHtmlForEmail(sender.email)}`
-        : `발신: ${escapeHtmlForEmail(sender.displayName)} (설정에서 이메일을 등록해 주세요)`
-
-    const bodyHtml = escapeHtmlForEmail(bodyText).replace(/\n/g, "<br/>")
-    const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.6;color:#111"><p style="margin:0 0 14px;color:#555;font-size:13px;border-bottom:1px solid #eee;padding-bottom:10px">${senderLine}</p>${bodyHtml}</div>`
-
-    await sendHtmlEmailViaResend({
+    return await sendDocumentEmail({
+      documentId: parsed.quoteId,
+      documentKind: "quote",
       to: parsed.to,
       subject: parsed.subject,
-      html,
-      fromDisplayName: sender.displayName,
-      fromEmail: sender.email || undefined,
-      replyTo: sender.email || undefined,
+      body: parsed.body,
+      includePublicLink: parsed.includePublicLink,
+      markAsSent: parsed.markAsSent,
     })
-
-    const supabaseForUsage = await createSupabaseServerClient()
-    if (supabaseForUsage) {
-      void bumpUserUsage(supabaseForUsage, "document_send")
-    }
-
-    await createActivityLog({
-      action: "quote.email_sent",
-      description: `「${snap.title}」(${snap.quoteNumber}) 견적서를 이메일로 보냈습니다. (${parsed.to})`,
-      quoteId: parsed.quoteId,
-      customerId: snap.customerId,
-      metadata: {
-        include_public_link: parsed.includePublicLink ? "yes" : "no",
-      },
-    })
-
-    if (parsed.markAsSent && snap.status === "draft") {
-      await updateQuoteStatusRecord(parsed.quoteId, "sent")
-    }
-
-    revalidatePath("/quotes")
-    return { ok: true as const }
   } catch (error) {
     if (error instanceof z.ZodError) {
       return { ok: false as const, error: error.issues[0]?.message ?? "입력값을 확인해 주세요." }
@@ -1382,71 +1375,15 @@ const sendInvoiceEmailInputSchema = z.object({
 export async function sendInvoiceEmailAction(input: z.infer<typeof sendInvoiceEmailInputSchema>) {
   try {
     const parsed = sendInvoiceEmailInputSchema.parse(input)
-    const snap = await getInvoiceOutboundSnapshot(parsed.invoiceId)
-    if (!snap) {
-      return { ok: false as const, error: "청구를 찾을 수 없습니다." }
-    }
-
-    const { token } = await ensureInvoiceShareTokenForInvoice(parsed.invoiceId)
-    const shareUrl = `${getSiteOrigin()}/invoice-view/${encodeURIComponent(token)}`
-
-    let bodyText = parsed.body
-    if (parsed.includePublicLink) {
-      bodyText += `\n\n청구서 보기 (링크):\n${shareUrl}`
-    }
-
-    const session = await getAppSession()
-    if (session?.mode === "demo") {
-      revalidatePath("/invoices")
-      return { ok: true as const, demo: true as const }
-    }
-    if (!session) {
-      return { ok: false as const, error: "로그인이 필요합니다." }
-    }
-
-    if (!isResendConfigured()) {
-      return {
-        ok: false as const,
-        error:
-          "메일 발송 API(Resend)가 설정되지 않았습니다. 배포 환경에 RESEND_API_KEY를 넣고, 가능하면 RESEND_FROM(인증된 발신 주소)도 설정해 주세요.",
-      }
-    }
-
-    const sender = await getBusinessFromIdentity()
-    const senderLine =
-      sender.email.trim().length > 0
-        ? `발신: ${escapeHtmlForEmail(sender.displayName)} · ${escapeHtmlForEmail(sender.email)}`
-        : `발신: ${escapeHtmlForEmail(sender.displayName)} (설정에서 이메일을 등록해 주세요)`
-
-    const bodyHtml = escapeHtmlForEmail(bodyText).replace(/\n/g, "<br/>")
-    const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.6;color:#111"><p style="margin:0 0 14px;color:#555;font-size:13px;border-bottom:1px solid #eee;padding-bottom:10px">${senderLine}</p>${bodyHtml}</div>`
-
-    await sendHtmlEmailViaResend({
+    return await sendDocumentEmail({
+      documentId: parsed.invoiceId,
+      documentKind: "invoice",
       to: parsed.to,
       subject: parsed.subject,
-      html,
-      fromDisplayName: sender.displayName,
-      fromEmail: sender.email || undefined,
-      replyTo: sender.email || undefined,
+      body: parsed.body,
+      includePublicLink: parsed.includePublicLink,
+      markAsSent: false,
     })
-
-    const supabaseForUsage = await createSupabaseServerClient()
-    if (supabaseForUsage) {
-      void bumpUserUsage(supabaseForUsage, "document_send")
-    }
-
-    await createActivityLog({
-      action: "invoice.email_sent",
-      description: `「${snap.invoiceNumber}」 청구서를 이메일로 보냈습니다. (${parsed.to})`,
-      invoiceId: parsed.invoiceId,
-      customerId: snap.customerId,
-      metadata: {
-        include_public_link: parsed.includePublicLink ? "yes" : "no",
-      },
-    })
-
-    revalidatePath("/invoices")
-    return { ok: true as const }
   } catch (error) {
     if (error instanceof z.ZodError) {
       return { ok: false as const, error: error.issues[0]?.message ?? "입력값을 확인해 주세요." }

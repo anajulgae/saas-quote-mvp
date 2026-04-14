@@ -13,6 +13,23 @@ export type BillIoMessagingPayloadV1 = {
   variables: Record<string, string>
 }
 
+const BLOCKED_HOST_PATTERNS = [
+  /^localhost$/i,
+  /^127\.\d+\.\d+\.\d+$/,
+  /^10\.\d+\.\d+\.\d+$/,
+  /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/,
+  /^192\.168\.\d+\.\d+$/,
+  /^0\.0\.0\.0$/,
+  /^\[::1?\]$/,
+  /^169\.254\.\d+\.\d+$/,
+  /\.internal$/i,
+  /\.local$/i,
+]
+
+function isBlockedHost(hostname: string): boolean {
+  return BLOCKED_HOST_PATTERNS.some((p) => p.test(hostname))
+}
+
 export async function postBillIoMessagingPayload(params: {
   endpoint: string
   headerName: string
@@ -23,6 +40,15 @@ export async function postBillIoMessagingPayload(params: {
   const url = params.endpoint.trim()
   if (!url.startsWith("https://")) {
     return { ok: false, error: "엔드포인트는 https:// 로 시작해야 합니다." }
+  }
+
+  try {
+    const parsed = new URL(url)
+    if (isBlockedHost(parsed.hostname)) {
+      return { ok: false, error: "내부 네트워크 주소는 사용할 수 없습니다." }
+    }
+  } catch {
+    return { ok: false, error: "유효하지 않은 URL입니다." }
   }
 
   const timeoutMs = Math.min(Math.max(params.timeoutMs ?? 25_000, 5000), 60_000)

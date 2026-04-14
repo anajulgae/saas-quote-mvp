@@ -1,9 +1,10 @@
 /**
  * true이면 로그인 화면에 데모 계정 안내·프리필 등 리뷰/내부용 블록을 노출합니다.
- * 운영 기본값은 false — 로컬·스테이징에서만 .env 에 LOGIN_REVIEW_HINTS=true 등으로 켭니다.
+ * 운영 기본값은 false — 로컬·스테이징에서만 .env 에 LOGIN_REVIEW_HINTS=true 로 켭니다.
+ * 서버 전용 env만 사용 — 클라이언트에 노출되지 않습니다.
  */
 export function showLoginReviewHints(): boolean {
-  const v = process.env.LOGIN_REVIEW_HINTS ?? process.env.NEXT_PUBLIC_LOGIN_REVIEW_HINTS
+  const v = process.env.LOGIN_REVIEW_HINTS
   return v === "true" || v === "1"
 }
 

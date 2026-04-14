@@ -12,10 +12,13 @@ import { createServerSupabaseClient } from "@/lib/supabase/server"
 export { isSupabaseConfigured } from "@/lib/supabase/public-config"
 
 export function getDemoCredentials() {
-  return {
-    email: process.env.DEMO_LOGIN_EMAIL ?? "demo-review@flowbill.kr",
-    password: process.env.DEMO_LOGIN_PASSWORD ?? "demo1234!",
+  const email = process.env.DEMO_LOGIN_EMAIL
+  const password = process.env.DEMO_LOGIN_PASSWORD
+  if (!email || !password) {
+    console.warn("[getDemoCredentials] DEMO_LOGIN_EMAIL / DEMO_LOGIN_PASSWORD env vars not set")
+    return { email: "", password: "" }
   }
+  return { email, password }
 }
 
 export async function createSupabaseServerClient() {

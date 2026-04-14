@@ -106,18 +106,22 @@ export async function syncExpiredStates(
   if (snap.subscriptionStatus === "trialing" && snap.trialEndsAt) {
     const trialEnd = new Date(snap.trialEndsAt).getTime()
     if (!Number.isNaN(trialEnd) && trialEnd <= now) {
-      await supabase
+      const { error: trialErr } = await supabase
         .from("users")
         .update({ subscription_status: "trial_expired", billing_status_updated_at: new Date().toISOString() })
         .eq("id", userId)
         .eq("subscription_status", "trialing")
-      await appendBillingEvent(
-        supabase,
-        userId,
-        "trial_ended",
-        "7일 무료 체험이 종료되었습니다. 결제 수단을 등록하거나 플랜을 다시 선택해 주세요."
-      )
-      next = { ...next, subscriptionStatus: "trial_expired" }
+      if (trialErr) {
+        console.warn("[syncExpiredStates] trial expiry update failed:", trialErr.message)
+      } else {
+        await appendBillingEvent(
+          supabase,
+          userId,
+          "trial_ended",
+          "7일 무료 체험이 종료되었습니다. 결제 수단을 등록하거나 플랜을 다시 선택해 주세요."
+        )
+        next = { ...next, subscriptionStatus: "trial_expired" }
+      }
     }
   }
 
@@ -128,7 +132,7 @@ export async function syncExpiredStates(
   ) {
     const end = new Date(next.currentPeriodEnd).getTime()
     if (!Number.isNaN(end) && end <= now) {
-      await supabase
+      const { error: cancelErr } = await supabase
         .from("users")
         .update({
           subscription_status: "canceled",
@@ -136,16 +140,20 @@ export async function syncExpiredStates(
           billing_status_updated_at: new Date().toISOString(),
         })
         .eq("id", userId)
-      await appendBillingEvent(
-        supabase,
-        userId,
-        "subscription_canceled",
-        "예약된 해지가 반영되어 유료 구독이 종료되었습니다."
-      )
-      next = {
-        ...next,
-        subscriptionStatus: "canceled",
-        cancelAtPeriodEnd: false,
+      if (cancelErr) {
+        console.warn("[syncExpiredStates] cancel update failed:", cancelErr.message)
+      } else {
+        await appendBillingEvent(
+          supabase,
+          userId,
+          "subscription_canceled",
+          "예약된 해지가 반영되어 유료 구독이 종료되었습니다."
+        )
+        next = {
+          ...next,
+          subscriptionStatus: "canceled",
+          cancelAtPeriodEnd: false,
+        }
       }
     }
   }

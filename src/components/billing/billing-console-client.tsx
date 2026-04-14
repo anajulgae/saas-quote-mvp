@@ -1,12 +1,10 @@
 "use client"
 
 import { useTransition } from "react"
-import Link from "next/link"
 import { toast } from "sonner"
 
 import {
   clearPendingPlanAction,
-  getPaymentMethodUpdateTransactionAction,
   openBillingPortalAction,
   resumeSubscriptionAction,
   scheduleSubscriptionCancelAction,
@@ -112,12 +110,8 @@ export function BillingConsoleClient({
       ? Math.round((billing.documentSendsThisMonth / limits.documentSendsPerMonth) * 100)
       : 0
 
-  const pgEnabled = runtime.provider === "stripe" || runtime.provider === "paddle" || runtime.provider === "dodo"
+  const pgEnabled = runtime.provider === "stripe" || runtime.provider === "dodo"
   const showPgCheckout = pgEnabled && runtime.configured
-  const hasPaddleSubscription =
-    runtime.provider === "paddle" &&
-    Boolean(billing.billingProviderSubscriptionId?.trim()) &&
-    billing.billingProvider === "paddle"
   const hasActiveSub = Boolean(billing.billingProviderSubscriptionId?.trim())
 
   return (
@@ -192,44 +186,16 @@ export function BillingConsoleClient({
               아직 등록된 결제 수단이 없습니다.
             </p>
           )}
-          {showPgCheckout ? (
+          {showPgCheckout && runtime.provider === "stripe" && Boolean(billing.billingCustomerId?.trim()) ? (
             <div className="mt-3">
-              {hasPaddleSubscription ? (
-                <button
-                  type="button"
-                  disabled={pending}
-                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8")}
-                  onClick={() => {
-                    start(async () => {
-                      const r = await getPaymentMethodUpdateTransactionAction()
-                      if (!r.ok) {
-                        toast.error(r.error)
-                        return
-                      }
-                      const { openPaddleUpdatePayment } = await import("@/components/billing/paddle-update-payment")
-                      openPaddleUpdatePayment(r.transactionId)
-                    })
-                  }}
-                >
-                  결제 수단 변경
-                </button>
-              ) : runtime.provider === "paddle" ? (
-                <Link
-                  href={`/billing/checkout/paddle?plan=${encodeURIComponent(billing.plan)}`}
-                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8 inline-flex items-center")}
-                >
-                  결제 수단 등록
-                </Link>
-              ) : runtime.provider === "stripe" && Boolean(billing.billingCustomerId?.trim()) ? (
-                <button
-                  type="button"
-                  disabled={pending}
-                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8")}
-                  onClick={() => run(() => openBillingPortalAction())}
-                >
-                  결제 수단 변경
-                </button>
-              ) : null}
+              <button
+                type="button"
+                disabled={pending}
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8")}
+                onClick={() => run(() => openBillingPortalAction())}
+              >
+                결제 수단 변경
+              </button>
             </div>
           ) : null}
         </div>

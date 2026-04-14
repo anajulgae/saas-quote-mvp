@@ -29,15 +29,25 @@ export function formatDate(value?: string) {
     return "-"
   }
 
+  const d = new Date(value)
+  if (!Number.isFinite(d.getTime())) {
+    return "-"
+  }
+
   return new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
     month: "short",
     day: "numeric",
-  }).format(new Date(value))
+  }).format(d)
 }
 
 export function formatDateTime(value?: string) {
   if (!value) {
+    return "-"
+  }
+
+  const d = new Date(value)
+  if (!Number.isFinite(d.getTime())) {
     return "-"
   }
 
@@ -47,7 +57,7 @@ export function formatDateTime(value?: string) {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-  }).format(new Date(value))
+  }).format(d)
 }
 
 /** 한국 사업자등록번호 10자리 — 입력 시 `XXX-XX-XXXXX` 형태로 하이픈 삽입 */

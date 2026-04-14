@@ -934,6 +934,3 @@ export function LandingFooter() {
     </footer>
   )
 }
-
-/** @deprecated 호환용 — 신규 랜딩은 LandingDifferentiators만 사용 */
-export const LandingFeatures = LandingDifferentiators

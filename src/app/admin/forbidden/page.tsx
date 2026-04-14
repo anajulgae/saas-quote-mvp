@@ -37,7 +37,7 @@ export default async function AdminForbiddenPage({
       <p className="text-center text-xs text-zinc-500">
         최초 운영자 지정: Supabase SQL —{" "}
         <code className="rounded bg-zinc-100 px-1 py-0.5 text-zinc-700">
-          update public.users set is_admin = true, admin_role = &apos;owner&apos; where email = &apos;…&apos;;
+          {"update public.users set is_admin = true, admin_role = 'owner' where email = '…';"}
         </code>
       </p>
     </div>
