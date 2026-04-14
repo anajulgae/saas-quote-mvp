@@ -9,7 +9,6 @@ import {
   getPaymentMethodUpdateTransactionAction,
   openBillingPortalAction,
   resumeSubscriptionAction,
-  scheduleDowngradeAction,
   scheduleSubscriptionCancelAction,
   selectSubscriptionPlanAction,
   startCheckoutAction,
@@ -17,9 +16,7 @@ import {
 import { buttonVariants } from "@/components/ui/button-variants"
 import { cn } from "@/lib/utils"
 import {
-  BILLING_PAGE_PATH,
   PLAN_LABEL,
-  PLAN_PRICE_KRW_MONTH,
   PLAN_PRICE_USD_MONTH,
   PLAN_TAGLINE,
 } from "@/lib/billing/catalog"
@@ -56,20 +53,16 @@ function billingEventKindKo(kind: string) {
     trial_ended: "체험 종료",
     payment_succeeded: "결제 완료",
     payment_failed: "결제 실패",
-    checkout_started: "체크아웃 시작",
-    portal_opened: "청구 포털",
+    checkout_started: "결제 시작",
+    portal_opened: "포털 열기",
     payment_method_added: "결제 수단 등록",
     trial_started: "무료 체험 시작",
+    subscription_started: "구독 시작",
+    subscription_canceled: "구독 해지",
+    subscription_upgraded: "업그레이드",
+    subscription_downgraded: "다운그레이드",
   }
   return m[kind] ?? kind
-}
-
-function billingProviderLabel(provider: string) {
-  if (provider === "dodo") return "Dodo Payments"
-  if (provider === "paddle") return "Paddle"
-  if (provider === "stripe") return "Stripe"
-  if (provider === "mock") return "시뮬레이션(mock)"
-  return provider
 }
 
 export function BillingConsoleClient({
@@ -125,33 +118,32 @@ export function BillingConsoleClient({
     runtime.provider === "paddle" &&
     Boolean(billing.billingProviderSubscriptionId?.trim()) &&
     billing.billingProvider === "paddle"
-  const hasCustomerId = Boolean(billing.billingCustomerId?.trim())
-  const showPortal = showPgCheckout && hasCustomerId
-  const showPaymentMethodArea = showPgCheckout
+  const hasActiveSub = Boolean(billing.billingProviderSubscriptionId?.trim())
 
   return (
     <div className="space-y-8 rounded-2xl border border-border/70 bg-card p-5 shadow-sm sm:p-7">
+      {/* 현재 플랜 & 상태 */}
       <div>
-        <h2 className="text-lg font-semibold tracking-tight">구독·사용량</h2>
+        <h2 className="text-lg font-semibold tracking-tight">내 구독</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          청구 플랜은 <strong className="text-foreground">{PLAN_LABEL[billing.plan]}</strong>, 기능·한도는{" "}
-          <strong className="text-foreground">{PLAN_LABEL[effectivePlan]}</strong> 기준입니다.
-          {billing.subscriptionStatus === "trialing" && trialLeft ? (
-            <span className="mt-2 block rounded-lg border border-primary/25 bg-primary/[0.06] px-3 py-2 text-xs font-medium text-foreground">
-              프로 수준 체험 중 · {trialLeft} ·{" "}
-              <Link href={BILLING_PAGE_PATH} className="text-primary underline-offset-2 hover:underline">
-                체험 후 플랜 선택
-              </Link>
-            </span>
-          ) : null}
-          {billing.subscriptionStatus === "trial_expired" ? (
-            <span className="mt-2 block rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs font-medium text-foreground">
-              체험이 종료되었습니다. 스타터 이상을 선택하면 이전과 같이 운영할 수 있습니다.
-            </span>
+          현재 플랜: <strong className="text-foreground">{PLAN_LABEL[billing.plan]}</strong>
+          {billing.plan !== effectivePlan ? (
+            <> (기능 한도: <strong className="text-foreground">{PLAN_LABEL[effectivePlan]}</strong> 기준)</>
           ) : null}
         </p>
+        {billing.subscriptionStatus === "trialing" && trialLeft ? (
+          <p className="mt-2 rounded-lg border border-primary/25 bg-primary/[0.06] px-3 py-2 text-xs font-medium text-foreground">
+            무료 체험 중 · {trialLeft} · 체험 종료 후 자동 결제됩니다
+          </p>
+        ) : null}
+        {billing.subscriptionStatus === "trial_expired" ? (
+          <p className="mt-2 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs font-medium text-foreground">
+            체험이 종료되었습니다. 플랜을 선택하면 서비스를 계속 이용할 수 있습니다.
+          </p>
+        ) : null}
       </div>
 
+      {/* 구독 상태 + 결제 수단 카드 */}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
           <p className="text-xs font-medium text-muted-foreground">구독 상태</p>
@@ -159,20 +151,33 @@ export function BillingConsoleClient({
             {subscriptionStatusKo(billing.subscriptionStatus)}
           </p>
           <p className="mt-2 text-xs text-muted-foreground">
-            다음 결제·갱신 예정:{" "}
+            다음 결제일:{" "}
             {billing.currentPeriodEnd
               ? new Date(billing.currentPeriodEnd).toLocaleDateString("ko-KR")
-              : "PG 연동 후 표시"}
+              : "결제 완료 후 표시"}
           </p>
           {billing.cancelAtPeriodEnd ? (
-            <p className="mt-2 text-xs font-medium text-amber-900">해지 예약됨 — 갱신일에 종료(시뮬레이션)</p>
-          ) : null}
-          {billing.pendingPlan ? (
-            <p className="mt-2 text-xs text-muted-foreground">
-              예약 다운그레이드: <strong className="text-foreground">{PLAN_LABEL[billing.pendingPlan]}</strong>
+            <p className="mt-2 text-xs font-medium text-amber-900">
+              해지 예약됨 — 다음 결제일에 구독이 종료됩니다
             </p>
           ) : null}
+          {billing.pendingPlan ? (
+            <div className="mt-2 flex items-center gap-2">
+              <p className="text-xs text-muted-foreground">
+                예약 변경: <strong className="text-foreground">{PLAN_LABEL[billing.pendingPlan]}</strong>
+              </p>
+              <button
+                type="button"
+                disabled={pending}
+                className="text-xs text-primary hover:underline"
+                onClick={() => run(() => clearPendingPlanAction())}
+              >
+                취소
+              </button>
+            </div>
+          ) : null}
         </div>
+
         <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
           <p className="text-xs font-medium text-muted-foreground">결제 수단</p>
           {billing.paymentMethodLast4 ? (
@@ -180,26 +185,20 @@ export function BillingConsoleClient({
               {billing.paymentMethodBrand ? `${billing.paymentMethodBrand} · ` : null}끝자리{" "}
               {billing.paymentMethodLast4}
             </p>
-          ) : pgEnabled && billing.billingCustomerId ? (
-            <p className="mt-1 text-sm text-foreground">
-              고객 프로필 연결됨. 아래「결제 수단 변경」으로 카드·청구서를 관리하세요.
-            </p>
-          ) : pgEnabled ? (
-            <p className="mt-1 text-sm text-muted-foreground">
-              아직 등록된 카드가 없습니다. 아래「결제 수단 등록」을 눌러 카드를 추가하세요.
-            </p>
+          ) : hasActiveSub ? (
+            <p className="mt-1 text-sm text-foreground">결제 수단이 등록되어 있습니다.</p>
           ) : (
-            <p className="mt-1 text-sm text-foreground">
-              시뮬레이션 모드입니다. 실제 카드는 저장되지 않습니다.
+            <p className="mt-1 text-sm text-muted-foreground">
+              아직 등록된 결제 수단이 없습니다.
             </p>
           )}
-          {showPaymentMethodArea ? (
-            <div className="mt-3 flex flex-wrap gap-2">
+          {showPgCheckout ? (
+            <div className="mt-3">
               {hasPaddleSubscription ? (
                 <button
                   type="button"
                   disabled={pending}
-                  className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8")}
                   onClick={() => {
                     start(async () => {
                       const r = await getPaymentMethodUpdateTransactionAction()
@@ -217,94 +216,75 @@ export function BillingConsoleClient({
               ) : runtime.provider === "paddle" ? (
                 <Link
                   href={`/billing/checkout/paddle?plan=${encodeURIComponent(billing.plan)}`}
-                  className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9 inline-flex items-center")}
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8 inline-flex items-center")}
                 >
-                  결제 수단 등록 (카드 입력)
+                  결제 수단 등록
                 </Link>
-              ) : showPortal && runtime.provider === "stripe" ? (
+              ) : runtime.provider === "stripe" && Boolean(billing.billingCustomerId?.trim()) ? (
                 <button
                   type="button"
                   disabled={pending}
-                  className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8")}
                   onClick={() => run(() => openBillingPortalAction())}
                 >
                   결제 수단 변경
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled={pending}
-                  className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
-                  onClick={() => run(() => startCheckoutAction(billing.plan))}
-                >
-                  결제 수단 등록
-                </button>
-              )}
+              ) : null}
             </div>
           ) : null}
         </div>
       </div>
 
-      {runtime.provider !== "mock" ? (
-        <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-4">
-          <h3 className="text-sm font-semibold text-foreground">실제 결제(PG)</h3>
+      {/* 플랜 선택 (결제 진행 통합) */}
+      {showPgCheckout ? (
+        <div>
+          <h3 className="text-sm font-semibold">플랜 선택</h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            제공자: <strong className="text-foreground">{billingProviderLabel(runtime.provider)}</strong> · 모드:{" "}
-            <strong className="text-foreground">{runtime.mode}</strong>
+            {hasActiveSub
+              ? "플랜을 변경하면 즉시 반영됩니다. 차액은 다음 결제일에 정산됩니다."
+              : "플랜을 선택하면 결제 페이지로 이동합니다. 7일 무료 체험 후 자동 결제됩니다."}
           </p>
-          {!runtime.configured ? (
-            <p className="mt-2 text-sm text-destructive">
-              {runtime.configurationError ?? "환경 변수를 확인해 주세요."}
-            </p>
-          ) : (
-            <>
-              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                {runtime.provider === "paddle"
-                  ? "플랜을 고르면 Paddle 결제 창이 열립니다. 완료 후 웹훅으로 구독 상태가 갱신됩니다."
-                  : runtime.provider === "dodo"
-                    ? "플랜을 고르면 Dodo Payments 결제 페이지로 이동합니다. 완료 후 웹훅으로 구독 상태가 갱신됩니다."
-                    : "플랜을 고르면 Stripe Checkout으로 이동합니다."}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {PLANS.map((p) =>
-                  runtime.provider === "paddle" ? (
-                    <Link
-                      key={`pg-${p}`}
-                      href={`/billing/checkout/paddle?plan=${encodeURIComponent(p)}`}
-                      className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9 inline-flex items-center")}
-                    >
-                      {PLAN_LABEL[p]} 결제 진행
-                    </Link>
-                  ) : (
-                    <button
-                      key={`pg-${p}`}
-                      type="button"
-                      disabled={pending}
-                      className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
-                      onClick={() => run(() => startCheckoutAction(p))}
-                    >
-                      {PLAN_LABEL[p]} 결제 진행
-                    </button>
-                  )
-                )}
-              </div>
-              {showPortal ? (
-                <div className="mt-3">
-                  <button
-                    type="button"
-                    disabled={pending}
-                    className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}
-                    onClick={() => run(() => openBillingPortalAction())}
-                  >
-                    청구서·구독 관리(포털)
-                  </button>
-                </div>
-              ) : null}
-            </>
-          )}
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            {PLANS.map((p) => {
+              const isCurrent = billing.plan === p
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  disabled={pending || isCurrent}
+                  className={cn(
+                    "relative flex flex-col rounded-xl border p-4 text-left transition-colors",
+                    isCurrent
+                      ? "border-primary bg-primary/[0.06]"
+                      : "border-border/60 hover:border-primary/40 hover:bg-primary/[0.02]"
+                  )}
+                  onClick={() => {
+                    if (hasActiveSub) {
+                      run(() => selectSubscriptionPlanAction(p))
+                    } else {
+                      run(() => startCheckoutAction(p))
+                    }
+                  }}
+                >
+                  {isCurrent ? (
+                    <span className="absolute right-3 top-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                      현재
+                    </span>
+                  ) : null}
+                  <span className="text-xs font-bold tracking-wide text-primary">{PLAN_LABEL[p]}</span>
+                  <span className="mt-1 text-lg font-bold">
+                    {PLAN_PRICE_USD_MONTH[p] != null ? `$${PLAN_PRICE_USD_MONTH[p]}` : "문의"}
+                    <span className="text-xs font-normal text-muted-foreground"> /월</span>
+                  </span>
+                  <span className="mt-2 text-xs leading-relaxed text-muted-foreground">{PLAN_TAGLINE[p]}</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
       ) : null}
 
+      {/* 사용량 */}
       <div>
         <h3 className="text-sm font-semibold">이번 달 사용량</h3>
         <ul className="mt-3 space-y-3 text-sm">
@@ -324,7 +304,7 @@ export function BillingConsoleClient({
           </li>
           <li>
             <div className="flex justify-between gap-2">
-              <span>문서 발송(이메일 등)</span>
+              <span>문서 발송</span>
               <span className="tabular-nums text-muted-foreground">
                 {billing.documentSendsThisMonth} / {limits.documentSendsPerMonth}건
               </span>
@@ -334,85 +314,19 @@ export function BillingConsoleClient({
             </div>
           </li>
           <li className="flex justify-between gap-2 border-t border-border/50 pt-2">
-            <span>활성 고객 포털</span>
+            <span>고객 포털</span>
             <span className="tabular-nums">
               {portalEnabledCount} / {limits.maxPortalCustomers}
             </span>
           </li>
-          <li className="flex justify-between gap-2">
-            <span>팀 시트(좌석)</span>
-            <span className="tabular-nums">{limits.seats}명까지(제품 멀티유저 연동 시)</span>
-          </li>
         </ul>
       </div>
 
-      <div>
-        <h3 className="text-sm font-semibold">플랜 변경</h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {runtime.provider === "mock"
-            ? "시뮬레이션: 아래 버튼은 DB 플랜만 바꿉니다."
-            : showPgCheckout && billing.billingProviderSubscriptionId
-              ? "활성 구독이 있으면 아래는 PG API로 플랜을 바꿉니다. 구독이 없거나 미완료면「실제 결제」에서 체크아웃을 먼저 진행하세요."
-              : showPgCheckout
-                ? "아직 PG 구독 ID가 없습니다. 위「실제 결제」에서 체크아웃을 완료한 뒤 웹훅으로 동기화되면 이 버튼으로 플랜 변경이 가능합니다."
-                : "PG가 설정되지 않았습니다. 환경 변수를 채운 뒤 다시 시도하세요."}
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {PLANS.map((p) => (
-            <button
-              key={p}
-              type="button"
-              disabled={pending}
-              className={cn(
-                buttonVariants({ variant: billing.plan === p ? "default" : "outline", size: "sm" }),
-                "h-9"
-              )}
-              onClick={() => run(() => selectSubscriptionPlanAction(p))}
-            >
-              {PLAN_LABEL[p]} ·{" "}
-              {runtime.provider === "dodo" && PLAN_PRICE_USD_MONTH[p] != null
-                ? `$${PLAN_PRICE_USD_MONTH[p]}/월`
-                : PLAN_PRICE_KRW_MONTH[p] != null
-                  ? `₩${PLAN_PRICE_KRW_MONTH[p]!.toLocaleString("ko-KR")}/월`
-                  : "—"}
-            </button>
-          ))}
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={pending}
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}
-            onClick={() => run(() => scheduleDowngradeAction("starter"))}
-          >
-            다운그레이드 예약 → 스타터
-          </button>
-          <button
-            type="button"
-            disabled={pending}
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}
-            onClick={() => run(() => scheduleDowngradeAction("pro"))}
-          >
-            다운그레이드 예약 → 프로
-          </button>
-          {billing.pendingPlan ? (
-            <button
-              type="button"
-              disabled={pending}
-              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-9")}
-              onClick={() => run(() => clearPendingPlanAction())}
-            >
-              다운그레이드 예약 취소
-            </button>
-          ) : null}
-        </div>
-      </div>
-
+      {/* 해지 */}
       <div className="rounded-xl border border-rose-500/25 bg-rose-500/[0.06] p-4">
-        <h3 className="text-sm font-semibold text-rose-950">해지</h3>
+        <h3 className="text-sm font-semibold text-rose-950">구독 해지</h3>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-          해지하면 갱신일까지는 이용 가능하고, 이후 AI·프로 전용 기능·높은 한도가 제한됩니다. 데이터는 계정 정책에 따라
-          보관·삭제됩니다(운영 정책에 맞게 조정하세요).
+          해지하면 다음 결제일까지 이용 가능합니다. 이후 프리미엄 기능과 높은 한도가 제한됩니다.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <button
@@ -421,7 +335,7 @@ export function BillingConsoleClient({
             className={cn(buttonVariants({ variant: "destructive", size: "sm" }), "h-9")}
             onClick={() => run(() => scheduleSubscriptionCancelAction())}
           >
-            해지 예약하기
+            해지 예약
           </button>
           {billing.cancelAtPeriodEnd ? (
             <button
@@ -430,18 +344,17 @@ export function BillingConsoleClient({
               className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}
               onClick={() => run(() => resumeSubscriptionAction())}
             >
-              해지 예약 철회
+              해지 철회
             </button>
           ) : null}
         </div>
       </div>
 
-      <div>
-        <h3 className="text-sm font-semibold">최근 구독·과금 이벤트</h3>
-        {events.length === 0 ? (
-          <p className="mt-2 text-xs text-muted-foreground">아직 기록이 없습니다. 플랜을 바꾸면 타임라인에 쌓입니다.</p>
-        ) : (
-          <ul className="mt-2 max-h-56 space-y-2 overflow-y-auto text-xs">
+      {/* 최근 이벤트 */}
+      {events.length > 0 ? (
+        <div>
+          <h3 className="text-sm font-semibold">결제 내역</h3>
+          <ul className="mt-2 max-h-48 space-y-2 overflow-y-auto text-xs">
             {events.map((e) => (
               <li key={e.id} className="flex flex-col border-b border-border/40 pb-2 last:border-0">
                 <span className="font-medium text-foreground">{billingEventKindKo(e.kind)}</span>
@@ -452,19 +365,8 @@ export function BillingConsoleClient({
               </li>
             ))}
           </ul>
-        )}
-      </div>
-
-      <div className="rounded-xl border border-border/50 bg-muted/15 p-4 text-xs text-muted-foreground">
-        <p className="font-medium text-foreground">플랜 요약</p>
-        <ul className="mt-2 list-inside list-disc space-y-1">
-          {PLANS.map((p) => (
-            <li key={p}>
-              <strong className="text-foreground">{PLAN_LABEL[p]}</strong> — {PLAN_TAGLINE[p]}
-            </li>
-          ))}
-        </ul>
-      </div>
+        </div>
+      ) : null}
     </div>
   )
 }

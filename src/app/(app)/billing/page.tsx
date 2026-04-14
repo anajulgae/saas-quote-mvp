@@ -7,9 +7,8 @@ import { buttonVariants } from "@/components/ui/button-variants"
 import { getAppSession } from "@/lib/auth"
 import {
   BILLING_UPGRADE_CONTACT_COPY,
-  FEATURE_GATES_AFTER_PAYMENT,
   PLAN_LABEL,
-  PLAN_PRICE_KRW_MONTH,
+  PLAN_PRICE_USD_MONTH,
   PLAN_TAGLINE,
   SUPPORT_EMAIL_ENV,
 } from "@/lib/billing/catalog"
@@ -85,8 +84,8 @@ export default async function BillingPage({
             <div key={p} className="p-4">
               <p className="text-xs font-bold tracking-wide text-primary">{PLAN_LABEL[p]}</p>
               <p className="mt-1 text-lg font-bold">
-                {PLAN_PRICE_KRW_MONTH[p] != null
-                  ? `₩${PLAN_PRICE_KRW_MONTH[p]!.toLocaleString("ko-KR")}`
+                {PLAN_PRICE_USD_MONTH[p] != null
+                  ? `$${PLAN_PRICE_USD_MONTH[p]}`
                   : "문의"}
                 <span className="text-xs font-normal text-muted-foreground"> /월</span>
               </p>
@@ -94,26 +93,6 @@ export default async function BillingPage({
             </div>
           ))}
         </div>
-      </section>
-
-      <section className="space-y-3 rounded-xl border border-border/60 bg-card p-5 shadow-sm">
-        <h2 className="text-base font-semibold">PG·웹훅 확장 포인트</h2>
-        <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
-          <li>
-            라우트 <code className="rounded bg-muted px-1">/billing</code> — Checkout·Customer Portal 연결
-          </li>
-          <li>
-            DB <code className="rounded bg-muted px-1">public.users</code> — plan, subscription_status, trial_ends_at,
-            current_period_end, stripe_customer_id
-          </li>
-          <li>
-            이벤트 로그 <code className="rounded bg-muted px-1">billing_events</code> — 웹훅에서 기록
-          </li>
-          <li>
-            코드 <code className="rounded bg-muted px-1">FEATURE_GATES_AFTER_PAYMENT</code> 참고:{" "}
-            <code className="rounded bg-background px-1 text-[11px]">{JSON.stringify(FEATURE_GATES_AFTER_PAYMENT)}</code>
-          </li>
-        </ul>
       </section>
 
       <div id="business" className="scroll-mt-8 space-y-3 rounded-xl border border-dashed border-border/70 p-5">
@@ -126,11 +105,7 @@ export default async function BillingPage({
           >
             {contact}
           </a>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            <code className="rounded bg-muted px-1">NEXT_PUBLIC_CONTACT_EMAIL</code> 설정 시 표시됩니다.
-          </p>
-        )}
+        ) : null}
       </div>
 
       <div className="flex flex-wrap gap-3">

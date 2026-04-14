@@ -52,6 +52,6 @@ export const FEATURE_GATES_AFTER_PAYMENT: Record<PlanFeature, BillingPlan[]> = {
 }
 
 export const BILLING_UPGRADE_CONTACT_COPY =
-  "카드 자동결제(PG) 연동 시 이 화면에서 바로 결제 수단을 등록하고 갱신일이 표시됩니다. 지금은 플랜·체험·사용량을 확정하고, 해지·변경 요청을 기록하는 운영 단계입니다."
+  "플랜을 선택하고 결제하면 바로 이용할 수 있습니다. 7일 무료 체험 후 자동 결제됩니다."
 
 export const SUPPORT_EMAIL_ENV = "NEXT_PUBLIC_SUPPORT_EMAIL"
