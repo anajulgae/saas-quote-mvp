@@ -340,13 +340,13 @@ export function SettingsForm({
               href={BILLING_PAGE_PATH}
               className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
             >
-              援щ룆 肄섏넄 ?닿린
+              구독 콘솔 열기
             </Link>
             <Link
               href="/help"
               className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}
             >
-              寃곗젣쨌援щ룆 媛?대뱶
+              결제·구독 가이드
             </Link>
           </div>
         </CardContent>
