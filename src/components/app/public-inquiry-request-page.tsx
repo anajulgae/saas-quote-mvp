@@ -1,7 +1,7 @@
 "use client"
 
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useRef, useState } from "react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
@@ -32,15 +32,32 @@ export function PublicInquiryRequestPage({
   landingSource,
   submissionSource,
   landingSlug,
+  embed,
 }: {
   token: string
   initialPayload: unknown
   landingSource?: string
   submissionSource?: string
   landingSlug?: string
+  embed?: boolean
 }) {
   const router = useRouter()
   const payload = isValidPayload(initialPayload) ? initialPayload : { valid: false as const, reason: "invalid" }
+
+  useEffect(() => {
+    if (!embed) return
+    const send = () => {
+      window.parent.postMessage(
+        { type: "billio-widget-resize", height: document.documentElement.scrollHeight },
+        "*"
+      )
+    }
+    send()
+    const observer = new MutationObserver(send)
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true })
+    window.addEventListener("resize", send)
+    return () => { observer.disconnect(); window.removeEventListener("resize", send) }
+  }, [embed])
 
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
@@ -60,8 +77,8 @@ export function PublicInquiryRequestPage({
   if (!payload.valid) {
     const biz = "businessName" in payload ? payload.businessName : undefined
     return (
-      <div className="min-h-screen bg-[#f6f5f2] px-4 py-16 text-neutral-900">
-        <div className="mx-auto max-w-lg rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
+      <div className={embed ? "bg-white px-4 py-6 text-neutral-900" : "min-h-screen bg-[#f6f5f2] px-4 py-16 text-neutral-900"}>
+        <div className={embed ? "text-center" : "mx-auto max-w-lg rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm"}>
           <h1 className="text-xl font-semibold tracking-tight">문의를 받을 수 없습니다</h1>
           <p className="mt-3 text-sm leading-relaxed text-neutral-600">
             {payload.reason === "disabled"
@@ -114,7 +131,10 @@ export function PublicInquiryRequestPage({
         setError("접수가 반영되지 않았습니다. 브라우저 자동완성·확장 프로그램을 잠시 끄고 다시 시도해 주세요.")
         return
       }
-      router.push(`/request/${encodeURIComponent(token)}/thanks`)
+      if (embed) {
+        window.parent.postMessage({ type: "billio-widget-submitted" }, "*")
+      }
+      router.push(`/request/${encodeURIComponent(token)}/thanks${embed ? "?embed=1" : ""}`)
       router.refresh()
     } catch {
       setError("네트워크 오류가 발생했습니다.")
@@ -124,16 +144,18 @@ export function PublicInquiryRequestPage({
   }
 
   return (
-    <div className="min-h-screen bg-[#f6f5f2] text-neutral-900">
-      <header className="border-b border-neutral-200/80 bg-white/90 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-2xl flex-col gap-1 px-4 py-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-500">문의</p>
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-900">{p.businessName}</h1>
-          {p.ownerName ? <p className="text-sm text-neutral-600">담당 {p.ownerName}</p> : null}
-        </div>
-      </header>
+    <div className={embed ? "bg-white text-neutral-900" : "min-h-screen bg-[#f6f5f2] text-neutral-900"}>
+      {!embed && (
+        <header className="border-b border-neutral-200/80 bg-white/90 backdrop-blur-sm">
+          <div className="mx-auto flex max-w-2xl flex-col gap-1 px-4 py-6">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-500">문의</p>
+            <h1 className="text-2xl font-bold tracking-tight text-neutral-900">{p.businessName}</h1>
+            {p.ownerName ? <p className="text-sm text-neutral-600">담당 {p.ownerName}</p> : null}
+          </div>
+        </header>
+      )}
 
-      <main className="mx-auto max-w-2xl px-4 py-8 pb-16">
+      <main className={embed ? "px-4 py-4" : "mx-auto max-w-2xl px-4 py-8 pb-16"}>
         {landingSource === "landing_page" ? (
           <p className="mb-3 rounded-lg border border-neutral-200 bg-white/80 px-3 py-2 text-xs text-neutral-600">
             업체 소개 페이지에서 연결된 문의입니다. 접수 후 담당자가 확인하여 연락드립니다.
@@ -371,7 +393,7 @@ export function PublicInquiryRequestPage({
           </p>
         </form>
 
-        {(p.contactEmail || p.contactPhone) && (
+        {!embed && (p.contactEmail || p.contactPhone) && (
           <div className="mt-10 rounded-xl border border-dashed border-neutral-300 bg-white/60 px-4 py-3 text-center text-sm text-neutral-600">
             문의 관련 연락:{" "}
             {p.contactPhone ? <span className="tabular-nums text-neutral-800">{p.contactPhone}</span> : null}

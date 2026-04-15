@@ -1,7 +1,5 @@
 import { randomBytes } from "node:crypto"
 
-import type { SupabaseClient } from "@supabase/supabase-js"
-
 import {
   countTaxInvoiceDashboardSignals,
   fetchTaxInvoiceSummaryForCustomer,
@@ -1478,6 +1476,203 @@ export async function deleteCustomerRecord(customerId: string) {
   return { mode: "supabase" as const }
 }
 
+/* ────────── Auto-remind rules ────────── */
+
+export type AutoRemindRule = {
+  id: string
+  name: string
+  enabled: boolean
+  triggerType: string
+  triggerDays: number
+  channel: string
+  messageTemplate: string
+  createdAt: string
+  updatedAt: string
+}
+
+export async function getAutoRemindRules(): Promise<AutoRemindRule[]> {
+  const context = await getDataContext()
+  if (context.mode === "demo") return []
+  const { data, error } = await context.supabase
+    .from("auto_remind_rules")
+    .select("*")
+    .eq("user_id", context.userId)
+    .order("created_at", { ascending: false })
+  if (error) throw error
+  return ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
+    id: r.id as string,
+    name: (r.name as string) || "",
+    enabled: r.enabled as boolean,
+    triggerType: (r.trigger_type as string) || "overdue_days",
+    triggerDays: (r.trigger_days as number) || 3,
+    channel: (r.channel as string) || "email",
+    messageTemplate: (r.message_template as string) || "",
+    createdAt: r.created_at as string,
+    updatedAt: r.updated_at as string,
+  }))
+}
+
+export async function upsertAutoRemindRule(input: {
+  id?: string
+  name: string
+  enabled: boolean
+  triggerType: string
+  triggerDays: number
+  channel: string
+  messageTemplate: string
+}) {
+  const context = await getDataContext()
+  if (context.mode === "demo") throw new Error("DEMO_MODE")
+  const row = {
+    user_id: context.userId,
+    name: input.name,
+    enabled: input.enabled,
+    trigger_type: input.triggerType,
+    trigger_days: input.triggerDays,
+    channel: input.channel,
+    message_template: input.messageTemplate,
+    updated_at: new Date().toISOString(),
+  }
+  if (input.id) {
+    const { error } = await context.supabase
+      .from("auto_remind_rules")
+      .update(row)
+      .eq("id", input.id)
+      .eq("user_id", context.userId)
+    if (error) throw error
+  } else {
+    const { error } = await context.supabase.from("auto_remind_rules").insert(row)
+    if (error) throw error
+  }
+  return { ok: true }
+}
+
+export async function deleteAutoRemindRule(ruleId: string) {
+  const context = await getDataContext()
+  if (context.mode === "demo") throw new Error("DEMO_MODE")
+  const { error } = await context.supabase
+    .from("auto_remind_rules")
+    .delete()
+    .eq("id", ruleId)
+    .eq("user_id", context.userId)
+  if (error) throw error
+  return { ok: true }
+}
+
+/* ────────── Recurring Series ────────── */
+
+export type RecurringSeries = {
+  id: string
+  customerId: string
+  customerLabel: string
+  name: string
+  enabled: boolean
+  documentType: string
+  frequency: string
+  dayOfMonth: number
+  amount: number
+  title: string
+  notes: string
+  invoiceType: string
+  nextRunDate: string
+  lastRunAt: string | null
+  totalRuns: number
+  maxRuns: number | null
+  createdAt: string
+}
+
+export async function getRecurringSeriesList(): Promise<RecurringSeries[]> {
+  const context = await getDataContext()
+  if (context.mode === "demo") return []
+  const { data, error } = await context.supabase
+    .from("recurring_series")
+    .select("*, customers(name, company_name)")
+    .eq("user_id", context.userId)
+    .order("created_at", { ascending: false })
+  if (error) throw error
+  return ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
+    const cust = r.customers as { name?: string; company_name?: string } | null
+    return {
+      id: r.id as string,
+      customerId: r.customer_id as string,
+      customerLabel: cust?.company_name || cust?.name || "",
+      name: (r.name as string) || "",
+      enabled: r.enabled as boolean,
+      documentType: (r.document_type as string) || "invoice",
+      frequency: (r.frequency as string) || "monthly",
+      dayOfMonth: (r.day_of_month as number) || 1,
+      amount: Number(r.amount) || 0,
+      title: (r.title as string) || "",
+      notes: (r.notes as string) || "",
+      invoiceType: (r.invoice_type as string) || "final",
+      nextRunDate: r.next_run_date as string,
+      lastRunAt: (r.last_run_at as string) ?? null,
+      totalRuns: (r.total_runs as number) || 0,
+      maxRuns: r.max_runs != null ? (r.max_runs as number) : null,
+      createdAt: r.created_at as string,
+    }
+  })
+}
+
+export async function upsertRecurringSeries(input: {
+  id?: string
+  customerId: string
+  name: string
+  enabled: boolean
+  documentType: string
+  frequency: string
+  dayOfMonth: number
+  amount: number
+  title: string
+  notes: string
+  invoiceType: string
+  nextRunDate: string
+  maxRuns: number | null
+}) {
+  const context = await getDataContext()
+  if (context.mode === "demo") throw new Error("DEMO_MODE")
+  const row = {
+    user_id: context.userId,
+    customer_id: input.customerId,
+    name: input.name,
+    enabled: input.enabled,
+    document_type: input.documentType,
+    frequency: input.frequency,
+    day_of_month: input.dayOfMonth,
+    amount: input.amount,
+    title: input.title,
+    notes: input.notes,
+    invoice_type: input.invoiceType,
+    next_run_date: input.nextRunDate,
+    max_runs: input.maxRuns,
+    updated_at: new Date().toISOString(),
+  }
+  if (input.id) {
+    const { error } = await context.supabase
+      .from("recurring_series")
+      .update(row)
+      .eq("id", input.id)
+      .eq("user_id", context.userId)
+    if (error) throw error
+  } else {
+    const { error } = await context.supabase.from("recurring_series").insert(row)
+    if (error) throw error
+  }
+  return { ok: true }
+}
+
+export async function deleteRecurringSeries(seriesId: string) {
+  const context = await getDataContext()
+  if (context.mode === "demo") throw new Error("DEMO_MODE")
+  const { error } = await context.supabase
+    .from("recurring_series")
+    .delete()
+    .eq("id", seriesId)
+    .eq("user_id", context.userId)
+  if (error) throw error
+  return { ok: true }
+}
+
 export async function getQuotePrintPageData(quoteId: string): Promise<{
   quote: QuoteWithItems
   issuer: {
@@ -1565,7 +1760,7 @@ export async function getQuotePrintPageData(quoteId: string): Promise<{
     : null
 
   const { effectivePlan: quotePrintPlan } = await loadPlanContext(
-    context.supabase as unknown as SupabaseClient<Database>,
+    context.supabase,
     context.userId
   )
 
@@ -1681,7 +1876,7 @@ export async function getInvoicePrintPageData(invoiceId: string): Promise<{
     : null
 
   const { effectivePlan: invoicePrintPlan } = await loadPlanContext(
-    context.supabase as unknown as SupabaseClient<Database>,
+    context.supabase,
     context.userId
   )
 
@@ -2359,7 +2554,7 @@ export async function upsertMessagingChannelConfigRecord(input: {
   }
 
   const { effectivePlan } = await loadPlanContext(
-    context.supabase as unknown as SupabaseClient<Database>,
+    context.supabase,
     context.userId
   )
   if (!planAllowsFeature(effectivePlan, "kakao_byoa_messaging")) {
@@ -2423,7 +2618,7 @@ export async function ensureCustomerPortalTokenRecord(
   }
 
   const { effectivePlan } = await loadPlanContext(
-    context.supabase as unknown as SupabaseClient<Database>,
+    context.supabase,
     context.userId
   )
 
@@ -2509,7 +2704,7 @@ export async function sendKakaoAlimtalkForInvoiceRecord(
   }
 
   const { effectivePlan } = await loadPlanContext(
-    context.supabase as unknown as SupabaseClient<Database>,
+    context.supabase,
     context.userId
   )
   if (!planAllowsFeature(effectivePlan, "kakao_byoa_messaging")) {
@@ -2606,7 +2801,7 @@ export async function sendKakaoAlimtalkForQuoteRecord(
   }
 
   const { effectivePlan } = await loadPlanContext(
-    context.supabase as unknown as SupabaseClient<Database>,
+    context.supabase,
     context.userId
   )
   if (!planAllowsFeature(effectivePlan, "kakao_byoa_messaging")) {
@@ -3208,7 +3403,7 @@ export async function getInquiriesPageData(): Promise<{
     : null
 
   const { effectivePlan: currentPlan } = await loadPlanContext(
-    context.supabase as unknown as SupabaseClient<Database>,
+    context.supabase,
     context.userId
   )
 
@@ -3507,12 +3702,12 @@ export async function getCustomerDetailData(customerId: string): Promise<{
   }
 
   const { effectivePlan: currentPlan } = await loadPlanContext(
-    context.supabase as unknown as SupabaseClient<Database>,
+    context.supabase,
     context.userId
   )
 
   const taxInvoiceSummary = await fetchTaxInvoiceSummaryForCustomer(
-    context.supabase as unknown as SupabaseClient<Database>,
+    context.supabase,
     context.userId,
     customerId
   )
@@ -3728,7 +3923,7 @@ export async function getQuotesPageData(): Promise<{
   const defaultBusinessName = biz?.business_name?.trim() ?? ""
 
   const { effectivePlan: currentPlan } = await loadPlanContext(
-    context.supabase as unknown as SupabaseClient<Database>,
+    context.supabase,
     context.userId
   )
 
@@ -3887,12 +4082,12 @@ export async function getInvoicesPageData(): Promise<{
   const bizSettingsMapped = bizRow ? mapBusinessSettings(bizRow as BusinessSettingsRow) : null
 
   const { effectivePlan: currentPlan } = await loadPlanContext(
-    context.supabase as unknown as SupabaseClient<Database>,
+    context.supabase,
     context.userId
   )
 
   const taxByInvoiceId = await fetchTaxInvoicesByInvoiceIds(
-    context.supabase as unknown as SupabaseClient<Database>,
+    context.supabase,
     context.userId,
     invoiceRowsSafe.map((r) => r.id)
   )
@@ -3990,7 +4185,7 @@ export async function getSettingsPageData(): Promise<{
   }
 
   const planCtx = await loadPlanContext(
-    context.supabase as unknown as SupabaseClient<Database>,
+    context.supabase,
     context.userId
   )
   const currentPlan = planCtx.effectivePlan
@@ -4070,7 +4265,7 @@ export async function getLandingPageEditorData(): Promise<{
   }
 
   const planCtx = await loadPlanContext(
-    context.supabase as unknown as SupabaseClient<Database>,
+    context.supabase,
     context.userId
   )
   const currentPlan = planCtx.effectivePlan
@@ -4331,12 +4526,12 @@ export async function getDashboardPageData(): Promise<{
   }
 
   const { effectivePlan: hubPlan } = await loadPlanContext(
-    context.supabase as unknown as SupabaseClient<Database>,
+    context.supabase,
     context.userId
   )
 
   const taxInvoiceSignals = await countTaxInvoiceDashboardSignals(
-    context.supabase as unknown as SupabaseClient<Database>,
+    context.supabase,
     context.userId
   )
 
@@ -4521,7 +4716,7 @@ export async function getBillingConsoleData(): Promise<{
   }
 
   const planCtx = await loadPlanContext(
-    context.supabase as unknown as SupabaseClient<Database>,
+    context.supabase,
     context.userId
   )
 
@@ -4601,7 +4796,7 @@ export async function getAuditLogData(opts?: {
   if (!context.supabase) return null
 
   const { effectivePlan } = await loadPlanContext(
-    context.supabase as unknown as SupabaseClient<Database>,
+    context.supabase,
     context.userId
   )
 

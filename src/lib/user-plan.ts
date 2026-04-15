@@ -1,5 +1,3 @@
-import type { SupabaseClient } from "@supabase/supabase-js"
-
 import { normalizePlan } from "@/lib/plan-features"
 import {
   getEffectiveBillingPlan,
@@ -8,7 +6,6 @@ import {
 } from "@/lib/subscription"
 import { getBillingProviderName } from "@/lib/billing/provider"
 import type { BillingPlan } from "@/types/domain"
-import type { Database } from "@/types/supabase"
 
 export type UserPlanFetchResult = {
   plan: BillingPlan
@@ -80,7 +77,8 @@ export function rowToSnapshot(
 }
 
 async function appendBillingEvent(
-  supabase: SupabaseClient<Database>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string,
   kind: string,
   message: string
@@ -97,7 +95,8 @@ async function appendBillingEvent(
 }
 
 export async function syncExpiredStates(
-  supabase: SupabaseClient<Database>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string,
   snap: UserBillingSnapshot
 ) {
@@ -167,7 +166,8 @@ export async function syncExpiredStates(
  * 0014/0015 미적용 환경에서도 최소 기능으로 폴백한다.
  */
 export async function fetchUserBillingState(
-  supabase: SupabaseClient<Database>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string
 ): Promise<UserBillingSnapshot> {
   const extended = await supabase
@@ -197,7 +197,8 @@ export async function fetchUserBillingState(
 }
 
 export async function fetchUserPlanRow(
-  supabase: SupabaseClient<Database>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string
 ): Promise<UserPlanFetchResult> {
   const snap = await fetchUserBillingState(supabase, userId)
@@ -207,7 +208,11 @@ export async function fetchUserPlanRow(
   }
 }
 
-export async function loadPlanContext(supabase: SupabaseClient<Database>, userId: string) {
+export async function loadPlanContext(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  userId: string
+) {
   let billing = await fetchUserBillingState(supabase, userId)
 
   // Dodo 결제 후 웹훅이 누락된 경우 API에서 직접 구독 상태를 확인하여 DB 동기화

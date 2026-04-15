@@ -1,5 +1,3 @@
-import type { SupabaseClient } from "@supabase/supabase-js"
-
 import { getBillingMode, getBillingProvider } from "@/lib/billing/provider"
 import type { BillingWebhookEvent } from "@/lib/billing/provider-types"
 import { PLAN_LABEL } from "@/lib/billing/catalog"
@@ -12,7 +10,6 @@ import { fetchUserBillingState } from "@/lib/user-plan"
 import type { BillingPlan, SubscriptionStatus } from "@/types/domain"
 import type { Database, Json } from "@/types/supabase"
 
-type WritableSupabase = SupabaseClient<Database>
 type BillingEventInsert = Database["public"]["Tables"]["billing_events"]["Insert"]
 type BillingWebhookEventInsert = Database["public"]["Tables"]["billing_webhook_events"]["Insert"]
 type UserUpdate = Database["public"]["Tables"]["users"]["Update"]
@@ -32,7 +29,8 @@ async function resolveWritableSupabase() {
 }
 
 async function insertBillingEvent(
-  supabase: WritableSupabase,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string,
   kind: string,
   message: string,
@@ -51,7 +49,8 @@ async function insertBillingEvent(
 }
 
 async function updateUserBillingState(
-  supabase: WritableSupabase,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string,
   patch: UserUpdate
 ) {
@@ -68,7 +67,8 @@ async function updateUserBillingState(
 }
 
 async function loadStripeCustomerId(
-  supabase: WritableSupabase,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string
 ): Promise<string | null> {
   const { data, error } = await supabase
@@ -83,7 +83,8 @@ async function loadStripeCustomerId(
 }
 
 async function loadBillingUserByIds(
-  supabase: WritableSupabase,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   event: BillingWebhookEvent
 ): Promise<{ id: string; stripe_customer_id: string | null } | null> {
   if (event.userId) {
@@ -243,7 +244,8 @@ function webhookEventMessage(event: BillingWebhookEvent, nextPlan: BillingPlan) 
 }
 
 async function insertOrResumeWebhookEvent(
-  supabase: WritableSupabase,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   row: BillingWebhookEventInsert
 ): Promise<{ proceed: true } | { proceed: false; skipped: boolean }> {
   const { error } = await supabase.from("billing_webhook_events").insert(row)
@@ -275,7 +277,8 @@ async function insertOrResumeWebhookEvent(
 }
 
 async function markWebhookProcessed(
-  supabase: WritableSupabase,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   provider: string,
   eventId: string
 ) {

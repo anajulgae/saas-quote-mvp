@@ -123,9 +123,9 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
               <div>
                 <p className="text-xs font-semibold text-zinc-500">문의</p>
                 <ul className="mt-1 space-y-1 text-xs text-zinc-800">
-                  {detail.recentInquiries.map((r) => (
+                  {detail.recentInquiries.map((r: { id: string; stage?: string | null; created_at: string }) => (
                     <li key={r.id}>
-                      {String((r as { stage?: string }).stage ?? "")} · {new Date(r.created_at).toLocaleDateString("ko-KR")}
+                      {String(r.stage ?? "")} · {new Date(r.created_at).toLocaleDateString("ko-KR")}
                     </li>
                   ))}
                   {detail.recentInquiries.length === 0 ? <li className="text-zinc-600">없음</li> : null}
@@ -134,7 +134,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
               <div>
                 <p className="text-xs font-semibold text-zinc-500">견적</p>
                 <ul className="mt-1 space-y-1 text-xs text-zinc-800">
-                  {detail.recentQuotes.map((r) => (
+                  {detail.recentQuotes.map((r: { id: string; status: string; created_at: string }) => (
                     <li key={r.id}>
                       {r.status} · {new Date(r.created_at).toLocaleDateString("ko-KR")}
                     </li>
@@ -145,7 +145,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
               <div>
                 <p className="text-xs font-semibold text-zinc-500">청구</p>
                 <ul className="mt-1 space-y-1 text-xs text-zinc-800">
-                  {detail.recentInvoices.map((r) => (
+                  {detail.recentInvoices.map((r: { id: string; payment_status: string; created_at: string }) => (
                     <li key={r.id}>
                       {r.payment_status} · {new Date(r.created_at).toLocaleDateString("ko-KR")}
                     </li>
@@ -159,7 +159,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           <section className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
             <h2 className="text-sm font-bold text-zinc-800">고객센터 티켓</h2>
             <ul className="mt-2 space-y-2 text-sm text-zinc-800">
-              {detail.supportTickets.map((t) => (
+              {detail.supportTickets.map((t: { id: string; subject: string; status: string }) => (
                 <li key={t.id}>
                   <Link href={`/admin/support/${t.id}`} className="font-semibold text-primary hover:underline">
                     {t.subject}
@@ -174,7 +174,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           <section className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
             <h2 className="text-sm font-bold text-zinc-800">빌링 이벤트</h2>
             <ul className="mt-2 max-h-60 space-y-1 overflow-y-auto text-xs text-zinc-600">
-              {detail.billingEvents.map((e) => (
+              {detail.billingEvents.map((e: { id: string; kind: string; message: string; created_at: string }) => (
                 <li key={e.id}>
                   <span className="text-zinc-500">{new Date(e.created_at).toLocaleString("ko-KR")}</span> ·{" "}
                   <span className="text-zinc-800">{e.kind}</span> — {e.message}
@@ -187,7 +187,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           <section className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
             <h2 className="text-sm font-bold text-zinc-800">알림톡·메시징 실패</h2>
             <ul className="mt-2 space-y-1 text-xs text-red-700">
-              {detail.messagingFailures.map((m) => (
+              {detail.messagingFailures.map((m: { id: string; status: string; error_message: string | null; created_at: string }) => (
                 <li key={m.id}>
                   {m.status} · {m.error_message ?? "—"} · {new Date(m.created_at).toLocaleString("ko-KR")}
                 </li>
@@ -199,7 +199,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           <section className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
             <h2 className="text-sm font-bold text-zinc-800">세금계산서 이슈</h2>
             <ul className="mt-2 space-y-1 text-xs text-zinc-800">
-              {detail.taxInvoices.map((t) => (
+              {detail.taxInvoices.map((t: { id: string; status: string; failure_reason: string | null }) => (
                 <li key={t.id}>
                   {t.status} · {t.failure_reason ?? "—"}
                 </li>
@@ -211,7 +211,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           <section className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
             <h2 className="text-sm font-bold text-zinc-800">활동 로그</h2>
             <ul className="mt-2 space-y-1 text-xs text-zinc-600">
-              {detail.activityLogs.map((a) => (
+              {detail.activityLogs.map((a: { id: string; action: string; description: string | null; created_at: string }) => (
                 <li key={a.id}>
                   {a.action} — {a.description ?? ""} · {new Date(a.created_at).toLocaleString("ko-KR")}
                 </li>
@@ -223,7 +223,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           <section className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
             <h2 className="text-sm font-bold text-zinc-800">운영 메모 이력</h2>
             <ul className="mt-2 space-y-2 text-sm text-zinc-800">
-              {detail.adminNotes.map((n) => (
+              {detail.adminNotes.map((n: { id: string; body: string; created_at: string }) => (
                 <li key={n.id} className="border-l-2 border-primary/40 pl-3">
                   <p className="text-xs text-zinc-500">{new Date(n.created_at).toLocaleString("ko-KR")}</p>
                   <p className="whitespace-pre-wrap">{n.body}</p>

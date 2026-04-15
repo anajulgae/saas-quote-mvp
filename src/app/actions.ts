@@ -915,6 +915,76 @@ export async function deleteCustomerAction(customerId: string) {
   }
 }
 
+/* ────────── Auto-Remind Rules ────────── */
+
+export async function saveAutoRemindRuleAction(input: {
+  id?: string
+  name: string
+  enabled: boolean
+  triggerType: string
+  triggerDays: number
+  channel: string
+  messageTemplate: string
+}) {
+  try {
+    const { upsertAutoRemindRule } = await import("@/lib/data")
+    await upsertAutoRemindRule(input)
+    revalidatePath("/settings/auto-remind")
+    return { ok: true as const }
+  } catch (error) {
+    return { ok: false as const, error: toUserFacingActionError(error, "규칙 저장에 실패했습니다.") }
+  }
+}
+
+export async function deleteAutoRemindRuleAction(ruleId: string) {
+  try {
+    const { deleteAutoRemindRule } = await import("@/lib/data")
+    await deleteAutoRemindRule(ruleId)
+    revalidatePath("/settings/auto-remind")
+    return { ok: true as const }
+  } catch (error) {
+    return { ok: false as const, error: toUserFacingActionError(error, "규칙 삭제에 실패했습니다.") }
+  }
+}
+
+/* ────────── Recurring Series ────────── */
+
+export async function saveRecurringSeriesAction(input: {
+  id?: string
+  customerId: string
+  name: string
+  enabled: boolean
+  documentType: string
+  frequency: string
+  dayOfMonth: number
+  amount: number
+  title: string
+  notes: string
+  invoiceType: string
+  nextRunDate: string
+  maxRuns: number | null
+}) {
+  try {
+    const { upsertRecurringSeries } = await import("@/lib/data")
+    await upsertRecurringSeries(input)
+    revalidatePath("/settings/recurring")
+    return { ok: true as const }
+  } catch (error) {
+    return { ok: false as const, error: toUserFacingActionError(error, "시리즈 저장에 실패했습니다.") }
+  }
+}
+
+export async function deleteRecurringSeriesAction(seriesId: string) {
+  try {
+    const { deleteRecurringSeries } = await import("@/lib/data")
+    await deleteRecurringSeries(seriesId)
+    revalidatePath("/settings/recurring")
+    return { ok: true as const }
+  } catch (error) {
+    return { ok: false as const, error: toUserFacingActionError(error, "시리즈 삭제에 실패했습니다.") }
+  }
+}
+
 export async function createInvoiceAction(input: {
   customerId: string
   quoteId: string
@@ -1900,10 +1970,8 @@ export async function generateBusinessLandingDraftAction(raw: z.infer<typeof lan
 }
 
 async function requireTaxInvoiceSupabase(): Promise<
-  | {
-      supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>
-      userId: string
-    }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  | { supabase: any; userId: string }
   | { error: string }
 > {
   const session = await getAppSession()

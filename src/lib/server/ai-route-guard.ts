@@ -2,11 +2,12 @@ import { NextResponse } from "next/server"
 
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { assertAiFeatureAllowed, getAuthenticatedUserForApi, type ApiAuthOk } from "@/lib/server/api-auth"
-import type { SupabaseClient } from "@supabase/supabase-js"
 
-import type { Database } from "@/types/supabase"
-
-export type AiRouteGuardOk = { auth: ApiAuthOk; supabase: SupabaseClient<Database> }
+export type AiRouteGuardOk = {
+  auth: ApiAuthOk
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any
+}
 
 export async function guardAiPost(): Promise<{ ok: true; ctx: AiRouteGuardOk } | { ok: false; response: NextResponse }> {
   const auth = await getAuthenticatedUserForApi()

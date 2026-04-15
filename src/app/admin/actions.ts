@@ -9,7 +9,8 @@ async function adminCtx() {
   const admin = await requireAdminAccess()
   const supabase = await createServerSupabaseClient()
   if (!supabase) throw new Error("DB 연결 실패")
-  return { supabase, admin }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return { supabase: supabase as any, admin }
 }
 
 export async function adminUpdateSupportTicketAction(input: {

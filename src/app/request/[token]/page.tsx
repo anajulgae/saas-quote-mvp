@@ -9,7 +9,7 @@ export default async function PublicInquiryFormPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>
-  searchParams: Promise<{ source?: string; slug?: string }>
+  searchParams: Promise<{ source?: string; slug?: string; embed?: string }>
 }) {
   const { token } = await params
   const sp = await searchParams
@@ -17,6 +17,7 @@ export default async function PublicInquiryFormPage({
   const landingSource = src === "landing_page" ? "landing_page" : undefined
   const submissionSource = src === "customer_portal" ? "customer_portal" : undefined
   const landingSlug = typeof sp.slug === "string" && sp.slug.trim() ? sp.slug.trim().slice(0, 80) : undefined
+  const embed = sp.embed === "1"
 
   if (!isSupabaseConfigured()) {
     return (
@@ -37,6 +38,7 @@ export default async function PublicInquiryFormPage({
         landingSource={landingSource}
         submissionSource={submissionSource}
         landingSlug={landingSlug}
+        embed={embed}
       />
     )
   }
@@ -48,6 +50,7 @@ export default async function PublicInquiryFormPage({
       landingSource={landingSource}
       submissionSource={submissionSource}
       landingSlug={landingSlug}
+      embed={embed}
     />
   )
 }

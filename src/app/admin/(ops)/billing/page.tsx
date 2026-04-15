@@ -104,7 +104,7 @@ export default async function AdminBillingPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {b.recentBillingEvents.map((e) => (
+              {b.recentBillingEvents.map((e: { id: string; user_id: string; kind: string; message: string; created_at: string }) => (
                 <TableRow key={e.id} className="border-zinc-200 text-xs text-zinc-700">
                   <TableCell>{new Date(e.created_at).toLocaleString("ko-KR")}</TableCell>
                   <TableCell>
@@ -141,7 +141,7 @@ export default async function AdminBillingPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {b.recentWebhooks.map((w) => (
+              {b.recentWebhooks.map((w: { id: string; created_at: string; provider: string; event_type: string; processed: boolean }) => (
                 <TableRow key={w.id} className="border-zinc-200 text-xs text-zinc-700">
                   <TableCell>{new Date(w.created_at).toLocaleString("ko-KR")}</TableCell>
                   <TableCell>{w.provider}</TableCell>

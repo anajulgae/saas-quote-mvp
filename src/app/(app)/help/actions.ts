@@ -1,7 +1,6 @@
 "use server"
 
 import { redirect } from "next/navigation"
-
 import { getAppSession } from "@/lib/auth"
 import { createAnonSupabaseClient } from "@/lib/supabase/anon"
 import { createServerSupabaseClient } from "@/lib/supabase/server"

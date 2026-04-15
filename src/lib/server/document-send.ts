@@ -1,8 +1,6 @@
 import { createHash } from "node:crypto"
 
-import type { SupabaseClient } from "@supabase/supabase-js"
-
-import type { Database, Json } from "@/types/supabase"
+import type { Json } from "@/types/supabase"
 
 function shortHash(value: string) {
   return createHash("sha256").update(value).digest("hex").slice(0, 16)
@@ -23,7 +21,8 @@ export function buildDocumentSendDedupeKey(input: {
 }
 
 export async function recordDocumentSendUsage(
-  supabase: SupabaseClient<Database>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   input: {
     documentKind: "quote" | "invoice"
     documentId: string

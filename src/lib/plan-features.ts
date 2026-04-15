@@ -20,6 +20,8 @@ export type PlanFeature =
   | "audit_log"
   | "white_label_pdf"
   | "advanced_reports"
+  | "auto_remind"
+  | "recurring_invoices"
 
 /**
  * 기능 허용 — `plan` 인자는 반드시 **effective** 플랜(getEffectiveBillingPlan)을 넘기세요.
@@ -39,6 +41,8 @@ export const FEATURE_GATES: Record<PlanFeature, BillingPlan[]> = {
   audit_log: ["business"],
   white_label_pdf: ["business"],
   advanced_reports: ["business"],
+  auto_remind: ["pro", "business"],
+  recurring_invoices: ["pro", "business"],
 }
 
 export function planAllowsFeature(plan: BillingPlan, feature: PlanFeature): boolean {

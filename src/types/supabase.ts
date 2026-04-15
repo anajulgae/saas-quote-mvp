@@ -9,6 +9,106 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      auto_remind_rules: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          enabled: boolean
+          trigger_type: string
+          trigger_days: number
+          channel: string
+          message_template: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name?: string
+          enabled?: boolean
+          trigger_type?: string
+          trigger_days?: number
+          channel?: string
+          message_template?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          enabled?: boolean
+          trigger_type?: string
+          trigger_days?: number
+          channel?: string
+          message_template?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      recurring_series: {
+        Row: {
+          id: string
+          user_id: string
+          customer_id: string
+          name: string
+          enabled: boolean
+          document_type: string
+          frequency: string
+          day_of_month: number
+          amount: number
+          title: string
+          notes: string
+          invoice_type: string
+          next_run_date: string
+          last_run_at: string | null
+          total_runs: number
+          max_runs: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          customer_id: string
+          name?: string
+          enabled?: boolean
+          document_type?: string
+          frequency?: string
+          day_of_month?: number
+          amount?: number
+          title?: string
+          notes?: string
+          invoice_type?: string
+          next_run_date?: string
+          last_run_at?: string
+          total_runs?: number
+          max_runs?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          customer_id?: string
+          name?: string
+          enabled?: boolean
+          document_type?: string
+          frequency?: string
+          day_of_month?: number
+          amount?: number
+          title?: string
+          notes?: string
+          invoice_type?: string
+          next_run_date?: string
+          last_run_at?: string
+          total_runs?: number
+          max_runs?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       users: {
         Row: {
           id: string

@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react"
 import {
   Activity,
   ArrowRight,
+  Brain,
   CalendarClock,
   CheckCircle2,
   Clock3,
@@ -10,6 +11,8 @@ import {
   MessagesSquare,
   Receipt,
   Sparkles,
+  TrendingDown,
+  TrendingUp,
 } from "lucide-react"
 
 import { ActivityEntry } from "@/components/app/activity-entry"
@@ -192,6 +195,87 @@ export default async function DashboardPage({
       <DashboardOperationalHub hub={hub} notificationPreview={notificationPreview} siteOrigin={siteOrigin} />
 
       {analyticsReport ? <AnalyticsDashboardSection report={analyticsReport} /> : null}
+
+      {analyticsReport && (analyticsReport.forecast || analyticsReport.aiInsights.length > 0) ? (
+        <section className="grid gap-3 sm:gap-4 lg:grid-cols-[1fr_1.2fr]">
+          {analyticsReport.forecast ? (
+            <Card className="border-border/70">
+              <CardHeader className="space-y-0.5 pb-2">
+                <div className="flex items-center gap-2">
+                  {analyticsReport.forecast.trend === "up" ? (
+                    <TrendingUp className="size-4 text-emerald-600" aria-hidden />
+                  ) : analyticsReport.forecast.trend === "down" ? (
+                    <TrendingDown className="size-4 text-red-500" aria-hidden />
+                  ) : (
+                    <Activity className="size-4 text-muted-foreground" aria-hidden />
+                  )}
+                  <CardTitle className="text-base font-semibold">매출 예측</CardTitle>
+                </div>
+                <CardDescription className="text-xs">{analyticsReport.forecast.nextMonthLabel} 예상</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-3xl font-bold tabular-nums tracking-tight">
+                  {formatCurrency(analyticsReport.forecast.nextMonthEstimate)}
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={cn(
+                    "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
+                    analyticsReport.forecast.trend === "up" && "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+                    analyticsReport.forecast.trend === "down" && "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+                    analyticsReport.forecast.trend === "flat" && "bg-muted text-muted-foreground"
+                  )}>
+                    {analyticsReport.forecast.trend === "up" ? "상승 추세" : analyticsReport.forecast.trend === "down" ? "하락 추세" : "보합"}
+                  </span>
+                  <span className={cn(
+                    "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
+                    analyticsReport.forecast.confidence === "high" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+                    analyticsReport.forecast.confidence === "medium" && "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+                    analyticsReport.forecast.confidence === "low" && "bg-muted text-muted-foreground"
+                  )}>
+                    신뢰도: {analyticsReport.forecast.confidence === "high" ? "높음" : analyticsReport.forecast.confidence === "medium" ? "보통" : "낮음"}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">{analyticsReport.forecast.basis}</p>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {analyticsReport.aiInsights.length > 0 ? (
+            <Card className="border-border/70">
+              <CardHeader className="space-y-0.5 pb-2">
+                <div className="flex items-center gap-2">
+                  <Brain className="size-4 text-primary" aria-hidden />
+                  <CardTitle className="text-base font-semibold">AI 매출 인사이트</CardTitle>
+                </div>
+                <CardDescription className="text-xs">데이터 기반 자동 분석 결과</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {analyticsReport.aiInsights.map((insight, idx) => (
+                  <div
+                    key={idx}
+                    className={cn(
+                      "rounded-lg border px-3 py-2",
+                      insight.type === "positive" && "border-emerald-200/70 bg-emerald-50/50 dark:border-emerald-800/40 dark:bg-emerald-950/20",
+                      insight.type === "warning" && "border-amber-200/70 bg-amber-50/50 dark:border-amber-800/40 dark:bg-amber-950/20",
+                      insight.type === "neutral" && "border-border/60 bg-muted/20"
+                    )}
+                  >
+                    <p className={cn(
+                      "text-sm font-medium",
+                      insight.type === "positive" && "text-emerald-800 dark:text-emerald-300",
+                      insight.type === "warning" && "text-amber-800 dark:text-amber-300",
+                      insight.type === "neutral" && "text-foreground"
+                    )}>
+                      {insight.title}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{insight.body}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="grid gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard

@@ -3,7 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { PLAN_LABEL } from "@/lib/billing/catalog"
 import type { Database } from "@/types/supabase"
 
-type Sb = SupabaseClient<Database>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Sb = any
 
 function isoDaysAgo(days: number) {
   const d = new Date()
@@ -349,7 +350,8 @@ export async function getAdminUserDetail(supabase: Sb, userId: string) {
     supabase.from("activity_logs").select("id, action, description, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(15),
   ])
 
-  const portalCustomers = (custRes.data ?? []).filter((c) => Boolean(c.portal_token)).length
+  const portalCustomers = (custRes.data ?? []).filter((c: { portal_token?: string | null }) => Boolean(c.portal_token))
+    .length
 
   return {
     user,
@@ -385,7 +387,6 @@ export async function getAdminBillingOps(supabase: Sb) {
   const nowIso = new Date().toISOString()
   const soon = new Date()
   soon.setUTCDate(soon.getUTCDate() + 7)
-
   const [trialExpiring, pastDue, cancelSoon, noPayment, events, webhooks] = await Promise.all([
     supabase
       .from("users")
@@ -456,10 +457,12 @@ export const SUPPORT_CATEGORY_LABEL: Record<string, string> = {
   cancel: "해지",
 }
 
+export type SupportTicketRow = Database["public"]["Tables"]["support_tickets"]["Row"]
+
 export async function listAdminSupportTickets(
   supabase: Sb,
   filters: { status?: string; category?: string }
-) {
+): Promise<{ rows: SupportTicketRow[]; error?: string }> {
   let q = supabase.from("support_tickets").select("*").order("created_at", { ascending: false }).limit(200)
   if (filters.status && filters.status !== "all") {
     if (filters.status === "new") {
@@ -472,7 +475,7 @@ export async function listAdminSupportTickets(
     q = q.eq("category", filters.category)
   }
   const { data, error } = await q
-  return { rows: data ?? [], error: error?.message }
+  return { rows: (data ?? []) as SupportTicketRow[], error: error?.message }
 }
 
 export async function getAdminSystemSnapshot(supabase: Sb) {
@@ -547,7 +550,7 @@ export async function getAdminUsageSnapshot(supabase: Sb) {
 
   const { data: portalSample } = await supabase.from("customers").select("user_id").not("portal_token", "is", null).limit(5000)
 
-  const portalByUser = new Set((portalSample ?? []).map((c) => c.user_id))
+  const portalByUser = new Set((portalSample ?? []).map((c: { user_id: string }) => c.user_id))
 
   return {
     month: ym,

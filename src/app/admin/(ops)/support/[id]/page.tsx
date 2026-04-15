@@ -12,7 +12,8 @@ export default async function AdminSupportDetailPage({ params }: { params: Promi
   const supabase = await createServerSupabaseClient()
   if (!supabase) notFound()
 
-  const { data: t, error } = await supabase.from("support_tickets").select("*").eq("id", id).maybeSingle()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: t, error } = await (supabase as any).from("support_tickets").select("*").eq("id", id).maybeSingle() as { data: Record<string, any> | null; error: any }
   if (error || !t) notFound()
 
   return (

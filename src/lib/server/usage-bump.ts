@@ -1,9 +1,6 @@
-import type { SupabaseClient } from "@supabase/supabase-js"
-
-import type { Database } from "@/types/supabase"
-
 export async function bumpUserUsage(
-  supabase: SupabaseClient<Database>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   kind: "ai" | "document_send"
 ): Promise<boolean> {
   const { data, error } = await supabase.rpc("bump_user_usage", { p_kind: kind })
@@ -16,7 +13,8 @@ export async function bumpUserUsage(
 }
 
 export async function logAiUsageActivity(
-  supabase: SupabaseClient<Database>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   input: {
     userId: string
     action:

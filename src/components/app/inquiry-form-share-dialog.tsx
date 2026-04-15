@@ -1,7 +1,7 @@
 "use client"
 
-import { useCallback } from "react"
-import { Copy, Mail, MessageCircle, QrCode, Smartphone } from "lucide-react"
+import { useCallback, useMemo, useState } from "react"
+import { Code, Copy, Mail, MessageCircle, QrCode, Smartphone } from "lucide-react"
 import { toast } from "sonner"
 
 import { logInquiryFormShareAction } from "@/app/actions"
@@ -34,6 +34,19 @@ export function InquiryFormShareDialog({
   businessName: string
   replyEmail?: string
 }) {
+  const [showWidget, setShowWidget] = useState(false)
+
+  const widgetSnippet = useMemo(() => {
+    if (!formUrl) return ""
+    try {
+      const origin = new URL(formUrl).origin
+      const urlToken = formUrl.split("/request/")[1]?.split("?")[0] ?? ""
+      return `<script src="${origin}/widget.js" data-token="${urlToken}"></script>`
+    } catch {
+      return ""
+    }
+  }, [formUrl])
+
   const lines = buildShareLines(businessName, formUrl)
   const mailSubject = encodeURIComponent(
     `${businessName.trim() || "문의"} — 온라인 문의 안내`
@@ -141,6 +154,40 @@ export function InquiryFormShareDialog({
             <p className="mt-2 text-center text-[11px] text-muted-foreground">
               인쇄·현장 안내에 활용해 보세요.
             </p>
+          </div>
+        ) : null}
+
+        {formUrl ? (
+          <div className="rounded-xl border border-border/60 bg-card p-4">
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 text-sm font-medium text-foreground"
+              onClick={() => setShowWidget((v) => !v)}
+            >
+              <Code className="size-4" aria-hidden />
+              웹사이트 임베드 위젯
+              <span className="ml-auto text-xs text-muted-foreground">{showWidget ? "접기" : "펼치기"}</span>
+            </button>
+            {showWidget && (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  아래 코드를 외부 웹사이트 HTML에 붙여넣으면 플로팅 견적 요청 버튼이 나타납니다.
+                </p>
+                <pre className="overflow-x-auto rounded-lg border border-border/50 bg-muted/30 p-2 text-[11px] leading-relaxed text-foreground">
+                  {widgetSnippet}
+                </pre>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => copy("link", widgetSnippet)}
+                >
+                  <Copy className="size-3" aria-hidden />
+                  코드 복사
+                </Button>
+              </div>
+            )}
           </div>
         ) : null}
 

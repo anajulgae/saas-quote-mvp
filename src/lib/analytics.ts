@@ -1,5 +1,3 @@
-import type { SupabaseClient } from "@supabase/supabase-js"
-
 import { getAppSession } from "@/lib/auth"
 import {
   demoActivityLogs,
@@ -138,6 +136,20 @@ export type AnalyticsCashSummary = {
   statusCounts: Array<{ key: "pending" | "partially_paid" | "paid" | "overdue"; label: string; count: number }>
 }
 
+export type RevenueForecast = {
+  nextMonthEstimate: number
+  nextMonthLabel: string
+  trend: "up" | "down" | "flat"
+  confidence: "low" | "medium" | "high"
+  basis: string
+}
+
+export type AiInsight = {
+  type: "positive" | "warning" | "neutral"
+  title: string
+  body: string
+}
+
 export type AnalyticsReport = {
   plan: BillingPlan
   effectivePlan: BillingPlan
@@ -197,6 +209,8 @@ export type AnalyticsReport = {
     actionRows: AnalyticsBreakdownRow[]
     documentRows: AnalyticsBreakdownRow[]
   }
+  forecast: RevenueForecast | null
+  aiInsights: AiInsight[]
   definitions: string[]
 }
 
@@ -734,6 +748,158 @@ function normalizeDocumentSendEvents(rows: DocumentSendEventRow[]) {
   }))
 }
 
+function buildForecast(
+  invoices: NormalizedInvoice[],
+  quotes: NormalizedQuote[],
+  boundary: RangeBoundary
+): RevenueForecast | null {
+  const now = new Date()
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  const nextMonthLabel = new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long" }).format(nextMonth)
+
+  const monthlyPaid: number[] = []
+  for (let i = 0; i < 6; i++) {
+    const ms = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const me = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59, 999)
+    const amount = invoices
+      .filter((inv) => {
+        const paidMs = parseDateMs(inv.paidAt)
+        return paidMs != null && paidMs >= ms.getTime() && paidMs <= me.getTime()
+      })
+      .reduce((sum, inv) => sum + inv.amount, 0)
+    monthlyPaid.push(amount)
+  }
+
+  const nonZeroMonths = monthlyPaid.filter((v) => v > 0)
+  if (nonZeroMonths.length < 2) return null
+
+  const [m0, m1, m2] = monthlyPaid
+  const weights = [0.5, 0.3, 0.2]
+  const available = monthlyPaid.slice(0, 3).filter((_, i) => i < nonZeroMonths.length)
+  let estimate = 0
+  let totalWeight = 0
+  for (let i = 0; i < available.length; i++) {
+    estimate += available[i] * (weights[i] ?? 0.1)
+    totalWeight += weights[i] ?? 0.1
+  }
+  estimate = totalWeight > 0 ? estimate / totalWeight : 0
+
+  const pendingQuoteValue = quotes
+    .filter((q) => q.status === "sent" || q.status === "draft")
+    .reduce((sum, q) => sum + q.total, 0)
+  estimate += pendingQuoteValue * 0.15
+
+  const trend: "up" | "down" | "flat" =
+    m0 > m1 * 1.1 ? "up" : m0 < m1 * 0.9 ? "down" : "flat"
+
+  const confidence: "low" | "medium" | "high" =
+    nonZeroMonths.length >= 4 ? "high" : nonZeroMonths.length >= 2 ? "medium" : "low"
+
+  return {
+    nextMonthEstimate: Math.round(estimate),
+    nextMonthLabel,
+    trend,
+    confidence,
+    basis: `최근 ${nonZeroMonths.length}개월 가중평균 + 진행 중 견적 반영`,
+  }
+}
+
+function buildAiInsights(data: {
+  currentPaidAmount: number
+  previousPaidAmount: number
+  currentOutstanding: number
+  currentOverdueInvoices: NormalizedInvoice[]
+  approvalRate: number | null
+  repeatCustomers: number
+  inquiriesInRange: NormalizedInquiry[]
+  quotesCreatedInRange: NormalizedQuote[]
+  invoicesCreatedInRange: NormalizedInvoice[]
+  previousInquiries: NormalizedInquiry[]
+  forecast: RevenueForecast | null
+}): AiInsight[] {
+  const insights: AiInsight[] = []
+
+  if (data.currentPaidAmount > data.previousPaidAmount * 1.2) {
+    insights.push({
+      type: "positive",
+      title: "매출 성장 감지",
+      body: `이번 기간 입금액이 이전 대비 ${Math.round(((data.currentPaidAmount - data.previousPaidAmount) / Math.max(data.previousPaidAmount, 1)) * 100)}% 증가했습니다. 현재 추세를 유지하세요.`,
+    })
+  } else if (data.previousPaidAmount > 0 && data.currentPaidAmount < data.previousPaidAmount * 0.7) {
+    insights.push({
+      type: "warning",
+      title: "매출 감소 주의",
+      body: "이번 기간 입금액이 이전 대비 크게 줄었습니다. 견적 발송과 팔로업 빈도를 점검해 보세요.",
+    })
+  }
+
+  if (data.currentOverdueInvoices.length >= 3) {
+    const total = data.currentOverdueInvoices.reduce((s, inv) => s + inv.amount, 0)
+    insights.push({
+      type: "warning",
+      title: "연체 집중 관리 필요",
+      body: `연체 ${data.currentOverdueInvoices.length}건 (${new Intl.NumberFormat("ko-KR").format(total)}원)이 쌓여 있습니다. 우선순위 수금 활동을 추천합니다.`,
+    })
+  }
+
+  if (data.approvalRate != null && data.approvalRate < 0.3 && data.quotesCreatedInRange.length >= 5) {
+    insights.push({
+      type: "warning",
+      title: "견적 승인율 저조",
+      body: `견적 승인율이 ${(data.approvalRate * 100).toFixed(0)}%로 낮습니다. 가격 경쟁력이나 견적 내용을 재검토해 보세요.`,
+    })
+  } else if (data.approvalRate != null && data.approvalRate > 0.7) {
+    insights.push({
+      type: "positive",
+      title: "높은 견적 승인율",
+      body: `승인율 ${(data.approvalRate * 100).toFixed(0)}% — 고객 신뢰가 매우 높습니다.`,
+    })
+  }
+
+  if (data.inquiriesInRange.length > data.previousInquiries.length * 1.5 && data.previousInquiries.length > 0) {
+    insights.push({
+      type: "positive",
+      title: "문의 유입 급증",
+      body: `이전 기간 대비 문의가 ${Math.round(((data.inquiriesInRange.length - data.previousInquiries.length) / data.previousInquiries.length) * 100)}% 증가했습니다. 리드 전환에 집중하세요.`,
+    })
+  }
+
+  if (data.forecast && data.forecast.trend === "up") {
+    insights.push({
+      type: "positive",
+      title: "매출 상승 추세",
+      body: `${data.forecast.nextMonthLabel} 예상 매출: ${new Intl.NumberFormat("ko-KR").format(data.forecast.nextMonthEstimate)}원. 상승 추세가 이어지고 있습니다.`,
+    })
+  } else if (data.forecast && data.forecast.trend === "down") {
+    insights.push({
+      type: "warning",
+      title: "매출 하락 추세",
+      body: `${data.forecast.nextMonthLabel} 예상 매출이 하향 추세입니다. 신규 문의 확보와 기존 고객 유지에 주력하세요.`,
+    })
+  }
+
+  if (data.repeatCustomers > 0 && data.inquiriesInRange.length > 0) {
+    const repeatRatio = data.repeatCustomers / new Set(data.inquiriesInRange.map((i) => i.customerId)).size
+    if (repeatRatio > 0.5) {
+      insights.push({
+        type: "positive",
+        title: "재구매 고객 비중 높음",
+        body: `문의 고객 중 ${(repeatRatio * 100).toFixed(0)}%가 재구매 고객입니다. 안정적인 매출 기반을 갖추고 있습니다.`,
+      })
+    }
+  }
+
+  if (!insights.length) {
+    insights.push({
+      type: "neutral",
+      title: "전반적으로 안정",
+      body: "특별한 주의가 필요한 지표가 없습니다. 현재 운영 패턴을 유지하세요.",
+    })
+  }
+
+  return insights.slice(0, 5)
+}
+
 function buildReport(input: {
   plan: BillingPlan
   effectivePlan: BillingPlan
@@ -1258,6 +1424,22 @@ function buildReport(input: {
     highlights.push("선택한 기간에서 뚜렷한 부정 신호는 보이지 않습니다.")
   }
 
+  const forecast = buildForecast(invoices, quotes, boundary)
+
+  const aiInsights = buildAiInsights({
+    currentPaidAmount,
+    previousPaidAmount,
+    currentOutstanding,
+    currentOverdueInvoices,
+    approvalRate: quoteApprovalRate,
+    repeatCustomers,
+    inquiriesInRange,
+    quotesCreatedInRange,
+    invoicesCreatedInRange,
+    previousInquiries,
+    forecast,
+  })
+
   return {
     plan,
     effectivePlan,
@@ -1330,6 +1512,8 @@ function buildReport(input: {
       actionRows,
       documentRows,
     },
+    forecast,
+    aiInsights,
     definitions: [
       "신규 문의 = 선택 기간에 생성된 문의입니다.",
       "문의→견적 전환 = 해당 기간 문의 중 견적이 1건 이상 연결된 고유 문의 비율입니다.",
@@ -1443,7 +1627,7 @@ export async function getAnalyticsReportForCurrentUser(
       .from("activity_logs")
       .select("id, customer_id, inquiry_id, quote_id, invoice_id, action, metadata, created_at")
       .eq("user_id", userId),
-    loadPlanContext(supabase as SupabaseClient<Database>, userId),
+    loadPlanContext(supabase, userId),
   ])
 
   if (customerError) throw customerError

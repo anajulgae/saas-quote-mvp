@@ -699,6 +699,81 @@ export function SettingsForm({
         </div>
         <div className="relative flex justify-center">
           <span className="bg-background px-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            자동화
+          </span>
+        </div>
+      </div>
+
+      <Card className="border-border/70" id="auto-remind">
+        <CardHeader className="space-y-1 pb-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle className="text-base font-semibold">자동 리마인드 스케줄러</CardTitle>
+            <SectionBadge>Pro</SectionBadge>
+          </div>
+          <CardDescription className="text-xs leading-relaxed">
+            입금 기한 경과 청구에 자동으로 이메일 리마인드를 발송합니다. 매일 오전 9시에 규칙을 확인합니다.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center gap-2">
+          {planAllowsFeature(currentPlan, "auto_remind") ? (
+            <Link
+              href="/settings/auto-remind"
+              className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
+            >
+              규칙 관리
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/billing?plan=pro"
+                className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
+              >
+                Pro로 업그레이드
+              </Link>
+              <p className="text-xs text-muted-foreground">Pro 이상 플랜에서 자동 리마인드를 사용할 수 있습니다.</p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/70" id="recurring-invoices">
+        <CardHeader className="space-y-1 pb-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle className="text-base font-semibold">반복 견적/청구 자동화</CardTitle>
+            <SectionBadge>Pro</SectionBadge>
+          </div>
+          <CardDescription className="text-xs leading-relaxed">
+            매월·매분기 반복되는 견적과 청구를 자동으로 생성합니다. 정기 거래 고객 관리에 활용하세요.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center gap-2">
+          {planAllowsFeature(currentPlan, "recurring_invoices") ? (
+            <Link
+              href="/settings/recurring"
+              className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
+            >
+              반복 설정 관리
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/billing?plan=pro"
+                className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
+              >
+                Pro로 업그레이드
+              </Link>
+              <p className="text-xs text-muted-foreground">Pro 이상 플랜에서 반복 자동화를 사용할 수 있습니다.</p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="relative py-1">
+        <div className="absolute inset-0 flex items-center" aria-hidden>
+          <span className="w-full border-t border-border/60" />
+        </div>
+        <div className="relative flex justify-center">
+          <span className="bg-background px-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
             템플릿
           </span>
         </div>

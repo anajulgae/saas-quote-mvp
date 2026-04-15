@@ -1,5 +1,3 @@
-import type { SupabaseClient } from "@supabase/supabase-js"
-
 import { computeTaxAmountsFromInvoice } from "@/lib/tax-invoice/amounts"
 import { getTaxInvoiceProvider } from "@/lib/tax-invoice/registry"
 import { validateTaxInvoiceReadiness } from "@/lib/tax-invoice/validate-readiness"
@@ -71,7 +69,8 @@ function credentialsFromConfig(config: TaxInvoiceAspProviderConfig): Record<stri
 }
 
 export async function fetchTaxInvoicesByInvoiceIds(
-  supabase: SupabaseClient<Database>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string,
   invoiceIds: string[]
 ): Promise<Map<string, TaxInvoice>> {
@@ -95,7 +94,8 @@ export async function fetchTaxInvoicesByInvoiceIds(
 }
 
 export async function fetchTaxInvoiceSummaryForCustomer(
-  supabase: SupabaseClient<Database>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string,
   customerId: string
 ): Promise<{
@@ -142,7 +142,8 @@ export async function fetchTaxInvoiceSummaryForCustomer(
 }
 
 export async function countTaxInvoiceDashboardSignals(
-  supabase: SupabaseClient<Database>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string
 ): Promise<{ needAttention: number; failed: number }> {
   const { data: invRows, error: invErr } = await supabase
@@ -163,7 +164,9 @@ export async function countTaxInvoiceDashboardSignals(
     throw taxErr
   }
 
-  const taxByInv = new Map((taxRows ?? []).map((r) => [r.invoice_id, r.status as string]))
+  const taxByInv = new Map(
+    (taxRows ?? []).map((r: { invoice_id: string; status: string }) => [r.invoice_id, r.status as string])
+  )
 
   let needAttention = 0
   let failed = 0
@@ -188,7 +191,8 @@ export async function countTaxInvoiceDashboardSignals(
 }
 
 export async function saveTaxInvoiceAspSettings(
-  supabase: SupabaseClient<Database>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string,
   input: {
     provider: string
@@ -212,7 +216,8 @@ export async function saveTaxInvoiceAspSettings(
 }
 
 export async function testTaxInvoiceAspConnection(
-  supabase: SupabaseClient<Database>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string
 ): Promise<{ ok: true; message: string } | { ok: false; message: string }> {
   const { data: row, error } = await supabase
@@ -267,7 +272,8 @@ export async function testTaxInvoiceAspConnection(
 }
 
 export async function updateInvoiceTaxFlags(
-  supabase: SupabaseClient<Database>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string,
   invoiceId: string,
   input: {
@@ -295,7 +301,8 @@ export async function updateInvoiceTaxFlags(
 }
 
 export async function updateCustomerTaxProfile(
-  supabase: SupabaseClient<Database>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string,
   customerId: string,
   input: {
@@ -327,7 +334,8 @@ export async function updateCustomerTaxProfile(
 }
 
 async function loadInvoiceBundle(
-  supabase: SupabaseClient<Database>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string,
   invoiceId: string
 ): Promise<{
@@ -500,7 +508,8 @@ async function loadInvoiceBundle(
 }
 
 export async function prepareTaxInvoiceForInvoice(
-  supabase: SupabaseClient<Database>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string,
   invoiceId: string
 ): Promise<TaxInvoice> {
@@ -592,7 +601,8 @@ export async function prepareTaxInvoiceForInvoice(
 }
 
 export async function issueTaxInvoiceForInvoice(
-  supabase: SupabaseClient<Database>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string,
   invoiceId: string
 ): Promise<TaxInvoice> {
@@ -694,7 +704,8 @@ export async function issueTaxInvoiceForInvoice(
 }
 
 export async function refreshTaxInvoiceStatus(
-  supabase: SupabaseClient<Database>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string,
   taxInvoiceId: string
 ): Promise<TaxInvoice> {

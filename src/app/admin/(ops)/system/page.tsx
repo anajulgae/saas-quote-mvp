@@ -28,7 +28,7 @@ export default async function AdminSystemPage() {
           <p className="text-sm text-zinc-600">아직 적재된 운영 오류 이벤트가 없습니다. API·워커에서 insert 하면 여기에 뜹니다.</p>
         ) : (
           <ul className="space-y-2 text-sm text-zinc-700">
-            {s.opsErrors.map((e) => (
+            {s.opsErrors.map((e: { id: string; created_at: string; source: string; kind: string; message: string }) => (
               <li key={e.id} className="rounded border border-zinc-200 bg-white px-3 py-2 shadow-sm">
                 <span className="text-xs text-zinc-500">{new Date(e.created_at).toLocaleString("ko-KR")}</span>
                 <span className="ml-2 text-xs font-mono text-amber-800">{e.source}</span>
@@ -45,7 +45,7 @@ export default async function AdminSystemPage() {
           <p className="text-sm text-zinc-600">실패·오류 키워드가 포함된 빌링 메시지가 없습니다.</p>
         ) : (
           <ul className="space-y-1 text-xs text-zinc-600">
-            {s.billingEventsIssues.map((e) => (
+            {s.billingEventsIssues.map((e: { id: string; user_id: string; kind: string; message: string }) => (
               <li key={e.id}>
                 <Link href={`/admin/users/${e.user_id}`} className="text-primary hover:underline">
                   사용자
@@ -62,7 +62,7 @@ export default async function AdminSystemPage() {
           <p className="text-sm text-zinc-600">실패 로그 없음.</p>
         ) : (
           <ul className="space-y-1 text-xs text-red-700">
-            {s.messagingFailures.map((m) => (
+            {s.messagingFailures.map((m: { id: string; user_id: string; status: string; error_message: string | null }) => (
               <li key={m.id}>
                 <Link href={`/admin/users/${m.user_id}`} className="text-primary hover:underline">
                   사용자
@@ -79,7 +79,7 @@ export default async function AdminSystemPage() {
           <p className="text-sm text-zinc-600">대기 중인 웹훅 없음.</p>
         ) : (
           <ul className="space-y-1 text-xs text-amber-900">
-            {s.webhooksPending.map((w) => (
+            {s.webhooksPending.map((w: { id: string; provider: string; event_type: string; created_at: string }) => (
               <li key={w.id}>
                 {w.provider} · {w.event_type} · {new Date(w.created_at).toLocaleString("ko-KR")}
               </li>
@@ -93,7 +93,7 @@ export default async function AdminSystemPage() {
           <p className="text-sm text-zinc-600">실패 사유 없음.</p>
         ) : (
           <ul className="space-y-1 text-xs text-zinc-700">
-            {s.taxFailures.map((t) => (
+            {s.taxFailures.map((t: { id: string; user_id: string; failure_reason: string }) => (
               <li key={t.id}>
                 <Link href={`/admin/users/${t.user_id}`} className="text-primary hover:underline">
                   사용자
