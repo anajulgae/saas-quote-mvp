@@ -54,11 +54,11 @@ export function SettingsMessagingChannelCard({
       <CardHeader className="space-y-1 pb-3">
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle className="text-base font-semibold">메시지 채널 연결 (BYOA)</CardTitle>
-          <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+          <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
             Pro · 카카오 알림톡
           </span>
         </div>
-        <CardDescription className="text-xs leading-relaxed">
+        <CardDescription className="text-sm leading-relaxed">
           Bill-IO는 메시지 비용을 청구하지 않습니다. Solapi·NHN 등{" "}
           <strong className="font-medium text-foreground/90">본인 계정</strong>으로 충전·발송하고, 아래 HTTPS
           엔드포인트는 <strong className="font-medium text-foreground/90">귀하의 프록시</strong>를 가리키게
@@ -72,8 +72,8 @@ export function SettingsMessagingChannelCard({
             <BookOpen className="size-3.5" aria-hidden />
             알림톡 설정 가이드 (전체)
           </Link>
-          <span className="hidden text-[10px] text-muted-foreground sm:inline">·</span>
-          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
+          <span className="hidden text-xs text-muted-foreground sm:inline">·</span>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
             <a
               href="https://business.kakao.com/"
               target="_blank"
@@ -124,7 +124,7 @@ export function SettingsMessagingChannelCard({
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
             <label className="text-xs font-medium">HTTPS 발송 엔드포인트</label>
-            <p className="text-[10px] leading-snug text-muted-foreground">
+            <p className="text-sm leading-snug text-muted-foreground">
               POST로 <code className="rounded bg-muted px-1">BillIoMessagingPayloadV1</code> JSON을 받는 주소
               (예: Cloud Functions, 자체 API)
             </p>
@@ -148,7 +148,7 @@ export function SettingsMessagingChannelCard({
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium">API 키 / 토큰 값</label>
-            <p className="text-[10px] text-muted-foreground">프록시가 요구하는 값(비어 있으면 헤더만 전송)</p>
+            <p className="text-xs text-muted-foreground">프록시가 요구하는 값(비어 있으면 헤더만 전송)</p>
             <Input
               className="h-9 font-mono text-xs"
               type="password"

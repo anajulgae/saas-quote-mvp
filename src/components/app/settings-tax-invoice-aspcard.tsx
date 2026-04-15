@@ -90,11 +90,11 @@ export function SettingsTaxInvoiceAspCard({
       <CardHeader className="space-y-1 pb-3">
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle className="text-base font-semibold">전자세금계산서 ASP 연동</CardTitle>
-          <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+          <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
             Pro · 사용자 BYOA
           </span>
         </div>
-        <CardDescription className="text-xs leading-relaxed">
+        <CardDescription className="text-sm leading-relaxed">
           Bill-IO가 대신 과금하는 발행 서비스가 아닙니다. 등록한 발급대행(ASP) 계정으로 청구 화면에서 발행 요청을 보냅니다.
           자격증명은 DB에 저장되므로 운영 환경에서는 암호화·Vault 적용을 권장합니다.
         </CardDescription>
@@ -182,7 +182,7 @@ export function SettingsTaxInvoiceAspCard({
             </div>
 
             {cfg.lastTestAt ? (
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 마지막 연결 테스트: {formatDateTime(cfg.lastTestAt)}
                 {cfg.lastTestOk === false && cfg.lastTestError ? (
                   <span className="ml-1 text-destructive">· {cfg.lastTestError}</span>
@@ -190,7 +190,7 @@ export function SettingsTaxInvoiceAspCard({
                 {cfg.lastTestOk ? <span className="ml-1 text-emerald-700 dark:text-emerald-300">· 성공</span> : null}
               </p>
             ) : (
-              <p className="text-[11px] text-muted-foreground">아직 연결 테스트 기록이 없습니다.</p>
+              <p className="text-xs text-muted-foreground">아직 연결 테스트 기록이 없습니다.</p>
             )}
 
             <div className="flex flex-wrap gap-2">

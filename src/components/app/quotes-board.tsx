@@ -260,6 +260,7 @@ function QuotesBoardPanel({
   quoteActivityByQuoteId,
   invoicesByQuoteId,
   currentPlan,
+  kakaoByoaConfigured,
 }: {
   quotes: QuoteWithItems[]
   customers: Customer[]
@@ -277,6 +278,7 @@ function QuotesBoardPanel({
   quoteActivityByQuoteId: Record<string, ActivityLog[]>
   invoicesByQuoteId: Record<string, QuoteLinkedInvoiceStub[]>
   currentPlan: BillingPlan
+  kakaoByoaConfigured: boolean
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -839,10 +841,10 @@ function QuotesBoardPanel({
   const formFields = (
     <div className="grid gap-5">
       <section className="rounded-lg border border-border/60 bg-muted/10 px-3 py-3 sm:px-4">
-        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           1) 고객 · 문의
         </p>
-        <p className="mb-3 text-[11px] leading-snug text-muted-foreground sm:grid sm:grid-cols-2 sm:gap-4">
+        <p className="mb-3 text-sm leading-snug text-muted-foreground sm:grid sm:grid-cols-2 sm:gap-4">
           <span>
             <span className="font-medium text-foreground/80">왼쪽</span> — 견적을 받을{" "}
             <span className="font-medium text-foreground">거래처(고객)</span>
@@ -856,11 +858,11 @@ function QuotesBoardPanel({
           <div className="space-y-1.5 sm:border-l-2 sm:border-primary/35 sm:pl-3">
             <div className="flex flex-wrap items-center gap-2">
               <label className="text-sm font-semibold tracking-tight">거래처(고객)</label>
-              <span className="rounded border border-destructive/25 bg-destructive/10 px-1.5 py-px text-[10px] font-semibold text-destructive">
+              <span className="rounded border border-destructive/25 bg-destructive/10 px-1.5 py-px text-xs font-semibold text-destructive">
                 필수
               </span>
             </div>
-            <p className="text-[11px] leading-snug text-muted-foreground">
+            <p className="text-sm leading-snug text-muted-foreground">
               견적서·안내에 쓰이는 상대 고객입니다.
             </p>
             <Select
@@ -898,11 +900,11 @@ function QuotesBoardPanel({
           <div className="space-y-1.5 sm:border-l-2 sm:border-border/80 sm:pl-3">
             <div className="flex flex-wrap items-center gap-2">
               <label className="text-sm font-semibold tracking-tight">연결 문의</label>
-              <span className="rounded border border-border/60 bg-background/80 px-1.5 py-px text-[10px] font-medium text-muted-foreground">
+              <span className="rounded border border-border/60 bg-background/80 px-1.5 py-px text-xs font-medium text-muted-foreground">
                 선택
               </span>
             </div>
-            <p className="text-[11px] leading-snug text-muted-foreground">
+            <p className="text-sm leading-snug text-muted-foreground">
               {form.customerId
                 ? "문의 연결은 선택입니다. 고를 경우 제목·요약이 채워지며, 없어도 견적 작성은 가능합니다."
                 : "왼쪽에서 고객을 먼저 고르면, 해당 고객의 문의만 여기에 나타납니다."}
@@ -916,7 +918,7 @@ function QuotesBoardPanel({
                 <div className="flex min-h-9 items-center rounded-lg border border-border/60 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
                   이 고객에 연결 가능한 문의가 없습니다
                 </div>
-                <p className="text-[10px] leading-snug text-muted-foreground">
+                <p className="text-sm leading-snug text-muted-foreground">
                   문의 없이도 견적을 이어서 작성할 수 있습니다.
                 </p>
               </div>
@@ -977,18 +979,18 @@ function QuotesBoardPanel({
       </section>
 
       <section className="space-y-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           2) 제목 · 요약
         </p>
         {form.inquiryId ? (
-          <p className="rounded-md border border-primary/20 bg-primary/[0.04] px-2.5 py-1.5 text-[11px] text-foreground/90">
+          <p className="rounded-md border border-primary/20 bg-primary/[0.04] px-2.5 py-1.5 text-xs text-foreground/90">
             연결한 문의를 기준으로 제목·요약을 채웠습니다. 필요하면 자유롭게 수정하세요.
           </p>
         ) : null}
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <label className="text-xs font-semibold">견적 제목</label>
-            <span className="rounded border border-destructive/25 bg-destructive/10 px-1.5 py-px text-[10px] font-semibold text-destructive">
+            <span className="rounded border border-destructive/25 bg-destructive/10 px-1.5 py-px text-xs font-semibold text-destructive">
               필수
             </span>
           </div>
@@ -1003,7 +1005,7 @@ function QuotesBoardPanel({
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-semibold">견적 요약</label>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             설정의 기본 견적 템플릿·문의 내용이 여기에 들어갑니다. 견적 상단 안내 문구로 쓰입니다.
           </p>
           <Textarea
@@ -1021,8 +1023,8 @@ function QuotesBoardPanel({
           </summary>
           <div className="grid gap-3 border-t border-border/40 px-3 py-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label className="text-[11px] font-medium text-muted-foreground">진행 상태</label>
-              <p className="text-[10px] text-muted-foreground">처음에는 초안으로 두고, 발송 후 바꿀 수 있습니다.</p>
+              <label className="text-xs font-medium text-muted-foreground">진행 상태</label>
+              <p className="text-xs text-muted-foreground">처음에는 초안으로 두고, 발송 후 바꿀 수 있습니다.</p>
               <Select
                 value={form.status}
                 items={quoteStatusSelectItems}
@@ -1046,8 +1048,8 @@ function QuotesBoardPanel({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[11px] font-medium text-muted-foreground">발송일 (선택)</label>
-              <p className="text-[10px] text-muted-foreground">실제 발송한 날짜를 나중에 넣어도 됩니다.</p>
+              <label className="text-xs font-medium text-muted-foreground">발송일 (선택)</label>
+              <p className="text-xs text-muted-foreground">실제 발송한 날짜를 나중에 넣어도 됩니다.</p>
               <Input
                 type="date"
                 className="h-9 bg-background/80"
@@ -1069,10 +1071,10 @@ function QuotesBoardPanel({
       <section className="space-y-2">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               3) 견적 항목
             </p>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               항목별 공급가 합계에 부가세 10%를 더해 총액을 맞춥니다.
             </p>
           </div>
@@ -1096,7 +1098,7 @@ function QuotesBoardPanel({
         <div className="hidden overflow-x-auto rounded-lg border border-border/70 md:block">
           <table className="w-full min-w-[640px] border-collapse text-sm">
             <thead>
-              <tr className="border-b border-border/60 bg-muted/40 text-left text-[11px] font-medium text-muted-foreground">
+              <tr className="border-b border-border/60 bg-muted/40 text-left text-xs font-medium text-muted-foreground">
                 <th className="px-2 py-2 pl-3">
                   항목명 <span className="text-destructive">*</span>
                 </th>
@@ -1252,7 +1254,7 @@ function QuotesBoardPanel({
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] text-muted-foreground">항목명 *</label>
+                  <label className="text-xs text-muted-foreground">항목명 *</label>
                   <Input
                     className="h-9"
                     value={item.name}
@@ -1271,7 +1273,7 @@ function QuotesBoardPanel({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] text-muted-foreground">설명 (선택)</label>
+                  <label className="text-xs text-muted-foreground">설명 (선택)</label>
                   <Input
                     className="h-8 text-sm"
                     value={item.description}
@@ -1283,7 +1285,7 @@ function QuotesBoardPanel({
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="space-y-1">
-                    <label className="text-[11px] text-muted-foreground">수량 *</label>
+                    <label className="text-xs text-muted-foreground">수량 *</label>
                     <Input
                       className="h-9 text-right tabular-nums"
                       value={item.quantity}
@@ -1295,7 +1297,7 @@ function QuotesBoardPanel({
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[11px] text-muted-foreground">단가 *</label>
+                    <label className="text-xs text-muted-foreground">단가 *</label>
                     <Input
                       className="h-9 text-right tabular-nums"
                       value={item.unitPrice}
@@ -1316,7 +1318,7 @@ function QuotesBoardPanel({
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[11px] text-muted-foreground">금액</label>
+                    <label className="text-xs text-muted-foreground">금액</label>
                     <div className="flex h-9 items-center justify-end text-sm font-semibold tabular-nums">
                       {formatCurrency(line)}
                     </div>
@@ -1330,11 +1332,11 @@ function QuotesBoardPanel({
 
       <section className="grid gap-4 lg:grid-cols-[1fr_min(100%,320px)] lg:items-start lg:gap-6">
         <div className="space-y-1.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             4) 유효기한
           </p>
           <label className="text-xs font-medium">견적 유효기한</label>
-          <p className="text-[11px] text-muted-foreground">이 날짜 이후 제안이 만료된 것으로 볼 수 있습니다.</p>
+          <p className="text-xs text-muted-foreground">이 날짜 이후 제안이 만료된 것으로 볼 수 있습니다.</p>
           <Input
             type="date"
             className="h-9 max-w-xs"
@@ -1348,8 +1350,8 @@ function QuotesBoardPanel({
           key={`tot-${previewTotal.total}-${previewTotal.subtotal}`}
           className="flex flex-col justify-center rounded-xl border border-primary/25 bg-gradient-to-b from-primary/[0.06] to-background/95 px-4 py-3.5 shadow-sm ring-1 ring-primary/10 backdrop-blur-sm lg:sticky lg:top-4 lg:min-w-[280px] lg:self-start lg:shadow-md"
         >
-          <p className="text-[11px] font-bold uppercase tracking-wide text-primary">합계</p>
-          <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
+          <p className="text-xs font-bold uppercase tracking-wide text-primary">합계</p>
+          <p className="mt-0.5 text-sm leading-snug text-muted-foreground">
             항목마다 수량×단가를 더한 뒤, 부가세 10%를 더합니다. 입력이 바뀌면 즉시 반영됩니다.
           </p>
           <div className="mt-3 space-y-2 text-sm">
@@ -1422,7 +1424,7 @@ function QuotesBoardPanel({
                   </span>
                 ) : null}
               </DialogTitle>
-              <DialogDescription className="text-xs leading-relaxed">
+              <DialogDescription className="text-sm leading-relaxed">
                 고객과 문의를 고른 뒤 항목·금액을 입력하면 공급가·부가세·총액이 바로 계산됩니다.
               </DialogDescription>
             </DialogHeader>
@@ -1431,7 +1433,7 @@ function QuotesBoardPanel({
             {formFields}
           </div>
           <div className="flex shrink-0 flex-col gap-2 border-t border-border/60 bg-background/95 px-4 py-3 shadow-[0_-6px_16px_rgba(0,0,0,0.06)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:shadow-[0_-6px_20px_rgba(0,0,0,0.25)]">
-            <p className="text-[11px] leading-snug text-muted-foreground sm:max-w-[58%]">
+            <p className="text-sm leading-snug text-muted-foreground sm:max-w-[58%]">
               {!formValidation.ok ? (
                 <span className="font-medium text-amber-900 dark:text-amber-100">
                   위쪽 노란색 안내에 적힌 항목을 채우면 저장됩니다. 저장 버튼 위에 마우스를 올리면
@@ -1538,7 +1540,7 @@ function QuotesBoardPanel({
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
             <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-muted-foreground">고객</label>
+                <label className="text-xs font-medium text-muted-foreground">고객</label>
                 <Select
                   value={customerFilterId}
                   items={quoteListCustomerFilterItems}
@@ -1558,7 +1560,7 @@ function QuotesBoardPanel({
                 </Select>
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-muted-foreground">정렬</label>
+                <label className="text-xs font-medium text-muted-foreground">정렬</label>
                 <Select
                   value={sortBy}
                   items={quoteToolbarSortSelectItems}
@@ -1588,7 +1590,7 @@ function QuotesBoardPanel({
           {advancedFiltersOpen ? (
             <div className="grid gap-3 border-t border-border/50 pt-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-muted-foreground">작성일부터</label>
+                <label className="text-xs font-medium text-muted-foreground">작성일부터</label>
                 <Input
                   type="date"
                   className="h-9"
@@ -1597,7 +1599,7 @@ function QuotesBoardPanel({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-muted-foreground">작성일까지</label>
+                <label className="text-xs font-medium text-muted-foreground">작성일까지</label>
                 <Input
                   type="date"
                   className="h-9"
@@ -1606,7 +1608,7 @@ function QuotesBoardPanel({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-muted-foreground">총액 최소(원)</label>
+                <label className="text-xs font-medium text-muted-foreground">총액 최소(원)</label>
                 <Input
                   className="h-9 tabular-nums"
                   inputMode="numeric"
@@ -1616,7 +1618,7 @@ function QuotesBoardPanel({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-muted-foreground">총액 최대(원)</label>
+                <label className="text-xs font-medium text-muted-foreground">총액 최대(원)</label>
                 <Input
                   className="h-9 tabular-nums"
                   inputMode="numeric"
@@ -1634,7 +1636,7 @@ function QuotesBoardPanel({
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/15 px-3 py-2">
           <div className="min-w-0">
             <p className="text-xs font-semibold text-foreground">보기 방식</p>
-            <p className="text-[11px] leading-snug text-muted-foreground">
+            <p className="text-sm leading-snug text-muted-foreground">
               기본은 리스트이며, 캘린더는 유효기한 중심으로 보는 보조 뷰입니다.
             </p>
           </div>
@@ -1674,7 +1676,7 @@ function QuotesBoardPanel({
         <Card className="border border-primary/30 bg-gradient-to-b from-primary/[0.05] to-background shadow-sm">
           <CardContent className="space-y-2.5 p-3 sm:p-4">
             <div className="space-y-1">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">첫 견적</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">첫 견적</p>
               <h2 className="text-base font-bold tracking-tight sm:text-lg">
                 {hasInquiries
                   ? "문의를 연결해 첫 견적을 만들어보세요"
@@ -1688,7 +1690,7 @@ function QuotesBoardPanel({
             {hasInquiries ? (
               <div className="flex flex-col gap-2 rounded-md border border-border/60 bg-background/80 p-2.5 sm:flex-row sm:items-end">
                 <div className="min-w-0 flex-1 space-y-1">
-                  <label className="text-[11px] font-medium text-muted-foreground">빠른 시작 · 문의 선택</label>
+                  <label className="text-xs font-medium text-muted-foreground">빠른 시작 · 문의 선택</label>
                   <Select
                     value={quickInquiryId}
                     items={quickInquirySelectItems}
@@ -1719,7 +1721,7 @@ function QuotesBoardPanel({
             ) : null}
 
             <div ref={flowRef} className="rounded-md border border-border/60 bg-muted/15 p-2 sm:p-2.5">
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 진행 순서
               </p>
               <ol className="grid gap-1.5 sm:grid-cols-3">
@@ -1728,12 +1730,12 @@ function QuotesBoardPanel({
                     key={item.step}
                     className="flex gap-1.5 rounded-md border border-border/50 bg-background/70 px-2 py-1.5 text-[12px]"
                   >
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/12 text-[10px] font-bold text-primary">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/12 text-xs font-bold text-primary">
                       {item.step}
                     </span>
                     <div>
                       <p className="font-semibold leading-tight">{item.title}</p>
-                      <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">{item.hint}</p>
+                      <p className="mt-0.5 text-sm leading-snug text-muted-foreground">{item.hint}</p>
                     </div>
                   </li>
                 ))}
@@ -1788,7 +1790,7 @@ function QuotesBoardPanel({
           <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
           <div className="min-w-0 space-y-0.5">
             <p className="text-sm font-medium text-foreground">아직 생성된 견적이 없습니다</p>
-            <p className="text-[11px] leading-snug text-muted-foreground">
+            <p className="text-sm leading-snug text-muted-foreground">
               {hasInquiries
                 ? "저장한 견적에 공개 링크·PDF·직인·메일 발송을 붙이고, AI 풀 초안으로 첫 작성 시간을 줄일 수 있어요. 승인 후 청구 화면에서 이어갑니다."
                 : "먼저 문의를 등록하면 위 카드에서 견적을 시작할 수 있어요. 설정의 템플릿·AI(항목·옵션·납기)는 반복 작성을 줄여 줍니다."}
@@ -1989,7 +1991,7 @@ function QuotesBoardPanel({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="font-mono text-[11px] text-muted-foreground">{quote.quoteNumber}</p>
+                      <p className="font-mono text-xs text-muted-foreground">{quote.quoteNumber}</p>
                       <p className="mt-0.5 font-medium leading-snug">{quote.title}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">{customerPrimaryLabel(customer)}</p>
                       <div className="mt-1.5 flex flex-wrap gap-1">
@@ -2033,7 +2035,7 @@ function QuotesBoardPanel({
                   </div>
                   <div className="flex flex-wrap items-end justify-between gap-2">
                     <p className="text-sm font-semibold tabular-nums text-primary">{formatCurrency(quote.total)}</p>
-                    <p className="text-[11px] tabular-nums text-muted-foreground">
+                    <p className="text-xs tabular-nums text-muted-foreground">
                       작성 {formatDate(quote.createdAt)}
                     </p>
                   </div>
@@ -2185,7 +2187,7 @@ function QuotesBoardPanel({
             <div>
               <p className="mb-2 text-xs font-semibold text-muted-foreground">연결 청구</p>
               {drawerQuote.status === "approved" && !drawerQuoteInvoices.length ? (
-                <p className="mb-2 rounded-md border border-primary/25 bg-primary/5 px-2.5 py-2 text-[11px] leading-snug text-foreground">
+                <p className="mb-2 rounded-md border border-primary/25 bg-primary/5 px-2.5 py-2 text-xs leading-snug text-foreground">
                   승인된 견적입니다. 하단 <span className="font-semibold">「청구 만들기」</span>로 선금·잔금
                   청구를 바로 시작할 수 있습니다.
                 </p>
@@ -2206,7 +2208,7 @@ function QuotesBoardPanel({
               ) : (
                 <p className="text-xs text-muted-foreground">이 견적에 연결된 청구가 없습니다.</p>
               )}
-              <p className="mt-2 text-[11px] text-muted-foreground">
+              <p className="mt-2 text-xs text-muted-foreground">
                 {drawerQuote.status === "approved"
                   ? "「청구 만들기」로 이동하거나, 청구 목록에서 직접 만들 수 있습니다."
                   : "승인 후 「청구 만들기」가 표시됩니다. 청구 목록에서도 동일 견적을 연결해 저장할 수 있습니다."}
@@ -2239,7 +2241,7 @@ function QuotesBoardPanel({
                     <li key={log.id} className="rounded-md border border-border/40 px-2 py-1.5">
                       <p className="font-medium text-foreground">{resolveActivityHeadline(log.action)}</p>
                       <p className="mt-0.5 leading-snug text-muted-foreground">{log.description}</p>
-                      <p className="mt-1 tabular-nums text-[10px] text-muted-foreground">
+                      <p className="mt-1 tabular-nums text-xs text-muted-foreground">
                         {formatDateTime(log.createdAt)}
                       </p>
                     </li>
@@ -2296,7 +2298,7 @@ function QuotesBoardPanel({
           <div className="shrink-0 border-b border-border/60 px-4 pb-3 pt-4 pr-12 sm:px-6 sm:pr-14">
             <DialogHeader className="gap-1">
               <DialogTitle className="text-lg">견적 수정</DialogTitle>
-              <DialogDescription className="text-xs leading-relaxed">
+              <DialogDescription className="text-sm leading-relaxed">
                 동일한 흐름으로 수정합니다. 저장하면 목록·고객 타임라인에 반영됩니다.
               </DialogDescription>
             </DialogHeader>
@@ -2305,7 +2307,7 @@ function QuotesBoardPanel({
             {formFields}
           </div>
           <div className="flex shrink-0 flex-col gap-2 border-t border-border/60 bg-background/95 px-4 py-3 shadow-[0_-6px_16px_rgba(0,0,0,0.06)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:shadow-[0_-6px_20px_rgba(0,0,0,0.25)]">
-            <p className="text-[11px] leading-snug text-muted-foreground sm:max-w-[58%]">
+            <p className="text-sm leading-snug text-muted-foreground sm:max-w-[58%]">
               {!formValidation.ok ? (
                 <span className="font-medium text-amber-900 dark:text-amber-100">
                   위쪽 노란색 안내에 적힌 항목을 채우면 저장됩니다. 저장 버튼 위에 마우스를 올리면
@@ -2436,7 +2438,7 @@ function QuotesBoardPanel({
         }}
         emailBodyTemplate={defaultQuoteSummary}
         businessName={defaultBusinessName}
-        kakaoByoaAllowed={planAllowsFeature(currentPlan, "kakao_byoa_messaging")}
+        kakaoByoaAllowed={planAllowsFeature(currentPlan, "kakao_byoa_messaging") && kakaoByoaConfigured}
         onAfterSend={() => router.refresh()}
       />
     </>
@@ -2454,6 +2456,7 @@ export function QuotesWorkspace({
   quoteActivityByQuoteId,
   invoicesByQuoteId,
   currentPlan,
+  kakaoByoaConfigured,
   deepLinkCustomerId,
   deepLinkOpenCreate = false,
 }: {
@@ -2467,6 +2470,7 @@ export function QuotesWorkspace({
   quoteActivityByQuoteId: Record<string, ActivityLog[]>
   invoicesByQuoteId: Record<string, QuoteLinkedInvoiceStub[]>
   currentPlan: BillingPlan
+  kakaoByoaConfigured: boolean
   deepLinkCustomerId?: string
   deepLinkOpenCreate?: boolean
 }) {
@@ -2529,7 +2533,7 @@ export function QuotesWorkspace({
                     새 견적
                   </Button>
                 </div>
-                <p className="mt-1.5 border-t border-border/40 pt-1.5 text-center text-[11px] leading-snug text-muted-foreground sm:text-left">
+                <p className="mt-1.5 border-t border-border/40 pt-1.5 text-center text-sm leading-snug text-muted-foreground sm:text-left">
                   먼저 문의를 등록하면 새 견적을 만들 수 있습니다
                 </p>
               </div>
@@ -2554,6 +2558,7 @@ export function QuotesWorkspace({
         quoteActivityByQuoteId={quoteActivityByQuoteId}
         invoicesByQuoteId={invoicesByQuoteId}
         currentPlan={currentPlan}
+        kakaoByoaConfigured={kakaoByoaConfigured}
       />
     </div>
   )

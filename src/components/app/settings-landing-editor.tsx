@@ -336,7 +336,7 @@ export function SettingsLandingEditor({
             </select>
           </div>
           {aiGeneratedAt ? (
-            <p className="text-[11px] text-muted-foreground sm:col-span-2">
+            <p className="text-xs text-muted-foreground sm:col-span-2">
               마지막 AI 반영: {new Date(aiGeneratedAt).toLocaleString("ko-KR")}
             </p>
           ) : null}

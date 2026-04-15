@@ -141,7 +141,7 @@ export function LoginForm({
             <p className="mt-1 leading-snug">
               Supabase 미연결 환경입니다. 아래는 로컬 검증용입니다.
             </p>
-            <p className="mt-2 font-mono text-[11px] text-foreground">
+            <p className="mt-2 font-mono text-xs text-foreground">
               {defaultEmail} / {defaultPassword}
             </p>
           </div>

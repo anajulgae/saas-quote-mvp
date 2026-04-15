@@ -78,7 +78,7 @@ export function BetaOnboardingBanner() {
                   <span className="text-muted-foreground">{index + 1}. </span>
                   {step.title}
                 </p>
-                <p className="mt-1 text-xs leading-snug text-muted-foreground">{step.body}</p>
+                <p className="mt-1 text-sm leading-snug text-muted-foreground">{step.body}</p>
               </li>
             ))}
           </ol>

@@ -23,7 +23,7 @@ function Kpi({
         warn && "border-amber-300 bg-amber-50"
       )}
     >
-      <p className="text-[11px] font-bold uppercase tracking-wide text-zinc-500">{label}</p>
+      <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">{label}</p>
       <p className="mt-1 text-2xl font-extrabold tabular-nums text-zinc-900">{value}</p>
       {hint ? <p className="mt-1 text-xs text-zinc-500">{hint}</p> : null}
     </div>

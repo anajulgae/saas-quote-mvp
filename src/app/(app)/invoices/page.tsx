@@ -26,6 +26,7 @@ export default async function InvoicesPage({
     paymentTerms,
     currentPlan,
     businessSettingsSnapshot,
+    kakaoByoaConfigured,
   } = await getInvoicesPageData()
 
   const deepLinkOpenCreate = sp.new === "1" || sp.new === "true"
@@ -43,6 +44,7 @@ export default async function InvoicesPage({
       bankAccount={bankAccount}
       paymentTerms={paymentTerms}
       currentPlan={currentPlan}
+      kakaoByoaConfigured={kakaoByoaConfigured}
       businessSettingsSnapshot={businessSettingsSnapshot}
       deepLinkQuoteId={sp.quote}
       deepLinkOpenCreate={deepLinkOpenCreate}

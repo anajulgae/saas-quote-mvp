@@ -1,17 +1,17 @@
 "use client"
 
-import { useState, useTransition } from "react"
-import { useRouter } from "next/navigation"
-import { CalendarClock, Plus, Trash2 } from "lucide-react"
-import { toast } from "sonner"
-import Link from "next/link"
+import { useState, useTransition } from"react"
+import { useRouter } from"next/navigation"
+import { CalendarClock, Plus, Trash2 } from"lucide-react"
+import { toast } from"sonner"
+import Link from"next/link"
 
-import { saveRecurringSeriesAction, deleteRecurringSeriesAction } from "@/app/actions"
-import { Button } from "@/components/ui/button"
-import { buttonVariants } from "@/components/ui/button-variants"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { saveRecurringSeriesAction, deleteRecurringSeriesAction } from"@/app/actions"
+import { Button } from"@/components/ui/button"
+import { buttonVariants } from"@/components/ui/button-variants"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from"@/components/ui/card"
+import { Input } from"@/components/ui/input"
+import { Textarea } from"@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
@@ -19,10 +19,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { cn } from "@/lib/utils"
-import { formatCurrency } from "@/lib/format"
-import type { RecurringSeries } from "@/lib/data"
+} from"@/components/ui/dialog"
+import { cn } from"@/lib/utils"
+import { formatCurrency } from"@/lib/format"
+import type { RecurringSeries } from"@/lib/data"
 
 type SeriesForm = {
   id?: string
@@ -41,26 +41,26 @@ type SeriesForm = {
 }
 
 const emptyForm: SeriesForm = {
-  customerId: "",
-  name: "",
+  customerId:"",
+  name:"",
   enabled: true,
-  documentType: "invoice",
-  frequency: "monthly",
+  documentType:"invoice",
+  frequency:"monthly",
   dayOfMonth: 1,
   amount: 0,
-  title: "",
-  notes: "",
-  invoiceType: "final",
+  title:"",
+  notes:"",
+  invoiceType:"final",
   nextRunDate: new Date().toISOString().slice(0, 10),
   maxRuns: null,
 }
 
 const FREQ_LABELS: Record<string, string> = {
-  weekly: "매주",
-  biweekly: "격주",
-  monthly: "매월",
-  quarterly: "매분기",
-  yearly: "매년",
+  weekly:"매주",
+  biweekly:"격주",
+  monthly:"매월",
+  quarterly:"매분기",
+  yearly:"매년",
 }
 
 export function RecurringSeriesPanel({
@@ -87,7 +87,7 @@ export function RecurringSeriesPanel({
           <p className="text-sm text-muted-foreground">
             반복 견적/청구 자동화는 <strong>Pro 이상 플랜</strong>에서 이용할 수 있습니다.
           </p>
-          <Link href="/billing" className={cn(buttonVariants({ size: "sm" }), "mx-auto")}>
+          <Link href="/billing" className={cn(buttonVariants({ size:"sm" }),"mx-auto")}>
             플랜 업그레이드
           </Link>
         </CardContent>
@@ -96,7 +96,7 @@ export function RecurringSeriesPanel({
   }
 
   function openNew() {
-    setEditing({ ...emptyForm, customerId: customers[0]?.id ?? "" })
+    setEditing({ ...emptyForm, customerId: customers[0]?.id ??"" })
   }
 
   function openEdit(s: RecurringSeries) {
@@ -125,11 +125,11 @@ export function RecurringSeriesPanel({
     startTransition(async () => {
       const result = await saveRecurringSeriesAction(editing)
       if (result.ok) {
-        toast.success(editing.id ? "시리즈를 수정했습니다." : "시리즈를 추가했습니다.")
+        toast.success(editing.id ?"시리즈를 수정했습니다." :"시리즈를 추가했습니다.")
         setEditing(null)
         router.refresh()
       } else {
-        toast.error(result.error ?? "저장에 실패했습니다.")
+        toast.error(result.error ??"저장에 실패했습니다.")
       }
     })
   }
@@ -143,7 +143,7 @@ export function RecurringSeriesPanel({
         setDeleteTarget(null)
         router.refresh()
       } else {
-        toast.error(result.error ?? "삭제에 실패했습니다.")
+        toast.error(result.error ??"삭제에 실패했습니다.")
       }
     })
   }
@@ -154,7 +154,7 @@ export function RecurringSeriesPanel({
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <div>
             <CardTitle className="text-base font-semibold">반복 시리즈</CardTitle>
-            <CardDescription className="text-xs">
+            <CardDescription>
               설정된 주기에 맞춰 매일 오전 6시에 자동으로 견적/청구를 생성합니다.
             </CardDescription>
           </div>
@@ -180,18 +180,17 @@ export function RecurringSeriesPanel({
             initialSeries.map((s) => (
               <div
                 key={s.id}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl border p-3 transition-colors",
-                  s.enabled ? "border-border/70 bg-card" : "border-border/40 bg-muted/20 opacity-60"
+                className={cn("flex items-center gap-3 rounded-xl border p-3 transition-colors",
+                  s.enabled ?"border-border/70 bg-card" :"border-border/40 bg-muted/20 opacity-60"
                 )}
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{s.name || "이름 없는 시리즈"}</p>
+                  <p className="text-sm font-medium">{s.name ||"이름 없는 시리즈"}</p>
                   <p className="text-xs text-muted-foreground">
-                    {s.customerLabel} · {s.documentType === "invoice" ? "청구" : "견적"} ·{" "}
-                    {FREQ_LABELS[s.frequency] || s.frequency} · {formatCurrency(s.amount)} ·{" "}
+                    {s.customerLabel} · {s.documentType ==="invoice" ?"청구" :"견적"} ·{""}
+                    {FREQ_LABELS[s.frequency] || s.frequency} · {formatCurrency(s.amount)} ·{""}
                     다음 실행: {s.nextRunDate} · 총 {s.totalRuns}회 실행
-                    {s.maxRuns != null ? ` / 최대 ${s.maxRuns}회` : ""}
+                    {s.maxRuns != null ? ` / 최대 ${s.maxRuns}회` :""}
                   </p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => openEdit(s)}>
@@ -210,7 +209,7 @@ export function RecurringSeriesPanel({
       <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editing?.id ? "시리즈 수정" : "새 반복 시리즈"}</DialogTitle>
+            <DialogTitle>{editing?.id ?"시리즈 수정" :"새 반복 시리즈"}</DialogTitle>
             <DialogDescription>반복 생성 조건과 내용을 설정합니다.</DialogDescription>
           </DialogHeader>
           {editing && (
@@ -288,7 +287,7 @@ export function RecurringSeriesPanel({
                     type="number"
                     min={0}
                     placeholder="무제한"
-                    value={editing.maxRuns ?? ""}
+                    value={editing.maxRuns ??""}
                     onChange={(e) => {
                       const v = e.target.value.trim()
                       setEditing({ ...editing, maxRuns: v ? Number(v) : null })
@@ -337,7 +336,7 @@ export function RecurringSeriesPanel({
               취소
             </Button>
             <Button onClick={handleSave} disabled={isPending}>
-              {isPending ? "저장 중…" : "저장"}
+              {isPending ?"저장 중…" :"저장"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -349,7 +348,7 @@ export function RecurringSeriesPanel({
           <DialogHeader>
             <DialogTitle>시리즈 삭제</DialogTitle>
             <DialogDescription>
-              &ldquo;{deleteTarget?.name || "이름 없는 시리즈"}&rdquo;를 삭제합니다. 이미 생성된 문서는 유지됩니다.
+              &ldquo;{deleteTarget?.name ||"이름 없는 시리즈"}&rdquo;를 삭제합니다. 이미 생성된 문서는 유지됩니다.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -357,7 +356,7 @@ export function RecurringSeriesPanel({
               취소
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={isPending}>
-              {isPending ? "삭제 중…" : "삭제"}
+              {isPending ?"삭제 중…" :"삭제"}
             </Button>
           </DialogFooter>
         </DialogContent>

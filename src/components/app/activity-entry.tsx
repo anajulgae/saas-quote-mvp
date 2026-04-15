@@ -69,7 +69,7 @@ export function ActivityEntry({
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <p className="text-sm font-semibold leading-tight">{label}</p>
           {action ? (
-            <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+            <span className="font-mono text-xs uppercase tracking-wide text-muted-foreground">
               {action}
             </span>
           ) : null}

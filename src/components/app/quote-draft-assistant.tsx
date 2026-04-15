@@ -217,18 +217,18 @@ export function QuoteDraftAssistantForm({
       )}
     >
       <div className="space-y-1">
-        <p className="text-xs leading-snug text-muted-foreground">
+        <p className="text-sm leading-snug text-muted-foreground">
           서비스 유형·업종 맥락·범위·톤을 넣은 뒤 AI로 초안을 만들거나, 로컬 규칙 초안을 그대로 쓸 수 있습니다.
         </p>
         {!hasInquiries ? (
-          <p className="rounded border border-amber-500/25 bg-amber-500/[0.07] px-2 py-1.5 text-[10px] leading-snug text-amber-950 dark:text-amber-50/90">
+          <p className="rounded border border-amber-500/25 bg-amber-500/[0.07] px-2 py-1.5 text-xs leading-snug text-amber-950 dark:text-amber-50/90">
             문의를 등록·연결하면 고객 맥락에 맞는 견적 작성이 더 수월합니다.
           </p>
         ) : null}
       </div>
 
       <div className="space-y-1">
-        <label className="text-[11px] font-medium">서비스 유형</label>
+        <label className="text-xs font-medium">서비스 유형</label>
         <Input
           value={serviceCategory}
           onChange={(event) => bumpInput({ serviceCategory: event.target.value })}
@@ -237,7 +237,7 @@ export function QuoteDraftAssistantForm({
         />
       </div>
       <div className="space-y-1">
-        <label className="text-[11px] font-medium">업종·맥락 힌트 (선택)</label>
+        <label className="text-xs font-medium">업종·맥락 힌트 (선택)</label>
         <Input
           value={industryHint}
           onChange={(event) => {
@@ -247,10 +247,10 @@ export function QuoteDraftAssistantForm({
           className="h-8 text-sm"
           placeholder="예: 애견미용 / 영상 제작 — 납기·수정 횟수 중요"
         />
-        <p className="text-[10px] text-muted-foreground">비어 있으면 서비스 유형과 동일하게 AI에 전달됩니다.</p>
+        <p className="text-xs text-muted-foreground">비어 있으면 서비스 유형과 동일하게 AI에 전달됩니다.</p>
       </div>
       <div className="space-y-1">
-        <label className="text-[11px] font-medium">작업 범위</label>
+        <label className="text-xs font-medium">작업 범위</label>
         <Textarea
           value={scope}
           onChange={(event) => bumpInput({ scope: event.target.value })}
@@ -259,7 +259,7 @@ export function QuoteDraftAssistantForm({
         />
       </div>
       <div className="space-y-1">
-        <label className="text-[11px] font-medium">문체·톤</label>
+        <label className="text-xs font-medium">문체·톤</label>
         <Input
           value={tone}
           onChange={(event) => bumpInput({ tone: event.target.value })}
@@ -289,7 +289,7 @@ export function QuoteDraftAssistantForm({
       </div>
       {optionalItems.length ? (
         <div className="rounded-md border border-border/50 bg-background/60 px-2 py-2">
-          <p className="text-[10px] font-semibold text-muted-foreground">옵션 항목 — 견적에 포함</p>
+          <p className="text-xs font-semibold text-muted-foreground">옵션 항목 — 견적에 포함</p>
           <ul className="mt-1.5 space-y-2">
             {optionalItems.map((item, idx) => (
               <li key={`${item.name}-${idx}`} className="flex items-start gap-2 text-xs">
@@ -313,8 +313,8 @@ export function QuoteDraftAssistantForm({
                 />
                 <label htmlFor={`opt-${idx}`} className="cursor-pointer leading-snug text-muted-foreground">
                   <span className="font-medium text-foreground">{item.name}</span>
-                  {item.description ? <span className="block text-[11px]">{item.description}</span> : null}
-                  <span className="block font-mono text-[10px] text-muted-foreground/90">
+                  {item.description ? <span className="block text-xs">{item.description}</span> : null}
+                  <span className="block font-mono text-xs text-muted-foreground/90">
                     {item.quantity} × {item.unitPrice}원
                   </span>
                 </label>
@@ -325,12 +325,12 @@ export function QuoteDraftAssistantForm({
       ) : null}
       <div className="rounded-md border border-border/60 bg-muted/15 p-2">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] font-medium text-foreground">미리보기</p>
+          <p className="text-xs font-medium text-foreground">미리보기</p>
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="h-6 gap-0.5 px-1.5 text-[10px] text-muted-foreground"
+            className="h-6 gap-0.5 px-1.5 text-xs text-muted-foreground"
             onClick={() => setDraftExpanded((o) => !o)}
           >
             {draftExpanded ? (
@@ -348,11 +348,11 @@ export function QuoteDraftAssistantForm({
         </div>
         {draftExpanded ? (
           <div className="mt-2 space-y-2">
-            <p className="text-[11px] font-medium text-foreground/90">{draft.title}</p>
-            <pre className="max-h-52 overflow-auto whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">
+            <p className="text-xs font-medium text-foreground/90">{draft.title}</p>
+            <pre className="max-h-52 overflow-auto whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
               {draft.summary}
             </pre>
-            <p className="text-[10px] font-medium text-muted-foreground">기본 항목</p>
+            <p className="text-xs font-medium text-muted-foreground">기본 항목</p>
             <ul className="list-inside list-disc text-xs text-muted-foreground">
               {draft.items.map((item) => (
                 <li key={item.name}>
@@ -363,7 +363,7 @@ export function QuoteDraftAssistantForm({
             </ul>
             {optionalItems.length ? (
               <>
-                <p className="text-[10px] font-medium text-muted-foreground">옵션 항목</p>
+                <p className="text-xs font-medium text-muted-foreground">옵션 항목</p>
                 <ul className="list-inside list-disc text-xs text-muted-foreground">
                   {optionalItems.map((item) => (
                     <li key={`o-${item.name}`}>
@@ -376,7 +376,7 @@ export function QuoteDraftAssistantForm({
             ) : null}
           </div>
         ) : (
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{summaryLine}</p>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{summaryLine}</p>
         )}
       </div>
     </div>

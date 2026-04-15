@@ -1,17 +1,17 @@
 "use client"
 
-import { useState, useTransition } from "react"
-import { useRouter } from "next/navigation"
-import { Bell, Plus, Trash2 } from "lucide-react"
-import { toast } from "sonner"
-import Link from "next/link"
+import { useState, useTransition } from"react"
+import { useRouter } from"next/navigation"
+import { Bell, Plus, Trash2 } from"lucide-react"
+import { toast } from"sonner"
+import Link from"next/link"
 
-import { saveAutoRemindRuleAction, deleteAutoRemindRuleAction } from "@/app/actions"
-import { Button } from "@/components/ui/button"
-import { buttonVariants } from "@/components/ui/button-variants"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { saveAutoRemindRuleAction, deleteAutoRemindRuleAction } from"@/app/actions"
+import { Button } from"@/components/ui/button"
+import { buttonVariants } from"@/components/ui/button-variants"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from"@/components/ui/card"
+import { Input } from"@/components/ui/input"
+import { Textarea } from"@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
@@ -19,9 +19,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { cn } from "@/lib/utils"
-import type { AutoRemindRule } from "@/lib/data"
+} from"@/components/ui/dialog"
+import { cn } from"@/lib/utils"
+import type { AutoRemindRule } from"@/lib/data"
 
 type RuleForm = {
   id?: string
@@ -34,12 +34,12 @@ type RuleForm = {
 }
 
 const emptyForm: RuleForm = {
-  name: "",
+  name:"",
   enabled: true,
-  triggerType: "overdue_days",
+  triggerType:"overdue_days",
   triggerDays: 3,
-  channel: "email",
-  messageTemplate: "",
+  channel:"email",
+  messageTemplate:"",
 }
 
 export function AutoRemindRulesPanel({
@@ -64,7 +64,7 @@ export function AutoRemindRulesPanel({
           <p className="text-sm text-muted-foreground">
             자동 리마인드 스케줄러는 <strong>Pro 이상 플랜</strong>에서 이용할 수 있습니다.
           </p>
-          <Link href="/billing" className={cn(buttonVariants({ size: "sm" }), "mx-auto")}>
+          <Link href="/billing" className={cn(buttonVariants({ size:"sm" }),"mx-auto")}>
             플랜 업그레이드
           </Link>
         </CardContent>
@@ -93,11 +93,11 @@ export function AutoRemindRulesPanel({
     startTransition(async () => {
       const result = await saveAutoRemindRuleAction(editing)
       if (result.ok) {
-        toast.success(editing.id ? "규칙을 수정했습니다." : "규칙을 추가했습니다.")
+        toast.success(editing.id ?"규칙을 수정했습니다." :"규칙을 추가했습니다.")
         setEditing(null)
         router.refresh()
       } else {
-        toast.error(result.error ?? "저장에 실패했습니다.")
+        toast.error(result.error ??"저장에 실패했습니다.")
       }
     })
   }
@@ -111,7 +111,7 @@ export function AutoRemindRulesPanel({
         setDeleteTarget(null)
         router.refresh()
       } else {
-        toast.error(result.error ?? "삭제에 실패했습니다.")
+        toast.error(result.error ??"삭제에 실패했습니다.")
       }
     })
   }
@@ -122,7 +122,7 @@ export function AutoRemindRulesPanel({
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <div>
             <CardTitle className="text-base font-semibold">자동 리마인드 규칙</CardTitle>
-            <CardDescription className="text-xs">
+            <CardDescription>
               입금 기한 경과 청구에 자동으로 리마인드를 발송합니다. 매일 오전 9시에 실행됩니다.
             </CardDescription>
           </div>
@@ -145,16 +145,15 @@ export function AutoRemindRulesPanel({
             initialRules.map((rule) => (
               <div
                 key={rule.id}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl border p-3 transition-colors",
-                  rule.enabled ? "border-border/70 bg-card" : "border-border/40 bg-muted/20 opacity-60"
+                className={cn("flex items-center gap-3 rounded-xl border p-3 transition-colors",
+                  rule.enabled ?"border-border/70 bg-card" :"border-border/40 bg-muted/20 opacity-60"
                 )}
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{rule.name || "이름 없는 규칙"}</p>
+                  <p className="text-sm font-medium">{rule.name ||"이름 없는 규칙"}</p>
                   <p className="text-xs text-muted-foreground">
-                    입금 기한 {rule.triggerDays}일 경과 · {rule.channel === "email" ? "이메일" : rule.channel} ·{" "}
-                    {rule.enabled ? "활성" : "비활성"}
+                    입금 기한 {rule.triggerDays}일 경과 · {rule.channel ==="email" ?"이메일" : rule.channel} ·{""}
+                    {rule.enabled ?"활성" :"비활성"}
                   </p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => openEdit(rule)}>
@@ -173,7 +172,7 @@ export function AutoRemindRulesPanel({
       <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editing?.id ? "규칙 수정" : "새 규칙 만들기"}</DialogTitle>
+            <DialogTitle>{editing?.id ?"규칙 수정" :"새 규칙 만들기"}</DialogTitle>
             <DialogDescription>
               입금 기한 경과 조건과 메시지 템플릿을 설정합니다.
             </DialogDescription>
@@ -219,7 +218,7 @@ export function AutoRemindRulesPanel({
                   rows={4}
                   placeholder={"비워두면 기본 메시지가 사용됩니다.\n변수: {{invoiceNumber}}, {{amount}}, {{dueDate}}"}
                 />
-                <p className="mt-1 text-[11px] text-muted-foreground">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {"{{invoiceNumber}}, {{amount}}, {{dueDate}} 변수를 사용할 수 있습니다."}
                 </p>
               </div>
@@ -239,7 +238,7 @@ export function AutoRemindRulesPanel({
               취소
             </Button>
             <Button onClick={handleSave} disabled={isPending}>
-              {isPending ? "저장 중…" : "저장"}
+              {isPending ?"저장 중…" :"저장"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -251,7 +250,7 @@ export function AutoRemindRulesPanel({
           <DialogHeader>
             <DialogTitle>규칙 삭제</DialogTitle>
             <DialogDescription>
-              &ldquo;{deleteTarget?.name || "이름 없는 규칙"}&rdquo;을(를) 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+              &ldquo;{deleteTarget?.name ||"이름 없는 규칙"}&rdquo;을(를) 삭제합니다. 이 작업은 되돌릴 수 없습니다.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -259,7 +258,7 @@ export function AutoRemindRulesPanel({
               취소
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={isPending}>
-              {isPending ? "삭제 중…" : "삭제"}
+              {isPending ?"삭제 중…" :"삭제"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -52,11 +52,11 @@ export function CustomerPortalLinkBlock({
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle className="text-base font-semibold">고객 미니 포털</CardTitle>
-          <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+          <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
             플랜 한도
           </span>
         </div>
-        <CardDescription className="text-xs leading-relaxed">
+        <CardDescription className="text-sm leading-relaxed">
           고객이 로그인 없이 견적·청구 요약을 볼 수 있는 단일 링크입니다. Starter는 1명, Pro는 더 많은 고객까지 활성화할 수
           있습니다. 최초 복사 시 토큰이 발급됩니다.
         </CardDescription>
@@ -69,7 +69,7 @@ export function CustomerPortalLinkBlock({
         ) : (
           <>
             {portalUrl ? (
-              <p className="break-all rounded-md border border-dashed border-border/70 bg-muted/20 px-2 py-1.5 font-mono text-[11px] text-muted-foreground">
+              <p className="break-all rounded-md border border-dashed border-border/70 bg-muted/20 px-2 py-1.5 font-mono text-xs text-muted-foreground">
                 {portalUrl}
               </p>
             ) : (

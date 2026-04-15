@@ -96,7 +96,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               </li>
             ))}
           </ul>
-          <p className="max-w-md border-t border-border/60 pt-4 text-xs leading-relaxed text-muted-foreground">
+          <p className="max-w-md border-t border-border/60 pt-4 text-sm leading-relaxed text-muted-foreground">
             국내 1인 사업자·소규모 서비스업을 염두에 둔 견적·청구 관리입니다. 데이터는 본인 계정
             기준으로 안전하게 분리됩니다.
           </p>
@@ -137,7 +137,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   인증 환경이 구성되지 않았습니다. 관리자에게 환경 설정을 요청하세요.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2 text-xs leading-relaxed text-muted-foreground">
+              <CardContent className="space-y-2 text-sm leading-relaxed text-muted-foreground">
                 <p>
                   Supabase 연결(
                   <code className="rounded bg-muted px-1 py-0.5 font-mono">
@@ -149,7 +149,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   </code>
                   )을 설정하거나, 내부 스테이징에서 허용된 방식으로 로그인을 활성화해야 합니다.
                 </p>
-                <p className="text-[11px]">
+                <p className="text-xs">
                   로컬 개발 전용 안내가 필요하면 환경 변수{" "}
                   <code className="rounded bg-muted px-1 font-mono">LOGIN_REVIEW_HINTS=true</code> 로 리뷰
                   모드를 켤 수 있습니다.

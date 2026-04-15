@@ -137,10 +137,10 @@ function SidebarContent({
   return (
     <div className="flex h-full flex-col">
       <div className="space-y-1.5 border-b border-border/70 px-4 py-4">
-        <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+        <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
           Bill-IO
         </p>
-        <p className="text-[10px] leading-snug text-muted-foreground/90">유입 → 견적 → 청구 → 수금</p>
+        <p className="text-sm leading-snug text-muted-foreground/90">유입 → 견적 → 청구 → 수금</p>
         <h2 className="text-base font-semibold leading-snug tracking-tight text-foreground">
           {businessName}
         </h2>
@@ -157,7 +157,7 @@ function SidebarContent({
         <AuthLegalLinks
           showBilling
           navLabel="약관·요금·고객센터"
-          className="flex flex-wrap gap-x-1.5 gap-y-1 text-[11px] leading-relaxed text-muted-foreground"
+          className="flex flex-wrap gap-x-1.5 gap-y-1 text-sm leading-relaxed text-muted-foreground"
         />
         <form action={logoutAction}>
           <Button type="submit" variant="outline" className="w-full">

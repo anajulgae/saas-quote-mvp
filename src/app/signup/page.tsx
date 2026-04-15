@@ -51,7 +51,7 @@ export default function SignupPage() {
               제출 후 안내 메일이 갑니다. 메일 속 링크로 인증을 완료한 뒤 로그인하면 됩니다.
             </p>
           </div>
-          <div className="max-w-md rounded-xl border border-border/80 bg-background/90 px-4 py-3 text-xs leading-relaxed text-muted-foreground shadow-sm">
+          <div className="max-w-md rounded-xl border border-border/80 bg-background/90 px-4 py-3 text-sm leading-relaxed text-muted-foreground shadow-sm">
             <p className="font-medium text-foreground">가입 후 진행 순서</p>
             <ol className="mt-2 list-inside list-decimal space-y-1">
               <li>오른쪽 양식 작성 후 제출</li>
@@ -107,15 +107,15 @@ export default function SignupPage() {
                 </p>
                 <p className="text-xs">
                   인증 리다이렉트 기준 URL은{" "}
-                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
                     NEXT_PUBLIC_SITE_URL
                   </code>
                   로 두거나 비워 두면 프로덕션에서는{" "}
-                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
                     https://www.bill-io.com
                   </code>
                   을 씁니다. Supabase Redirect URLs에 해당 주소의{" "}
-                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">/auth/callback</code> 등이
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">/auth/callback</code> 등이
                   등록돼 있어야 합니다.
                 </p>
                 {demoAllowed ? (
@@ -131,7 +131,7 @@ export default function SignupPage() {
           ) : (
             <div className="w-full space-y-4">
               <SignupForm />
-              <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
+              <p className="text-center text-sm leading-relaxed text-muted-foreground">
                 계정을 만들면{" "}
                 <Link href="/terms" className="font-medium text-foreground underline-offset-4 hover:underline">
                   이용약관

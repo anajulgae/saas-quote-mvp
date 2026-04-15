@@ -18,6 +18,7 @@ export default async function QuotesPage({
     quoteActivityByQuoteId,
     invoicesByQuoteId,
     currentPlan,
+    kakaoByoaConfigured,
   } = await getQuotesPageData()
 
   const initialCreateOpen = sp.new === "1" || sp.new === "true"
@@ -34,6 +35,7 @@ export default async function QuotesPage({
       quoteActivityByQuoteId={quoteActivityByQuoteId}
       invoicesByQuoteId={invoicesByQuoteId}
       currentPlan={currentPlan}
+      kakaoByoaConfigured={kakaoByoaConfigured}
       deepLinkCustomerId={sp.customer}
       deepLinkOpenCreate={initialCreateOpen}
     />

@@ -65,7 +65,7 @@ export function UpdatePasswordForm() {
           <div className="space-y-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-3">
             <p
               id="update-password-hint"
-              className="text-xs leading-relaxed text-muted-foreground"
+              className="text-sm leading-relaxed text-muted-foreground"
             >
               <span className="font-medium text-foreground">비밀번호 조건</span>
               <br />

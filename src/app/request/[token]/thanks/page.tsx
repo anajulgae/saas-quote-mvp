@@ -38,7 +38,7 @@ export default async function PublicInquiryThanksPage({
   return (
     <div className={embed ? "bg-white px-4 py-8 text-neutral-900" : "min-h-screen bg-[#f6f5f2] px-4 py-20 text-neutral-900"}>
       <div className={embed ? "text-center" : "mx-auto max-w-lg rounded-2xl border border-neutral-200 bg-white p-8 text-center shadow-sm"}>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-500">접수 완료</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">접수 완료</p>
         {businessName ? (
           <h1 className="mt-2 text-xl font-bold tracking-tight text-neutral-900">{businessName}</h1>
         ) : null}

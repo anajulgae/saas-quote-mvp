@@ -96,7 +96,7 @@ export default async function BillingPage({
                   : "문의"}
                 <span className="text-xs font-normal text-muted-foreground"> /월</span>
               </p>
-              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{PLAN_TAGLINE[p]}</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{PLAN_TAGLINE[p]}</p>
             </div>
           ))}
         </div>

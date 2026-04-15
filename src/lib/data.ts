@@ -3736,6 +3736,7 @@ export async function getQuotesPageData(): Promise<{
   quoteActivityByQuoteId: Record<string, ActivityLog[]>
   invoicesByQuoteId: Record<string, QuoteLinkedInvoiceStub[]>
   currentPlan: BillingPlan
+  kakaoByoaConfigured: boolean
 }> {
   const context = await getDataContext()
 
@@ -3779,6 +3780,7 @@ export async function getQuotesPageData(): Promise<{
       quoteActivityByQuoteId,
       invoicesByQuoteId,
       currentPlan: demoUser.plan,
+      kakaoByoaConfigured: false,
     }
   }
 
@@ -3791,6 +3793,7 @@ export async function getQuotesPageData(): Promise<{
     { data: invoiceLinkRows, error: invoiceLinkError },
     { data: quoteLogRows, error: quoteLogError },
     { data: bizRow, error: bizError },
+    { data: kakaoRow },
   ] = await Promise.all([
     context.supabase.from("customers").select("*"),
     context.supabase
@@ -3824,6 +3827,12 @@ export async function getQuotesPageData(): Promise<{
       .from("business_settings")
       .select("payment_terms, business_name")
       .eq("user_id", context.userId)
+      .maybeSingle(),
+    context.supabase
+      .from("messaging_channel_configs")
+      .select("id")
+      .eq("user_id", context.userId)
+      .eq("channel_kind", "kakao_alimtalk")
       .maybeSingle(),
   ])
 
@@ -3944,6 +3953,7 @@ export async function getQuotesPageData(): Promise<{
     quoteActivityByQuoteId,
     invoicesByQuoteId,
     currentPlan,
+    kakaoByoaConfigured: kakaoRow != null,
   }
 }
 
@@ -3958,6 +3968,7 @@ export async function getInvoicesPageData(): Promise<{
   paymentTerms: string
   currentPlan: BillingPlan
   businessSettingsSnapshot: BusinessSettings | null
+  kakaoByoaConfigured: boolean
 }> {
   const context = await getDataContext()
 
@@ -3981,6 +3992,7 @@ export async function getInvoicesPageData(): Promise<{
       paymentTerms: demoBusinessSettings.paymentTerms ?? "",
       currentPlan: demoUser.plan,
       businessSettingsSnapshot: demoBusinessSettings,
+      kakaoByoaConfigured: false,
     }
   }
 
@@ -3992,6 +4004,7 @@ export async function getInvoicesPageData(): Promise<{
     { data: templateRows, error: templateError },
     { data: invoiceLogRows, error: invoiceLogError },
     { data: bizRow, error: bizErr },
+    { data: kakaoRow },
   ] = await Promise.all([
     context.supabase.from("customers").select("*"),
     context.supabase
@@ -4022,6 +4035,12 @@ export async function getInvoicesPageData(): Promise<{
       .from("business_settings")
       .select("*")
       .eq("user_id", context.userId)
+      .maybeSingle(),
+    context.supabase
+      .from("messaging_channel_configs")
+      .select("id")
+      .eq("user_id", context.userId)
+      .eq("channel_kind", "kakao_alimtalk")
       .maybeSingle(),
   ])
 
@@ -4112,6 +4131,7 @@ export async function getInvoicesPageData(): Promise<{
     paymentTerms: bizSettingsMapped?.paymentTerms?.trim() ?? "",
     currentPlan,
     businessSettingsSnapshot: bizSettingsMapped,
+    kakaoByoaConfigured: kakaoRow != null,
   }
 }
 

@@ -41,7 +41,7 @@ import type {
 
 function FieldHint({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <p className={cn("text-[11px] leading-snug text-muted-foreground", className)}>{children}</p>
+    <p className={cn("text-sm leading-snug text-muted-foreground", className)}>{children}</p>
   )
 }
 
@@ -49,7 +49,7 @@ function SectionBadge({ children, className }: { children: React.ReactNode; clas
   return (
     <span
       className={cn(
-        "shrink-0 rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground",
+        "shrink-0 rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 text-xs font-medium text-muted-foreground",
         className
       )}
     >
@@ -234,7 +234,7 @@ export function SettingsForm({
           role="status"
         >
           <p className="font-semibold text-foreground">데이터베이스: 플랜·구독 컬럼 미적용</p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
             <code className="rounded bg-background/80 px-1">0004_user_plan.sql</code> 및{" "}
             <code className="rounded bg-background/80 px-1">0014_saas_plans_trial_usage_support.sql</code> 이
             적용되지 않은 것으로 보입니다. 체험·사용량·빌링 이벤트·고객센터 티켓은 마이그레이션 후 정상 동작합니다.
@@ -274,17 +274,17 @@ export function SettingsForm({
               기능 적용: {PLAN_LABEL[getEffectiveBillingPlan(billing)]}
             </span>
             {billing.subscriptionStatus === "trialing" ? (
-              <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-950 dark:text-amber-50">
+              <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-950 dark:text-amber-50">
                 7일 체험 · {trialRemainingLabel(billing) ?? "진행 중"}
               </span>
             ) : null}
             {billing.cancelAtPeriodEnd ? (
-              <span className="rounded-full border border-rose-500/35 bg-rose-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-rose-950">
+              <span className="rounded-full border border-rose-500/35 bg-rose-500/10 px-2.5 py-0.5 text-xs font-semibold text-rose-950">
                 해지 예약됨
               </span>
             ) : null}
             {billing.pendingPlan ? (
-              <span className="rounded-full border border-border/70 bg-muted/50 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+              <span className="rounded-full border border-border/70 bg-muted/50 px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                 예정: {PLAN_LABEL[billing.pendingPlan]}
               </span>
             ) : null}
@@ -340,13 +340,13 @@ export function SettingsForm({
               href={BILLING_PAGE_PATH}
               className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
             >
-              援щ룆 肄섏넄 ?닿린
+              구독 콘솔 열기
             </Link>
             <Link
               href="/help"
               className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}
             >
-              寃곗젣쨌援щ룆 媛?대뱶
+              결제·구독 가이드
             </Link>
           </div>
         </CardContent>
@@ -355,7 +355,7 @@ export function SettingsForm({
       <Card className="border-border/70">
         <CardHeader className="space-y-1 pb-3">
           <CardTitle className="text-base font-semibold">사업자 및 안내 설정</CardTitle>
-          <CardDescription className="text-xs leading-relaxed">
+          <CardDescription className="text-sm leading-relaxed">
             아래 내용은 Supabase에 저장되며, 견적·청구 화면과 리마인드 작성에 반복 반영됩니다.
           </CardDescription>
         </CardHeader>
@@ -473,7 +473,7 @@ export function SettingsForm({
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={sealUrl} alt="직인 미리보기" className="max-h-20 max-w-[7rem] object-contain" />
                 ) : (
-                  <span className="px-2 text-center text-[11px] text-muted-foreground">미등록</span>
+                  <span className="px-2 text-center text-xs text-muted-foreground">미등록</span>
                 )}
               </div>
               <div className="flex flex-1 flex-col gap-2">
@@ -546,7 +546,7 @@ export function SettingsForm({
           </SettingsSection>
 
           <div className="mt-4 flex flex-col gap-3 border-t border-border/50 pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[11px] leading-snug text-muted-foreground">
+            <p className="text-sm leading-snug text-muted-foreground">
               위 영역만 저장합니다. 템플릿은 아래 카드에서 따로 저장하세요.
             </p>
             <Button
@@ -580,7 +580,7 @@ export function SettingsForm({
             <CardTitle className="text-base font-semibold">업체 소개 페이지</CardTitle>
             <SectionBadge>Pro</SectionBadge>
           </div>
-          <CardDescription className="text-xs leading-relaxed">
+          <CardDescription className="text-sm leading-relaxed">
             고객에게 보여 줄 단일 소개 랜딩입니다. 공개 문의 폼과 연결해 온라인 문의를 받을 수 있습니다.
           </CardDescription>
         </CardHeader>
@@ -621,7 +621,7 @@ export function SettingsForm({
           <span className="w-full border-t border-border/60" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-background px-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          <span className="bg-background px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Business 전용
           </span>
         </div>
@@ -633,7 +633,7 @@ export function SettingsForm({
             <CardTitle className="text-base font-semibold">감사 로그</CardTitle>
             <SectionBadge>Business</SectionBadge>
           </div>
-          <CardDescription className="text-xs leading-relaxed">
+          <CardDescription className="text-sm leading-relaxed">
             모든 견적·청구·고객·설정 변경 이력을 타임라인으로 추적합니다. 컴플라이언스 및 내부 감사에 활용할 수 있습니다.
           </CardDescription>
         </CardHeader>
@@ -665,7 +665,7 @@ export function SettingsForm({
             <CardTitle className="text-base font-semibold">화이트 라벨 PDF</CardTitle>
             <SectionBadge>Business</SectionBadge>
           </div>
-          <CardDescription className="text-xs leading-relaxed">
+          <CardDescription className="text-sm leading-relaxed">
             고객에게 보내는 견적서·청구서 PDF 하단의 Bill-IO 브랜드 워터마크를 제거합니다.
             Business 플랜에서는 자동으로 적용됩니다.
           </CardDescription>
@@ -698,7 +698,7 @@ export function SettingsForm({
           <span className="w-full border-t border-border/60" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-background px-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          <span className="bg-background px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
             자동화
           </span>
         </div>
@@ -710,7 +710,7 @@ export function SettingsForm({
             <CardTitle className="text-base font-semibold">자동 리마인드 스케줄러</CardTitle>
             <SectionBadge>Pro</SectionBadge>
           </div>
-          <CardDescription className="text-xs leading-relaxed">
+          <CardDescription className="text-sm leading-relaxed">
             입금 기한 경과 청구에 자동으로 이메일 리마인드를 발송합니다. 매일 오전 9시에 규칙을 확인합니다.
           </CardDescription>
         </CardHeader>
@@ -742,7 +742,7 @@ export function SettingsForm({
             <CardTitle className="text-base font-semibold">반복 견적/청구 자동화</CardTitle>
             <SectionBadge>Pro</SectionBadge>
           </div>
-          <CardDescription className="text-xs leading-relaxed">
+          <CardDescription className="text-sm leading-relaxed">
             매월·매분기 반복되는 견적과 청구를 자동으로 생성합니다. 정기 거래 고객 관리에 활용하세요.
           </CardDescription>
         </CardHeader>
@@ -773,7 +773,7 @@ export function SettingsForm({
           <span className="w-full border-t border-border/60" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-background px-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          <span className="bg-background px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
             템플릿
           </span>
         </div>
@@ -782,7 +782,7 @@ export function SettingsForm({
       <Card className="border-border/70">
         <CardHeader className="space-y-1 pb-3">
           <CardTitle className="text-base font-semibold">기본 템플릿</CardTitle>
-          <CardDescription className="text-xs leading-relaxed">
+          <CardDescription className="text-sm leading-relaxed">
             견적 요약·리마인드 본문의 출발점입니다. 각각 견적/청구 흐름에서 초안으로 불러옵니다.
           </CardDescription>
         </CardHeader>
@@ -810,7 +810,7 @@ export function SettingsForm({
                     </SectionBadge>
                   </div>
                   {template.isDefault ? (
-                    <span className="rounded-full border border-border/60 bg-background px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    <span className="rounded-full border border-border/60 bg-background px-2 py-0.5 text-xs font-medium text-muted-foreground">
                       기본값
                     </span>
                   ) : null}
@@ -822,7 +822,7 @@ export function SettingsForm({
                 </FieldHint>
                 <div className="space-y-2">
                   <div className="space-y-1">
-                    <label className="text-[11px] font-medium text-muted-foreground">템플릿 제목</label>
+                    <label className="text-xs font-medium text-muted-foreground">템플릿 제목</label>
                     <Input
                       className="h-8 text-sm"
                       value={template.name}
@@ -836,7 +836,7 @@ export function SettingsForm({
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[11px] font-medium text-muted-foreground">내용</label>
+                    <label className="text-xs font-medium text-muted-foreground">내용</label>
                     <Textarea
                       value={template.content}
                       onChange={(event) =>
@@ -855,7 +855,7 @@ export function SettingsForm({
           })}
 
           <div className="flex flex-col gap-3 border-t border-border/50 pt-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[11px] leading-snug text-muted-foreground">
+            <p className="text-sm leading-snug text-muted-foreground">
               견적·리마인드 템플릿만 저장합니다. 사업자 정보는 위 카드에서 저장하세요.
             </p>
             <Button

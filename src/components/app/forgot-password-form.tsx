@@ -54,7 +54,7 @@ function ForgotPasswordFormInner({ onTryAnother }: { onTryAnother: () => void })
               <span className="font-medium text-foreground">‘비밀번호 재설정’ 링크를 눌러</span> 이
               브라우저에서 새 비밀번호 입력 화면으로 이동합니다.
             </p>
-            <p className="text-xs leading-relaxed">
+            <p className="text-sm leading-relaxed">
               다음 단계: 메일 앱 → 링크 클릭 → 새 비밀번호 입력·저장 → 로그인. 도착까지{" "}
               <span className="text-foreground/90">1~2분</span> 걸릴 수 있으며, 보이지 않으면{" "}
               <span className="text-foreground/90">스팸·프로모션함</span>도 확인해 주세요.
@@ -184,7 +184,7 @@ function ForgotPasswordFormInner({ onTryAnother }: { onTryAnother: () => void })
             로그인 화면으로 돌아가기
           </Link>
         </p>
-        <AuthLegalLinks className="pt-3 text-center text-[11px] leading-relaxed text-muted-foreground" />
+        <AuthLegalLinks className="pt-3 text-center text-sm leading-relaxed text-muted-foreground" />
       </CardContent>
     </Card>
   )

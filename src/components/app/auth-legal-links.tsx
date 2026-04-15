@@ -21,7 +21,7 @@ export function AuthLegalLinks({
       {...(navLabel ? { "aria-label": navLabel } : {})}
       className={
         className ??
-        "text-center text-[11px] leading-relaxed text-muted-foreground"
+        "text-center text-sm leading-relaxed text-muted-foreground"
       }
     >
       <Link href="/terms" className={linkClass}>

@@ -358,7 +358,7 @@ export function NotificationCenter({ userId, isDemoSession }: { userId: string |
       >
         <Bell className="size-4" />
         {unreadCount > 0 ? (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-xs font-bold text-destructive-foreground">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         ) : null}
@@ -367,7 +367,7 @@ export function NotificationCenter({ userId, isDemoSession }: { userId: string |
         <div className="flex items-center justify-between border-b border-border/60 px-3 py-2">
           <div>
             <p className="text-sm font-semibold">알림</p>
-            <p className="text-[10px] text-muted-foreground">새 문의·이후 견적·청구 이벤트</p>
+            <p className="text-xs text-muted-foreground">새 문의·이후 견적·청구 이벤트</p>
           </div>
           <div className="flex shrink-0 items-center gap-1">
             <Button type="button" variant="ghost" size="sm" className="h-8 text-xs" onClick={() => void requestBrowserPermission()}>
@@ -414,7 +414,7 @@ export function NotificationCenter({ userId, isDemoSession }: { userId: string |
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium leading-snug">{n.title}</span>
                         {badge ? (
-                          <span className="rounded border border-border/60 bg-muted/40 px-1.5 py-px text-[10px] font-medium text-muted-foreground">
+                          <span className="rounded border border-border/60 bg-muted/40 px-1.5 py-px text-xs font-medium text-muted-foreground">
                             {badge}
                           </span>
                         ) : null}
@@ -423,7 +423,7 @@ export function NotificationCenter({ userId, isDemoSession }: { userId: string |
                         ) : null}
                       </div>
                       <span className="line-clamp-2 text-xs text-muted-foreground">{n.body}</span>
-                      <span className="text-[10px] text-muted-foreground">{formatNotifTime(n.createdAt)}</span>
+                      <span className="text-xs text-muted-foreground">{formatNotifTime(n.createdAt)}</span>
                     </button>
                   </li>
                 )

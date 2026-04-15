@@ -657,7 +657,7 @@ export function InquiriesBoard({
             AI로 필드 채우기
           </Button>
         </div>
-        <p className="text-[11px] leading-snug text-muted-foreground">
+        <p className="text-sm leading-snug text-muted-foreground">
           카톡·메일 등 원문을 붙인 뒤 버튼을 누르면 제목·채널·범위·요약이 정리됩니다. 고객은 반드시 직접 선택합니다.
         </p>
         <Textarea
@@ -777,7 +777,7 @@ export function InquiriesBoard({
                     문의 등록
                   </Button>
                 </div>
-                <p className="mt-2 border-t border-border/50 pt-2 text-center text-[11px] leading-snug text-muted-foreground sm:text-left">
+                <p className="mt-2 border-t border-border/50 pt-2 text-center text-sm leading-snug text-muted-foreground sm:text-left">
                   문의 등록 전에 먼저 고객을 추가해주세요
                 </p>
               </div>
@@ -852,7 +852,7 @@ export function InquiriesBoard({
         <Card className="overflow-hidden border border-primary/35 bg-gradient-to-b from-primary/[0.06] to-background shadow-sm ring-1 ring-primary/10">
           <CardContent className="space-y-3 p-4 sm:p-5">
             <div className="space-y-1.5">
-              <p className="text-[11px] font-semibold tracking-wide text-primary uppercase">빠른 시작</p>
+              <p className="text-xs font-semibold tracking-wide text-primary uppercase">빠른 시작</p>
               <h2 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
                 먼저 고객을 등록한 뒤 문의를 추가하세요
               </h2>
@@ -909,7 +909,7 @@ export function InquiriesBoard({
               id="inquiry-flow-steps"
               className="rounded-lg border border-border/60 bg-background/80 p-2.5 sm:p-3"
             >
-              <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 <ListOrdered className="size-3" aria-hidden />
                 진행 순서
               </p>
@@ -926,7 +926,7 @@ export function InquiriesBoard({
                   >
                     <span
                       className={cn(
-                        "flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold",
+                        "flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold",
                         item.step === 3
                           ? "bg-muted text-muted-foreground"
                           : "bg-primary/12 text-primary"
@@ -943,9 +943,9 @@ export function InquiriesBoard({
                       >
                         {item.title}
                       </p>
-                      <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{item.hint}</p>
+                      <p className="mt-0.5 text-sm leading-snug text-muted-foreground">{item.hint}</p>
                       {item.step === 3 ? (
-                        <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground/90">
+                        <p className="mt-1.5 text-sm leading-snug text-muted-foreground/90">
                           문의 등록 후 견적 메뉴에서 진행하세요
                         </p>
                       ) : null}
@@ -956,8 +956,8 @@ export function InquiriesBoard({
             </div>
 
             <div className="rounded-lg border border-dashed border-primary/20 bg-primary/[0.03] px-3 py-2.5">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">확장 기능</p>
-              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">확장 기능</p>
+              <p className="mt-1 text-sm leading-snug text-muted-foreground">
                 설정에서 공개 문의 URL을 켜 두면 고객이 직접 접수하고, 알림·이메일로 운영자에게 전달됩니다. Pro에서는 고객
                 포털로 견적·청구 요약도 넘길 수 있습니다.
               </p>
@@ -978,7 +978,7 @@ export function InquiriesBoard({
       ) : null}
 
       {!isEmptyInquiries ? (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border/50 bg-muted/15 px-3 py-2 text-[11px] text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border/50 bg-muted/15 px-3 py-2 text-xs text-muted-foreground">
           <span>
             신규{" "}
             <strong className="font-semibold tabular-nums text-foreground">{displayStageSummary.new}</strong>
@@ -1055,7 +1055,7 @@ export function InquiriesBoard({
           </Select>
           <OpsCollapsibleFilters open={extraFiltersOpen} onOpenChange={setExtraFiltersOpen}>
             <div className="min-w-0 flex-1 space-y-1">
-              <label className="text-[11px] font-medium text-muted-foreground">채널</label>
+              <label className="text-xs font-medium text-muted-foreground">채널</label>
               <Select
                 value={channelFilter}
                 items={channelFilterSelectItems}
@@ -1075,7 +1075,7 @@ export function InquiriesBoard({
               </Select>
             </div>
             <div className="min-w-0 flex-1 space-y-1">
-              <label className="text-[11px] font-medium text-muted-foreground">고객</label>
+              <label className="text-xs font-medium text-muted-foreground">고객</label>
               <Select
                 value={customerFilterId}
                 items={inquiryListCustomerFilterItems}
@@ -1102,7 +1102,7 @@ export function InquiriesBoard({
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/15 px-3 py-2">
           <div className="min-w-0">
             <p className="text-xs font-semibold text-foreground">보기 방식</p>
-            <p className="text-[11px] leading-snug text-muted-foreground">
+            <p className="text-sm leading-snug text-muted-foreground">
               리스트가 기본이며, 달력은 일정·희망일 확인용 보조 뷰입니다.
             </p>
           </div>
@@ -1190,12 +1190,12 @@ export function InquiriesBoard({
                         <div className="flex flex-wrap items-center gap-1.5">
                           <span className="line-clamp-2">{inquiry.title}</span>
                           {inquiry.channel === "웹폼" ? (
-                            <span className="shrink-0 rounded border border-primary/25 bg-primary/[0.08] px-1.5 py-px text-[10px] font-medium text-primary">
+                            <span className="shrink-0 rounded border border-primary/25 bg-primary/[0.08] px-1.5 py-px text-xs font-medium text-primary">
                               웹폼
                             </span>
                           ) : null}
                         </div>
-                        <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground line-clamp-1">
+                        <span className="mt-0.5 block text-xs font-normal text-muted-foreground line-clamp-1">
                           {inquiry.serviceCategory}
                         </span>
                       </td>
@@ -1323,7 +1323,7 @@ export function InquiriesBoard({
                   <div className="min-w-0">
                     {inquiry.channel === "웹폼" ? (
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="rounded border border-primary/25 bg-primary/[0.08] px-1.5 py-px text-[10px] font-medium text-primary">
+                        <span className="rounded border border-primary/25 bg-primary/[0.08] px-1.5 py-px text-xs font-medium text-primary">
                           웹폼
                         </span>
                       </div>

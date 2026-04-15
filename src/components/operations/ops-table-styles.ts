@@ -3,7 +3,7 @@ export const opsTableClass =
   "ops-table w-full min-w-[720px] border-collapse text-sm caption-bottom"
 
 export const opsTableHeadRowClass =
-  "border-b border-border/60 bg-muted/40 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+  "border-b border-border/60 bg-muted/40 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground"
 
 export const opsTableHeadCellClass = "whitespace-nowrap px-3 py-2.5 first:pl-4 last:pr-4"
 

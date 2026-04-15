@@ -123,12 +123,12 @@ function resolvePrimaryCustomerSignal(customer: CustomerSummary): {
 function CustomerPrimarySignalBadge({ customer }: { customer: CustomerSummary }) {
   const signal = resolvePrimaryCustomerSignal(customer)
   if (!signal) {
-    return <span className="text-[11px] text-muted-foreground">—</span>
+    return <span className="text-xs text-muted-foreground">—</span>
   }
   return (
     <span
       className={cn(
-        "inline-block max-w-full truncate rounded border px-1.5 py-0.5 text-[10px] font-medium leading-none",
+        "inline-block max-w-full truncate rounded border px-1.5 py-0.5 text-xs font-medium leading-none",
         signal.className
       )}
       title={signal.label}
@@ -507,13 +507,13 @@ export function CustomersBoard({
                           {(customer.tags ?? []).slice(0, 3).map((tag) => (
                             <span
                               key={tag}
-                              className="rounded border border-border/60 bg-muted/40 px-1 py-px text-[10px] text-muted-foreground"
+                              className="rounded border border-border/60 bg-muted/40 px-1 py-px text-xs text-muted-foreground"
                             >
                               {tag}
                             </span>
                           ))}
                           {(customer.tags?.length ?? 0) > 3 ? (
-                            <span className="text-[10px] text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                               +{customer.tags!.length - 3}
                             </span>
                           ) : null}
@@ -648,7 +648,7 @@ export function CustomersBoard({
                   <span>견적 {customer.quoteCount}</span>
                   <span>청구 {customer.invoiceCount}</span>
                 </div>
-                <span className="text-[11px] text-primary">탭하여 상세</span>
+                <span className="text-xs text-primary">탭하여 상세</span>
               </button>
             )
           })}
@@ -793,7 +793,7 @@ export function CustomersBoard({
                     <li key={log.id} className="rounded-md border border-border/40 px-2 py-1.5">
                       <p className="font-medium text-foreground">{resolveActivityHeadline(log.action)}</p>
                       <p className="mt-0.5 leading-snug text-muted-foreground">{log.description}</p>
-                      <p className="mt-1 tabular-nums text-[10px] text-muted-foreground">
+                      <p className="mt-1 tabular-nums text-xs text-muted-foreground">
                         {formatDateTime(log.createdAt)}
                       </p>
                     </li>

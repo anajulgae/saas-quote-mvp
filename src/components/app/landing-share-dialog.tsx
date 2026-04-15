@@ -119,7 +119,7 @@ export function LandingShareDialog({
               height={200}
               className={cn("mx-auto mt-3 rounded-lg border border-border/50 bg-white p-2")}
             />
-            <p className="mt-2 text-center text-[11px] text-muted-foreground">
+            <p className="mt-2 text-center text-xs text-muted-foreground">
               명함·현장 안내에 활용해 보세요.
             </p>
           </div>

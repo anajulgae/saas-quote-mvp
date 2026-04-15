@@ -1,13 +1,13 @@
-import Link from "next/link"
+import Link from"next/link"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { buttonVariants } from "@/components/ui/button-variants"
-import { formatCurrency, formatDate } from "@/lib/format"
-import { getOpsStatusMeta, opsStatusChipVariants } from "@/lib/ops-status-meta"
-import type { BillCalendarEvent } from "@/lib/calendar-events"
-import { koreanCalendarListDateCn, parseLocalDateKey } from "@/lib/korean-calendar-display"
-import { cn } from "@/lib/utils"
-import type { InquiryStage, PaymentStatus, QuoteStatus } from "@/types/domain"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from"@/components/ui/card"
+import { buttonVariants } from"@/components/ui/button-variants"
+import { formatCurrency, formatDate } from"@/lib/format"
+import { getOpsStatusMeta, opsStatusChipVariants } from"@/lib/ops-status-meta"
+import type { BillCalendarEvent } from"@/lib/calendar-events"
+import { koreanCalendarListDateCn, parseLocalDateKey } from"@/lib/korean-calendar-display"
+import { cn } from"@/lib/utils"
+import type { InquiryStage, PaymentStatus, QuoteStatus } from"@/types/domain"
 
 function statusChip(event: BillCalendarEvent) {
   if (!event.statusDomain || !event.statusValue) {
@@ -15,9 +15,9 @@ function statusChip(event: BillCalendarEvent) {
   }
 
   const meta =
-    event.statusDomain === "inquiry"
+    event.statusDomain ==="inquiry"
       ? getOpsStatusMeta("inquiry", event.statusValue as InquiryStage)
-      : event.statusDomain === "payment"
+      : event.statusDomain ==="payment"
         ? getOpsStatusMeta("payment", event.statusValue as PaymentStatus)
         : getOpsStatusMeta("quote", event.statusValue as QuoteStatus)
 
@@ -25,7 +25,7 @@ function statusChip(event: BillCalendarEvent) {
     <span
       className={opsStatusChipVariants({
         tone: meta.tone,
-        size: "sm",
+        size:"sm",
         emphasis: meta.emphasis,
       })}
     >
@@ -35,10 +35,10 @@ function statusChip(event: BillCalendarEvent) {
 }
 
 function hrefForEvent(event: BillCalendarEvent) {
-  if (event.entityKind === "inquiry") {
+  if (event.entityKind ==="inquiry") {
     return `/inquiries?focus=${event.relatedEntityId}`
   }
-  if (event.entityKind === "invoice") {
+  if (event.entityKind ==="invoice") {
     return `/invoices?focus=${event.relatedEntityId}`
   }
   return `/quotes?focus=${event.relatedEntityId}`
@@ -59,7 +59,7 @@ export function OpsAgendaList({
     <Card className="border-border/70">
       <CardHeader className="space-y-0.5 pb-3">
         <CardTitle className="text-base font-semibold">{title}</CardTitle>
-        {description ? <CardDescription className="text-xs">{description}</CardDescription> : null}
+        {description ? <CardDescription>{description}</CardDescription> : null}
       </CardHeader>
       <CardContent>
         {!events.length ? (
@@ -81,9 +81,9 @@ export function OpsAgendaList({
                         {formatDate(event.date)}
                       </span>
                       <span className="text-muted-foreground">
-                        {" "}
+                        {""}
                         · {event.kindLabel}
-                        {event.timeLabel ? ` ${event.timeLabel}` : ""}
+                        {event.timeLabel ? ` ${event.timeLabel}` :""}
                       </span>
                     </p>
                     <p className="mt-0.5 line-clamp-2 text-sm font-semibold text-foreground">{event.title}</p>
@@ -93,7 +93,7 @@ export function OpsAgendaList({
                 </div>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   {event.subtitle ? <span>{event.subtitle}</span> : null}
-                  {typeof event.amount === "number" ? (
+                  {typeof event.amount ==="number" ? (
                     <span className="font-semibold tabular-nums text-foreground">
                       {formatCurrency(event.amount)}
                     </span>
@@ -105,7 +105,7 @@ export function OpsAgendaList({
         )}
         {events.length ? (
           <div className="mt-3">
-            <span className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "pointer-events-none px-0 text-xs text-muted-foreground")}>
+            <span className={cn(buttonVariants({ variant:"ghost", size:"sm" }),"pointer-events-none px-0 text-xs text-muted-foreground")}>
               항목을 누르면 해당 화면 상세로 이동합니다
             </span>
           </div>

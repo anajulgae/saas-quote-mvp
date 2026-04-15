@@ -68,7 +68,7 @@ export function LandingPricingSaas() {
     >
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto mb-12 max-w-3xl text-center">
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/90">요금</p>
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-primary/90">요금</p>
           <h2
             id="pricing-heading"
             className="text-2xl font-extrabold tracking-tight text-foreground sm:text-[1.95rem] sm:leading-snug"
@@ -87,7 +87,7 @@ export function LandingPricingSaas() {
               {PLAN_LABEL.starter}
             </div>
             <div className="flex items-center gap-2 border-b border-border/50 bg-primary/[0.1] px-3 py-3 sm:border-b-0 sm:border-r sm:py-4 sm:pl-5">
-              <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
+              <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">
                 추천
               </span>
               {PLAN_LABEL.pro}
@@ -138,7 +138,7 @@ export function LandingPricingSaas() {
             >
               <div className="mb-2 min-h-[1.75rem]">
                 {highlight ? (
-                  <span className="inline-flex rounded-full bg-primary px-3 py-1 text-[11px] font-extrabold tracking-wide text-primary-foreground shadow-sm">
+                  <span className="inline-flex rounded-full bg-primary px-3 py-1 text-xs font-extrabold tracking-wide text-primary-foreground shadow-sm">
                     런칭에 추천
                   </span>
                 ) : null}

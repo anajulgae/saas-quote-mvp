@@ -1,12 +1,12 @@
-import Link from "next/link"
-import { ArrowRight, Download, Lock, TrendingDown, TrendingUp } from "lucide-react"
+import Link from"next/link"
+import { ArrowRight, Download, Lock, TrendingDown, TrendingUp } from"lucide-react"
 
-import { buildAnalyticsHref } from "@/lib/analytics"
-import type { AnalyticsBreakdownRow, AnalyticsKpi, AnalyticsRange, AnalyticsReport } from "@/lib/analytics"
-import { formatCurrency } from "@/lib/format"
-import { cn } from "@/lib/utils"
-import { buttonVariants } from "@/components/ui/button-variants"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { buildAnalyticsHref } from"@/lib/analytics"
+import type { AnalyticsBreakdownRow, AnalyticsKpi, AnalyticsRange, AnalyticsReport } from"@/lib/analytics"
+import { formatCurrency } from"@/lib/format"
+import { cn } from"@/lib/utils"
+import { buttonVariants } from"@/components/ui/button-variants"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from"@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -14,33 +14,33 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import type { QuoteStatus } from "@/types/domain"
+} from"@/components/ui/table"
+import type { QuoteStatus } from"@/types/domain"
 
 function formatMetric(value: number, type: AnalyticsKpi["valueType"]) {
-  if (type === "currency") return formatCurrency(value)
-  if (type === "percent") return `${(value * 100).toFixed(1)}%`
-  if (type === "days") return `${value.toFixed(1)}일`
+  if (type ==="currency") return formatCurrency(value)
+  if (type ==="percent") return `${(value * 100).toFixed(1)}%`
+  if (type ==="days") return `${value.toFixed(1)}일`
   return new Intl.NumberFormat("ko-KR").format(value)
 }
 
 function formatRate(value: number | null | undefined) {
-  if (value == null) return "—"
+  if (value == null) return"—"
   return `${(value * 100).toFixed(1)}%`
 }
 
 function deltaTone(kpi: AnalyticsKpi) {
-  if (!kpi.delta || kpi.goodDirection === "neutral") return "text-muted-foreground"
+  if (!kpi.delta || kpi.goodDirection ==="neutral") return"text-muted-foreground"
   const positive = kpi.delta > 0
-  if ((positive && kpi.goodDirection === "up") || (!positive && kpi.goodDirection === "down")) {
-    return "text-emerald-700"
+  if ((positive && kpi.goodDirection ==="up") || (!positive && kpi.goodDirection ==="down")) {
+    return"text-emerald-700"
   }
-  return "text-rose-700"
+  return"text-rose-700"
 }
 
 function deltaLabel(kpi: AnalyticsKpi) {
-  if (kpi.delta == null || kpi.delta === 0) return "비교 기간 대비 변화 없음"
-  return `${kpi.delta > 0 ? "+" : "-"}${formatMetric(Math.abs(kpi.delta), kpi.valueType)} (직전 비교 구간 대비)`
+  if (kpi.delta == null || kpi.delta === 0) return"비교 기간 대비 변화 없음"
+  return `${kpi.delta > 0 ?"+" :"-"}${formatMetric(Math.abs(kpi.delta), kpi.valueType)} (직전 비교 구간 대비)`
 }
 
 function maxValue(values: number[]) {
@@ -49,11 +49,11 @@ function maxValue(values: number[]) {
 
 function quoteStatusKo(status: QuoteStatus | string) {
   const m: Record<string, string> = {
-    draft: "초안",
-    sent: "발송",
-    approved: "승인",
-    rejected: "거절",
-    expired: "만료",
+    draft:"초안",
+    sent:"발송",
+    approved:"승인",
+    rejected:"거절",
+    expired:"만료",
   }
   return m[status] ?? status
 }
@@ -70,11 +70,11 @@ function PeriodFilter({
   exportHref?: string
 }) {
   const presets: Array<{ key: AnalyticsRange["preset"]; label: string }> = [
-    { key: "today", label: "오늘" },
-    { key: "7d", label: "7일" },
-    { key: "30d", label: "30일" },
-    { key: "this_month", label: "이번 달" },
-    { key: "last_month", label: "지난 달" },
+    { key:"today", label:"오늘" },
+    { key:"7d", label:"7일" },
+    { key:"30d", label:"30일" },
+    { key:"this_month", label:"이번 달" },
+    { key:"last_month", label:"지난 달" },
   ]
 
   return (
@@ -85,13 +85,13 @@ function PeriodFilter({
             <Link
               key={preset.key}
               href={buildAnalyticsHref(basePath, { preset: preset.key, startDate: range.startDate, endDate: range.endDate })}
-              className={cn(buttonVariants({ variant: range.preset === preset.key ? "default" : "outline", size: "sm" }), "h-8")}
+              className={cn(buttonVariants({ variant: range.preset === preset.key ?"default" :"outline", size:"sm" }),"h-8")}
             >
               {preset.label}
             </Link>
           ))}
           {exportHref ? (
-            <a href={exportHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "ml-auto h-8")}>
+            <a href={exportHref} className={cn(buttonVariants({ variant:"outline", size:"sm" }),"ml-auto h-8")}>
               <Download className="mr-1 size-3.5" />
               CSV 받기
             </a>
@@ -108,7 +108,7 @@ function PeriodFilter({
             종료일
             <input type="date" name="to" defaultValue={range.endDate} disabled={!allowCustomRange} className="h-9 rounded-md border border-border/70 bg-background px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-60" />
           </label>
-          <button type="submit" disabled={!allowCustomRange} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}>
+          <button type="submit" disabled={!allowCustomRange} className={cn(buttonVariants({ variant:"outline", size:"sm" }),"h-9")}>
             사용자 지정 기간 적용
           </button>
         </form>
@@ -168,9 +168,9 @@ function BreakdownBars({ rows }: { rows: AnalyticsBreakdownRow[] }) {
           </div>
           {row.conversionRate != null || row.averageAmount != null ? (
             <p className="text-xs text-muted-foreground">
-              {row.conversionRate != null ? `견적 전환 ${formatRate(row.conversionRate)}` : "—"}
-              {row.secondaryRate != null ? ` · 승인 ${formatRate(row.secondaryRate)}` : ""}
-              {row.averageAmount != null ? ` · 평균 ${formatCurrency(row.averageAmount)}` : ""}
+              {row.conversionRate != null ? `견적 전환 ${formatRate(row.conversionRate)}` :"—"}
+              {row.secondaryRate != null ? ` · 승인 ${formatRate(row.secondaryRate)}` :""}
+              {row.averageAmount != null ? ` · 평균 ${formatCurrency(row.averageAmount)}` :""}
             </p>
           ) : null}
         </div>
@@ -188,9 +188,9 @@ function SeriesBars({ report }: { report: AnalyticsReport }) {
           <p className="text-xs text-muted-foreground">{row.label}</p>
           <div className="space-y-1">
             {[
-              ["문의", row.inquiries, "bg-sky-500/80"],
-              ["견적", row.quotes, "bg-primary/80"],
-              ["청구", row.invoices, "bg-amber-500/80"],
+              ["문의", row.inquiries,"bg-sky-500/80"],
+              ["견적", row.quotes,"bg-primary/80"],
+              ["청구", row.invoices,"bg-amber-500/80"],
             ].map(([label, value, klass]) => (
               <div key={label} className="flex items-center gap-2 text-[11px] text-muted-foreground">
                 <span className="w-14 shrink-0">{label}</span>
@@ -217,7 +217,7 @@ function UpgradeCard() {
             업그레이드 시 채널 전환, 고객 순위, AI·문서 발송 분해, 사용자 지정 기간·CSV 보내기 등을 사용할 수 있습니다.
           </p>
         </div>
-        <Link href="/billing?plan=pro" className={cn(buttonVariants({ size: "sm" }), "h-9 shrink-0")}>
+        <Link href="/billing?plan=pro" className={cn(buttonVariants({ size:"sm" }),"h-9 shrink-0")}>
           플랜 안내
         </Link>
       </CardContent>
@@ -233,7 +233,7 @@ export function AnalyticsDashboardSection({ report }: { report: AnalyticsReport 
           <h2 className="text-lg font-semibold tracking-tight text-foreground">운영 요약</h2>
           <p className="text-sm text-muted-foreground">목록 작업 전에 파이프라인 건강도를 빠르게 확인하세요.</p>
         </div>
-        <Link href={buildAnalyticsHref("/analytics", report.range)} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}>
+        <Link href={buildAnalyticsHref("/analytics", report.range)} className={cn(buttonVariants({ variant:"outline", size:"sm" }),"h-9")}>
           통계 전체 보기
           <ArrowRight className="ml-1 size-3.5" />
         </Link>
@@ -244,7 +244,7 @@ export function AnalyticsDashboardSection({ report }: { report: AnalyticsReport 
         <Card className="border-border/70">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">전환 퍼널</CardTitle>
-            <CardDescription className="text-xs">선택 기간에 생성된 문의 코호트 기준입니다.</CardDescription>
+            <CardDescription>선택 기간에 생성된 문의 코호트 기준입니다.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <BreakdownBars
@@ -261,7 +261,7 @@ export function AnalyticsDashboardSection({ report }: { report: AnalyticsReport 
         <Card className="border-border/70">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">핵심 변화</CardTitle>
-            <CardDescription className="text-xs">운영·리더십 미팅용 한 줄 요약입니다.</CardDescription>
+            <CardDescription>운영·리더십 미팅용 한 줄 요약입니다.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {report.highlights.map((item) => (
@@ -288,7 +288,7 @@ export function AnalyticsReportView({ report }: { report: AnalyticsReport }) {
         <Card className="border-border/70">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">파이프라인 퍼널</CardTitle>
-            <CardDescription className="text-xs">이탈이 큰 단계가 어디인지 한눈에 봅니다.</CardDescription>
+            <CardDescription>이탈이 큰 단계가 어디인지 한눈에 봅니다.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <BreakdownBars
@@ -305,7 +305,7 @@ export function AnalyticsReportView({ report }: { report: AnalyticsReport }) {
         <Card className="border-border/70">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">거래량 추이</CardTitle>
-            <CardDescription className="text-xs">문의·견적·청구 건수를 기간 구간별로 나눕니다.</CardDescription>
+            <CardDescription>문의·견적·청구 건수를 기간 구간별로 나눕니다.</CardDescription>
           </CardHeader>
           <CardContent>
             <SeriesBars report={report} />
@@ -338,8 +338,8 @@ export function AnalyticsReportView({ report }: { report: AnalyticsReport }) {
               7일 내 만기 예정: <strong>{report.cash.dueSoonCount}</strong>건
             </p>
             <p>
-              평균 결제 소요일:{" "}
-              <strong>{report.cash.averagePaymentDays == null ? "—" : `${report.cash.averagePaymentDays.toFixed(1)}일`}</strong>
+              평균 결제 소요일:{""}
+              <strong>{report.cash.averagePaymentDays == null ?"—" : `${report.cash.averagePaymentDays.toFixed(1)}일`}</strong>
             </p>
           </CardContent>
         </Card>
@@ -402,7 +402,7 @@ export function AnalyticsReportView({ report }: { report: AnalyticsReport }) {
               <div>
                 <p className="font-medium text-foreground">AI 사용</p>
                 <p className="text-muted-foreground">
-                  기간 내 {report.aiSummary.periodCalls}회 · 이번 달 {report.aiSummary.currentMonthCalls} /{" "}
+                  기간 내 {report.aiSummary.periodCalls}회 · 이번 달 {report.aiSummary.currentMonthCalls} /{""}
                   {report.aiSummary.currentMonthLimit}회
                 </p>
                 {report.aiSummary.backfillNotice ? <p className="mt-1 text-xs text-amber-700">{report.aiSummary.backfillNotice}</p> : null}
@@ -411,13 +411,13 @@ export function AnalyticsReportView({ report }: { report: AnalyticsReport }) {
                 rows={
                   report.aiSummary.featureRows.length
                     ? report.aiSummary.featureRows
-                    : [{ key: "empty", label: "이 기간에 기록된 AI 호출이 없습니다", count: 0 }]
+                    : [{ key:"empty", label:"이 기간에 기록된 AI 호출이 없습니다", count: 0 }]
                 }
               />
               <div className="pt-2">
                 <p className="font-medium text-foreground">문서 발송(채널)</p>
                 <p className="text-muted-foreground">
-                  기간 내 {report.documentSendSummary.periodCount}건 · 이번 달 {report.documentSendSummary.currentMonthCount} /{" "}
+                  기간 내 {report.documentSendSummary.periodCount}건 · 이번 달 {report.documentSendSummary.currentMonthCount} /{""}
                   {report.documentSendSummary.currentMonthLimit}건
                 </p>
               </div>
@@ -425,7 +425,7 @@ export function AnalyticsReportView({ report }: { report: AnalyticsReport }) {
                 rows={
                   report.documentSendSummary.actionRows.length
                     ? report.documentSendSummary.actionRows
-                    : [{ key: "empty", label: "이 기간에 문서 발송 기록이 없습니다", count: 0 }]
+                    : [{ key:"empty", label:"이 기간에 문서 발송 기록이 없습니다", count: 0 }]
                 }
               />
             </CardContent>
@@ -450,7 +450,7 @@ export function AnalyticsReportView({ report }: { report: AnalyticsReport }) {
                       <TableCell>{row.label}</TableCell>
                       <TableCell>{formatCurrency(row.totalInvoiced)}</TableCell>
                       <TableCell>{formatCurrency(row.totalPaid)}</TableCell>
-                      <TableCell>{row.risk === "watch" ? "관심" : "안정"}</TableCell>
+                      <TableCell>{row.risk ==="watch" ?"관심" :"안정"}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

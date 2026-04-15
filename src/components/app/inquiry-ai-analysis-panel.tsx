@@ -121,7 +121,7 @@ export function InquiryAiAnalysisPanel({
             type="button"
             variant="outline"
             size="sm"
-            className="h-7 gap-1 text-[10px]"
+            className="h-7 gap-1 text-xs"
             disabled={busy}
             onClick={() => run(false)}
           >
@@ -132,7 +132,7 @@ export function InquiryAiAnalysisPanel({
             type="button"
             variant="secondary"
             size="sm"
-            className="h-7 gap-1 text-[10px]"
+            className="h-7 gap-1 text-xs"
             disabled={busy}
             onClick={() => run(true)}
           >
@@ -143,11 +143,11 @@ export function InquiryAiAnalysisPanel({
       </div>
 
       {localError ? (
-        <p className="text-[11px] text-destructive">{localError}</p>
+        <p className="text-xs text-destructive">{localError}</p>
       ) : null}
 
       {!analysis ? (
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
+        <p className="text-sm leading-relaxed text-muted-foreground">
           아직 분석 결과가 없습니다. 「불러오기」로 캐시를 확인하거나 「다시 분석」을 눌러 주세요. 공개 문의 폼으로 접수된 건은 접수 직후 자동 분석될 수
           있습니다.
         </p>
@@ -156,42 +156,42 @@ export function InquiryAiAnalysisPanel({
           <div className="flex flex-wrap gap-1.5">
             <span
               className={cn(
-                "inline-flex rounded-full border px-2 py-px text-[10px] font-medium",
+                "inline-flex rounded-full border px-2 py-px text-xs font-medium",
                 urgencyClass(analysis.urgency)
               )}
             >
               긴급도 {urgencyLabel(analysis.urgency)}
             </span>
-            <span className="inline-flex rounded-full border border-border/60 bg-card px-2 py-px text-[10px] font-medium">
+            <span className="inline-flex rounded-full border border-border/60 bg-card px-2 py-px text-xs font-medium">
               {analysis.requestTypeLabel}
             </span>
             {analysis.quoteConversionReady ? (
-              <span className="inline-flex rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2 py-px text-[10px] font-medium text-emerald-900 dark:text-emerald-100">
+              <span className="inline-flex rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2 py-px text-xs font-medium text-emerald-900 dark:text-emerald-100">
                 견적 전환 검토
               </span>
             ) : null}
           </div>
           <p className="leading-relaxed text-foreground/90">{analysis.summary}</p>
-          <p className="text-[10px] font-medium text-muted-foreground">팔로업 우선순위: {urgencyLabel(analysis.followupPriority)}</p>
-          <p className="text-[10px] text-muted-foreground">{analysis.quoteConversionHint}</p>
+          <p className="text-xs font-medium text-muted-foreground">팔로업 우선순위: {urgencyLabel(analysis.followupPriority)}</p>
+          <p className="text-xs text-muted-foreground">{analysis.quoteConversionHint}</p>
 
           {analysis.nextActions.length ? (
             <div>
-              <p className="mb-1 text-[10px] font-semibold text-muted-foreground">추천 다음 액션</p>
+              <p className="mb-1 text-xs font-semibold text-muted-foreground">추천 다음 액션</p>
               <ul className="space-y-1.5">
                 {analysis.nextActions.slice(0, 5).map((a, i) => {
                   const href = actionHref(a.kind, inquiry.customerId)
                   return (
                     <li
                       key={`${a.label}-${i}`}
-                      className="rounded-md border border-border/50 bg-background/80 px-2 py-1.5 text-[11px]"
+                      className="rounded-md border border-border/50 bg-background/80 px-2 py-1.5 text-xs"
                     >
                       <div className="font-medium text-foreground">{a.label}</div>
                       {a.reason ? <p className="mt-0.5 text-muted-foreground">{a.reason}</p> : null}
                       {href ? (
                         <Link
                           href={href}
-                          className="mt-1 inline-block text-[10px] font-medium text-primary underline-offset-2 hover:underline"
+                          className="mt-1 inline-block text-xs font-medium text-primary underline-offset-2 hover:underline"
                         >
                           바로 이동
                         </Link>
@@ -205,8 +205,8 @@ export function InquiryAiAnalysisPanel({
 
           {analysis.suggestedQuestions.length ? (
             <div>
-              <p className="mb-1 text-[10px] font-semibold text-muted-foreground">고객에게 확인하면 좋은 질문</p>
-              <ul className="list-inside list-disc text-[11px] text-muted-foreground">
+              <p className="mb-1 text-xs font-semibold text-muted-foreground">고객에게 확인하면 좋은 질문</p>
+              <ul className="list-inside list-disc text-xs text-muted-foreground">
                 {analysis.suggestedQuestions.map((q) => (
                   <li key={q}>{q}</li>
                 ))}
@@ -215,7 +215,7 @@ export function InquiryAiAnalysisPanel({
           ) : null}
 
           {analysis.industryContextNote ? (
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               <span className="font-medium text-foreground/80">맥락: </span>
               {analysis.industryContextNote}
             </p>

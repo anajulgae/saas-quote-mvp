@@ -81,7 +81,7 @@ export function InvoiceCollectionAiPanel({
           AI 추천 액션 · 문구
         </p>
         <div className="flex flex-wrap gap-1">
-          <Button type="button" variant="secondary" size="sm" className="h-7 gap-1 text-[10px]" disabled={busy} onClick={load}>
+          <Button type="button" variant="secondary" size="sm" className="h-7 gap-1 text-xs" disabled={busy} onClick={load}>
             {busy ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
             상황 분석
           </Button>
@@ -89,7 +89,7 @@ export function InvoiceCollectionAiPanel({
             type="button"
             variant="outline"
             size="sm"
-            className="h-7 gap-1 text-[10px]"
+            className="h-7 gap-1 text-xs"
             disabled={!advice}
             onClick={() => void copyDraft()}
           >
@@ -100,7 +100,7 @@ export function InvoiceCollectionAiPanel({
       </div>
 
       {!advice ? (
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
+        <p className="text-sm leading-relaxed text-muted-foreground">
           청구 상태·기한·리마인드 이력을 보고 지금 할 일과 고객 메시지 초안을 제안합니다. 「상황 분석」을 눌러 주세요.
         </p>
       ) : (
@@ -109,17 +109,17 @@ export function InvoiceCollectionAiPanel({
             <p className="font-medium text-foreground">{advice.headline}</p>
             <p className="mt-1 text-muted-foreground">{advice.reason}</p>
           </div>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             권장 톤:{" "}
             <span className="font-medium text-foreground">
               {advice.suggestedTone === "polite" ? "정중형" : advice.suggestedTone === "firm" ? "단호형" : "기본형"}
             </span>
-            · 메시지 유형: <span className="font-mono text-[10px]">{advice.messageKind}</span>
+            · 메시지 유형: <span className="font-mono text-xs">{advice.messageKind}</span>
           </p>
           {advice.checklist.length ? (
             <div>
-              <p className="mb-0.5 text-[10px] font-semibold text-muted-foreground">체크리스트</p>
-              <ul className="list-inside list-disc text-[11px] text-muted-foreground">
+              <p className="mb-0.5 text-xs font-semibold text-muted-foreground">체크리스트</p>
+              <ul className="list-inside list-disc text-xs text-muted-foreground">
                 {advice.checklist.map((c) => (
                   <li key={c}>{c}</li>
                 ))}
@@ -128,13 +128,13 @@ export function InvoiceCollectionAiPanel({
           ) : null}
           <div className="rounded-md border border-border/50 bg-background/80 p-2">
             {advice.draftSubject ? (
-              <p className="text-[10px] font-medium text-muted-foreground">제목 후보</p>
+              <p className="text-xs font-medium text-muted-foreground">제목 후보</p>
             ) : null}
-            {advice.draftSubject ? <p className="text-[11px]">{advice.draftSubject}</p> : null}
-            <p className="mt-1 text-[10px] font-medium text-muted-foreground">본문 초안</p>
-            <p className="whitespace-pre-wrap text-[11px] leading-relaxed text-foreground/90">{advice.draftBody}</p>
+            {advice.draftSubject ? <p className="text-xs">{advice.draftSubject}</p> : null}
+            <p className="mt-1 text-xs font-medium text-muted-foreground">본문 초안</p>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">{advice.draftBody}</p>
           </div>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             리마인드 기록·발송 창에서 필요하면 「리마인드」메뉴와 연결해 사용하세요. 문구는 사실 확인 후 발송하세요.
           </p>
         </div>

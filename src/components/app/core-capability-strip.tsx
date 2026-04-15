@@ -29,7 +29,7 @@ export function CoreCapabilityStrip({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-x-1 gap-y-1.5 text-[11px] leading-tight text-muted-foreground",
+        "flex flex-wrap items-center gap-x-1 gap-y-1.5 text-xs leading-tight text-muted-foreground",
         className
       )}
     >

@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
-import { Loader2, Sparkles } from "lucide-react"
-import { toast } from "sonner"
+import { useState } from"react"
+import { Loader2, Sparkles } from"lucide-react"
+import { toast } from"sonner"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from"@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from"@/components/ui/card"
 
 type Insight = {
   headline: string
@@ -32,14 +32,14 @@ export function CustomerAiInsightSection({
     void (async () => {
       try {
         const res = await fetch("/api/ai/customer-insight", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
+          method:"POST",
+          headers: {"Content-Type":"application/json" },
+          credentials:"include",
           body: JSON.stringify({ customerId }),
         })
         const data = (await res.json()) as { error?: string; insight?: Insight }
         if (!res.ok) {
-          toast.error(data.error ?? "인사이트를 불러오지 못했습니다.")
+          toast.error(data.error ??"인사이트를 불러오지 못했습니다.")
           return
         }
         if (data.insight) {
@@ -67,7 +67,7 @@ export function CustomerAiInsightSection({
               <Sparkles className="size-4 text-primary/80" aria-hidden />
               AI 고객 인사이트
             </CardTitle>
-            <CardDescription className="text-xs">
+            <CardDescription>
               문의·견적·청구 이력을 바탕으로 이번 대응에 도움이 되는 짧은 요약입니다.
             </CardDescription>
           </div>
@@ -92,7 +92,7 @@ export function CustomerAiInsightSection({
                 ))}
               </ul>
             ) : null}
-            <p className="text-xs leading-relaxed text-foreground/90">{insight.suggestedApproach}</p>
+            <p className="text-sm leading-relaxed text-foreground/90">{insight.suggestedApproach}</p>
           </>
         )}
       </CardContent>

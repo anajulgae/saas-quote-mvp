@@ -40,7 +40,7 @@ export function OpsDetailSheet({
         <SheetHeader className="shrink-0 space-y-1 border-b border-border/60 px-4 py-4 text-left sm:px-5">
           <SheetTitle className="text-base leading-snug">{title}</SheetTitle>
           {description ? (
-            <SheetDescription className="text-xs leading-relaxed">{description}</SheetDescription>
+            <SheetDescription className="text-sm leading-relaxed">{description}</SheetDescription>
           ) : null}
         </SheetHeader>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">

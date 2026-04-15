@@ -111,18 +111,18 @@ export default async function AuditLogPage() {
               />
               <div className="flex flex-col gap-0.5">
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                  <span className="rounded bg-muted/60 px-1.5 py-0.5 text-[10px] font-medium">
+                  <span className="rounded bg-muted/60 px-1.5 py-0.5 text-xs font-medium">
                     {actionLabel(entry.action)}
                   </span>
-                  <time className="text-[10px] text-muted-foreground">
+                  <time className="text-xs text-muted-foreground">
                     {formatDateTime(entry.createdAt)}
                   </time>
                 </div>
-                <p className="text-xs leading-relaxed text-foreground/90">
+                <p className="text-sm leading-relaxed text-foreground/90">
                   {entry.description}
                 </p>
                 {entry.customerName ? (
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     고객: {entry.customerName}
                   </p>
                 ) : null}

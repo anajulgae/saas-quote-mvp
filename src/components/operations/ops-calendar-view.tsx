@@ -168,7 +168,7 @@ export function OpsCalendarView({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold">
+        <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold">
           {koreanWeekdayHeaders.map((col) => (
             <div key={col.label} className={cn("py-1", koreanHeaderTextClass(col.tone))}>
               {col.label}
@@ -210,7 +210,7 @@ export function OpsCalendarView({
                 >
                   <span className={koreanCalendarDayNumberCn(date, { isToday })}>{date.getDate()}</span>
                   {dayEvents.length ? (
-                    <span className="text-[10px] text-muted-foreground">{dayEvents.length}건</span>
+                    <span className="text-xs text-muted-foreground">{dayEvents.length}건</span>
                   ) : null}
                 </button>
 
@@ -229,19 +229,19 @@ export function OpsCalendarView({
                       }}
                     >
                       <div className="flex w-full items-center justify-between gap-2">
-                        <span className="line-clamp-1 text-[11px] font-semibold">
+                        <span className="line-clamp-1 text-xs font-semibold">
                           {event.kindLabel}
                           {event.timeLabel ? ` · ${event.timeLabel}` : ""}
                         </span>
                       </div>
-                      <span className="mt-0.5 line-clamp-1 text-[11px] font-medium">{event.title}</span>
-                      <span className="line-clamp-1 text-[10px] opacity-80">{event.customerName}</span>
+                      <span className="mt-0.5 line-clamp-1 text-xs font-medium">{event.title}</span>
+                      <span className="line-clamp-1 text-xs opacity-80">{event.customerName}</span>
                     </button>
                   ))}
                   {hiddenCount > 0 ? (
                     <button
                       type="button"
-                      className="w-full rounded-md border border-dashed border-border/70 px-2 py-1 text-left text-[11px] font-medium text-muted-foreground hover:bg-muted/35"
+                      className="w-full rounded-md border border-dashed border-border/70 px-2 py-1 text-left text-xs font-medium text-muted-foreground hover:bg-muted/35"
                       onClick={() => setSelectedDateKey(key)}
                     >
                       + {hiddenCount}건 더보기

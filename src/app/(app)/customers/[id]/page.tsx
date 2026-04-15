@@ -1,5 +1,5 @@
-import Link from "next/link"
-import { notFound } from "next/navigation"
+import Link from"next/link"
+import { notFound } from"next/navigation"
 import {
   ArrowRight,
   Building2,
@@ -12,22 +12,22 @@ import {
   Receipt,
   Sparkles,
   User,
-} from "lucide-react"
+} from"lucide-react"
 
-import { ActivityEntry } from "@/components/app/activity-entry"
-import { PageHeader } from "@/components/app/page-header"
-import { InquiryStageBadge, PaymentStatusBadge, QuoteStatusBadge } from "@/components/app/status-badge"
-import { buttonVariants } from "@/components/ui/button-variants"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CustomerAiInsightSection } from "@/components/app/customer-ai-insight-section"
-import { CustomerPortalLinkBlock } from "@/components/app/customer-portal-link-block"
-import { CustomerTaxInvoiceSidebarCard } from "@/components/app/customer-tax-invoice-sidebar-card"
-import { invoiceTypeOptions } from "@/lib/constants"
-import { getCustomerDetailData } from "@/lib/data"
-import { formatCurrency } from "@/lib/format"
-import { planAllowsFeature } from "@/lib/plan-features"
-import { getSiteOrigin } from "@/lib/site-url"
-import { cn } from "@/lib/utils"
+import { ActivityEntry } from"@/components/app/activity-entry"
+import { PageHeader } from"@/components/app/page-header"
+import { InquiryStageBadge, PaymentStatusBadge, QuoteStatusBadge } from"@/components/app/status-badge"
+import { buttonVariants } from"@/components/ui/button-variants"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from"@/components/ui/card"
+import { CustomerAiInsightSection } from"@/components/app/customer-ai-insight-section"
+import { CustomerPortalLinkBlock } from"@/components/app/customer-portal-link-block"
+import { CustomerTaxInvoiceSidebarCard } from"@/components/app/customer-tax-invoice-sidebar-card"
+import { invoiceTypeOptions } from"@/lib/constants"
+import { getCustomerDetailData } from"@/lib/data"
+import { formatCurrency } from"@/lib/format"
+import { planAllowsFeature } from"@/lib/plan-features"
+import { getSiteOrigin } from"@/lib/site-url"
+import { cn } from"@/lib/utils"
 
 function invoiceTypeLabel(type: string) {
   return invoiceTypeOptions.find((o) => o.value === type)?.label ?? type
@@ -47,7 +47,7 @@ export default async function CustomerDetailPage({
   }
 
   const siteOrigin = getSiteOrigin()
-  const portalAllowed = planAllowsFeature(currentPlan, "customer_mini_portal")
+  const portalAllowed = planAllowsFeature(currentPlan,"customer_mini_portal")
 
   const displayTitle = customer.companyName?.trim() || customer.name
   const hasCompany = Boolean(customer.companyName?.trim())
@@ -66,37 +66,37 @@ export default async function CustomerDetailPage({
   const inquiryNewHref = `/inquiries?customer=${customer.id}&new=1`
   const quoteNewHref = `/quotes?customer=${customer.id}&new=1`
 
-  const inquiryBtnVariant = primaryCta === "inquiry" ? "default" : "outline"
-  const inquiryBtnSize = primaryCta === "inquiry" ? "default" : "sm"
+  const inquiryBtnVariant = primaryCta ==="inquiry" ?"default" :"outline"
+  const inquiryBtnSize = primaryCta ==="inquiry" ?"default" :"sm"
   const inquiryBtnLayout =
-    primaryCta === "inquiry"
-      ? "h-10 font-semibold sm:h-10"
-      : "h-9 font-normal text-foreground sm:h-9"
+    primaryCta ==="inquiry"
+      ?"h-10 font-semibold sm:h-10"
+      :"h-9 font-normal text-foreground sm:h-9"
 
   const quoteBtnVariant =
-    primaryCta === "quote"
-      ? "default"
-      : allActivityEmpty && primaryCta === "inquiry"
-        ? "ghost"
-        : primaryCta === "invoice" || primaryCta === null
-          ? "ghost"
-          : "outline"
-  const quoteBtnSize = primaryCta === "quote" ? "default" : "sm"
+    primaryCta ==="quote"
+      ?"default"
+      : allActivityEmpty && primaryCta ==="inquiry"
+        ?"ghost"
+        : primaryCta ==="invoice" || primaryCta === null
+          ?"ghost"
+          :"outline"
+  const quoteBtnSize = primaryCta ==="quote" ?"default" :"sm"
   const quoteBtnLayout = cn(
-    primaryCta === "quote" ? "h-10 font-semibold sm:h-10" : "h-9 font-normal sm:h-9",
-    quoteBtnVariant === "ghost" && "text-muted-foreground hover:text-foreground"
+    primaryCta ==="quote" ?"h-10 font-semibold sm:h-10" :"h-9 font-normal sm:h-9",
+    quoteBtnVariant ==="ghost" &&"text-muted-foreground hover:text-foreground"
   )
 
   const invoiceBtnVariant =
-    primaryCta === "invoice"
-      ? "default"
-      : allActivityEmpty || primaryCta === "quote" || primaryCta === null
-        ? "ghost"
-        : "outline"
-  const invoiceBtnSize = primaryCta === "invoice" ? "default" : "sm"
+    primaryCta ==="invoice"
+      ?"default"
+      : allActivityEmpty || primaryCta ==="quote" || primaryCta === null
+        ?"ghost"
+        :"outline"
+  const invoiceBtnSize = primaryCta ==="invoice" ?"default" :"sm"
   const invoiceBtnLayout = cn(
-    primaryCta === "invoice" ? "h-10 font-semibold sm:h-10" : "h-9 font-normal sm:h-9",
-    invoiceBtnVariant === "ghost" && "text-muted-foreground hover:text-foreground"
+    primaryCta ==="invoice" ?"h-10 font-semibold sm:h-10" :"h-9 font-normal sm:h-9",
+    invoiceBtnVariant ==="ghost" &&"text-muted-foreground hover:text-foreground"
   )
 
   return (
@@ -105,22 +105,22 @@ export default async function CustomerDetailPage({
         title={displayTitle}
         description={
           hasCompany
-            ? `${customer.name} · ${customer.phone || "—"} · ${customer.email || "—"}`
-            : `${customer.phone || "—"} · ${customer.email || "—"}`
+            ? `${customer.name} · ${customer.phone ||"—"} · ${customer.email ||"—"}`
+            : `${customer.phone ||"—"} · ${customer.email ||"—"}`
         }
         action={
           <div className="flex w-full flex-col gap-2.5 sm:w-auto sm:items-end">
             <div className="flex flex-wrap justify-end gap-1.5">
-              <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 활동 요약
               </span>
-              <span className="inline-flex items-center rounded-md border border-border/80 bg-muted/30 px-2 py-0.5 text-[11px] tabular-nums text-foreground">
+              <span className="inline-flex items-center rounded-md border border-border/80 bg-muted/30 px-2 py-0.5 text-xs tabular-nums text-foreground">
                 문의 <strong className="ml-1 font-semibold">{inquiries.length}</strong>
               </span>
-              <span className="inline-flex items-center rounded-md border border-border/80 bg-muted/30 px-2 py-0.5 text-[11px] tabular-nums text-foreground">
+              <span className="inline-flex items-center rounded-md border border-border/80 bg-muted/30 px-2 py-0.5 text-xs tabular-nums text-foreground">
                 견적 <strong className="ml-1 font-semibold">{quotes.length}</strong>
               </span>
-              <span className="inline-flex items-center rounded-md border border-border/80 bg-muted/30 px-2 py-0.5 text-[11px] tabular-nums text-foreground">
+              <span className="inline-flex items-center rounded-md border border-border/80 bg-muted/30 px-2 py-0.5 text-xs tabular-nums text-foreground">
                 청구 <strong className="ml-1 font-semibold">{invoices.length}</strong>
               </span>
             </div>
@@ -131,8 +131,7 @@ export default async function CustomerDetailPage({
                   buttonVariants({
                     variant: inquiryBtnVariant,
                     size: inquiryBtnSize,
-                  }),
-                  "inline-flex w-full items-center justify-center gap-2 sm:w-auto",
+                  }),"inline-flex w-full items-center justify-center gap-2 sm:w-auto",
                   inquiryBtnLayout
                 )}
               >
@@ -145,8 +144,7 @@ export default async function CustomerDetailPage({
                   buttonVariants({
                     variant: quoteBtnVariant,
                     size: quoteBtnSize,
-                  }),
-                  "inline-flex w-full items-center justify-center gap-2 sm:w-auto",
+                  }),"inline-flex w-full items-center justify-center gap-2 sm:w-auto",
                   quoteBtnLayout
                 )}
               >
@@ -159,8 +157,7 @@ export default async function CustomerDetailPage({
                   buttonVariants({
                     variant: invoiceBtnVariant,
                     size: invoiceBtnSize,
-                  }),
-                  "inline-flex w-full items-center justify-center gap-2 sm:w-auto",
+                  }),"inline-flex w-full items-center justify-center gap-2 sm:w-auto",
                   invoiceBtnLayout
                 )}
               >
@@ -188,7 +185,7 @@ export default async function CustomerDetailPage({
 
       <CustomerAiInsightSection
         customerId={customer.id}
-        aiAssistEnabled={planAllowsFeature(currentPlan, "ai_assist")}
+        aiAssistEnabled={planAllowsFeature(currentPlan,"ai_assist")}
       />
 
       <Card className="border-border/70 shadow-sm">
@@ -204,7 +201,7 @@ export default async function CustomerDetailPage({
                   <User className="size-4 text-muted-foreground" aria-hidden />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     담당자
                   </p>
                   <p className="truncate text-sm font-medium text-foreground">{customer.name}</p>
@@ -216,14 +213,14 @@ export default async function CustomerDetailPage({
                 <Phone className="size-4 text-muted-foreground" aria-hidden />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   전화
                 </p>
                 <a
-                  href={`tel:${customer.phone.replace(/\s/g, "")}`}
+                  href={`tel:${customer.phone.replace(/\s/g,"")}`}
                   className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                 >
-                  {customer.phone || "—"}
+                  {customer.phone ||"—"}
                 </a>
               </div>
             </div>
@@ -232,7 +229,7 @@ export default async function CustomerDetailPage({
                 <Mail className="size-4 text-muted-foreground" aria-hidden />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   이메일
                 </p>
                 {customer.email ? (
@@ -252,7 +249,7 @@ export default async function CustomerDetailPage({
                 <Building2 className="size-4 text-muted-foreground" aria-hidden />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   태그 · 분류
                 </p>
                 <div className="mt-1 flex flex-wrap gap-1.5">
@@ -282,7 +279,7 @@ export default async function CustomerDetailPage({
               <Sparkles className="mt-0.5 size-4 text-amber-600 dark:text-amber-400" aria-hidden />
               <div>
                 <CardTitle className="text-base font-semibold">고객 메모</CardTitle>
-                <CardDescription className="text-[11px] leading-snug">
+                <CardDescription>
                   내부 참고용 메모·태그입니다.
                 </CardDescription>
               </div>
@@ -290,7 +287,7 @@ export default async function CustomerDetailPage({
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 분류 태그
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -309,7 +306,7 @@ export default async function CustomerDetailPage({
               </div>
             </div>
             <div>
-              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 메모
               </p>
               {customer.notes?.trim() ? (
@@ -317,12 +314,12 @@ export default async function CustomerDetailPage({
                   {customer.notes}
                 </p>
               ) : (
-                <p className="rounded-md border border-dashed border-border/70 bg-muted/15 px-2.5 py-2 text-xs leading-snug text-muted-foreground">
+                <p className="rounded-md border border-dashed border-border/70 bg-muted/15 px-2.5 py-2 text-sm leading-snug text-muted-foreground">
                   메모 없음 · 결제·선호 채널·반복 요청 등을 짧게 적어 두세요.
                 </p>
               )}
             </div>
-            <p className="text-[10px] leading-snug text-muted-foreground/90">
+            <p className="text-sm leading-snug text-muted-foreground/90">
               예: 월 정액 유지보수, 견적 전 샘플 요청
             </p>
           </CardContent>
@@ -337,12 +334,12 @@ export default async function CustomerDetailPage({
                 </div>
                 <div>
                   <CardTitle className="text-lg">고객 타임라인</CardTitle>
-                  <CardDescription className="mt-0.5 max-w-prose text-[11px] leading-snug">
+                  <CardDescription className="mt-0.5 max-w-prose">
                     문의·견적·청구·알림이 시간순으로 쌓입니다.
                   </CardDescription>
                 </div>
               </div>
-              <span className="rounded-full border border-primary/25 bg-background/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+              <span className="rounded-full border border-primary/25 bg-background/80 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-primary">
                 핵심
               </span>
             </div>
@@ -354,14 +351,13 @@ export default async function CustomerDetailPage({
                   <Clock className="size-5 text-primary" aria-hidden />
                 </div>
                 <p className="text-sm font-semibold text-foreground">타임라인이 비어 있습니다</p>
-                <p className="mx-auto mt-1.5 max-w-sm text-xs leading-snug text-muted-foreground">
+                <p className="mx-auto mt-1.5 max-w-sm text-sm leading-snug text-muted-foreground">
                   문의·견적·청구를 시작하면 이력이 여기에 쌓입니다.
                 </p>
                 <Link
                   href={inquiryNewHref}
                   className={cn(
-                    buttonVariants({ size: "sm" }),
-                    "mt-3 inline-flex gap-2 font-semibold"
+                    buttonVariants({ size:"sm" }),"mt-3 inline-flex gap-2 font-semibold"
                   )}
                 >
                   <MessageSquare className="size-4" aria-hidden />
@@ -376,7 +372,7 @@ export default async function CustomerDetailPage({
                     label={event.label}
                     description={event.description}
                     createdAt={event.createdAt}
-                    kind={event.kind ?? "other"}
+                    kind={event.kind ??"other"}
                     action={event.action}
                   />
                 ))}
@@ -408,14 +404,13 @@ export default async function CustomerDetailPage({
             ) : (
               <div className="rounded-lg border border-dashed border-sky-500/35 bg-sky-500/[0.06] p-3">
                 <p className="text-sm font-semibold text-foreground">문의 없음</p>
-                <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
+                <p className="mt-0.5 text-sm leading-snug text-muted-foreground">
                   첫 문의를 등록해 단계를 관리하세요.
                 </p>
                 <Link
                   href={inquiryNewHref}
                   className={cn(
-                    buttonVariants({ size: "sm" }),
-                    "mt-2 inline-flex gap-1.5 font-semibold"
+                    buttonVariants({ size:"sm" }),"mt-2 inline-flex gap-1.5 font-semibold"
                   )}
                 >
                   <Plus className="size-4" aria-hidden />
@@ -448,20 +443,20 @@ export default async function CustomerDetailPage({
             ) : (
               <div className="rounded-lg border border-dashed border-violet-500/35 bg-violet-500/[0.06] p-3">
                 <p className="text-sm font-semibold text-foreground">견적 없음</p>
-                <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
+                <p className="mt-0.5 text-sm leading-snug text-muted-foreground">
                   문의 후 견적로 이어지거나, 바로 견적을 올릴 수 있습니다.
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   <Link
-                    href={inquiries.length ? "/inquiries" : inquiryNewHref}
-                    className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8 gap-1 text-xs")}
+                    href={inquiries.length ?"/inquiries" : inquiryNewHref}
+                    className={cn(buttonVariants({ variant:"outline", size:"sm" }),"h-8 gap-1 text-xs")}
                   >
-                    {inquiries.length ? "문의 보기" : "문의 먼저"}
+                    {inquiries.length ?"문의 보기" :"문의 먼저"}
                     <ArrowRight className="size-3" aria-hidden />
                   </Link>
                   <Link
                     href={quoteNewHref}
-                    className={cn(buttonVariants({ size: "sm" }), "h-8 gap-1 text-xs font-semibold")}
+                    className={cn(buttonVariants({ size:"sm" }),"h-8 gap-1 text-xs font-semibold")}
                   >
                     <FileText className="size-3.5" aria-hidden />
                     견적 만들기
@@ -495,20 +490,20 @@ export default async function CustomerDetailPage({
             ) : (
               <div className="rounded-lg border border-dashed border-primary/25 bg-primary/[0.06] p-3">
                 <p className="text-sm font-semibold text-foreground">청구 없음</p>
-                <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
+                <p className="mt-0.5 text-sm leading-snug text-muted-foreground">
                   견적 확정 후 선금·잔금 청구를 만듭니다.
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   <Link
                     href="/invoices"
-                    className={cn(buttonVariants({ size: "sm" }), "h-8 gap-1 text-xs font-semibold")}
+                    className={cn(buttonVariants({ size:"sm" }),"h-8 gap-1 text-xs font-semibold")}
                   >
                     청구 화면
                     <ArrowRight className="size-3" aria-hidden />
                   </Link>
                   <Link
                     href="/quotes"
-                    className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8 text-xs")}
+                    className={cn(buttonVariants({ variant:"outline", size:"sm" }),"h-8 text-xs")}
                   >
                     견적 확인
                   </Link>

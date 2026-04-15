@@ -209,7 +209,7 @@ export function InvoiceTaxInvoiceSection({
           <p className="text-xs font-semibold text-foreground">전자세금계산서</p>
           <span className={opsStatusChipVariants({ tone: "muted", size: "sm", emphasis: false })}>Business</span>
         </div>
-        <p className="text-xs leading-relaxed text-muted-foreground">
+        <p className="text-sm leading-relaxed text-muted-foreground">
           등록한 발급대행(ASP) 계정으로 청구와 연결해 전자세금계산서를 발행·추적할 수 있습니다. Business 플랜에서 이용할 수
           있습니다.
         </p>
@@ -240,7 +240,7 @@ export function InvoiceTaxInvoiceSection({
             {listMeta.label}
           </span>
         </div>
-        <p className="text-[11px] leading-snug text-muted-foreground">
+        <p className="text-sm leading-snug text-muted-foreground">
           Bill-IO는 국세청 직접 송신이 아니라, 설정에 등록한 ASP 계정으로 발행 요청을 보냅니다. 발행 필요 여부는 청구마다
           직접 관리합니다.
         </p>
@@ -249,7 +249,7 @@ export function InvoiceTaxInvoiceSection({
           <div className="flex items-center justify-between gap-2">
             <div>
               <p className="text-xs font-medium">세금계산서 대상 청구</p>
-              <p className="text-[10px] text-muted-foreground">과세 B2B 등 발행이 필요한 청구만 켜 주세요.</p>
+              <p className="text-xs text-muted-foreground">과세 B2B 등 발행이 필요한 청구만 켜 주세요.</p>
             </div>
             <input
               type="checkbox"
@@ -262,7 +262,7 @@ export function InvoiceTaxInvoiceSection({
           <div className="flex items-center justify-between gap-2">
             <div>
               <p className="text-xs font-medium">발행 필요</p>
-              <p className="text-[10px] text-muted-foreground">입금과 무관하게, 실제로 발행할 청구임을 표시합니다.</p>
+              <p className="text-xs text-muted-foreground">입금과 무관하게, 실제로 발행할 청구임을 표시합니다.</p>
             </div>
             <input
               type="checkbox"
@@ -274,7 +274,7 @@ export function InvoiceTaxInvoiceSection({
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             <div className="space-y-1">
-              <label className="text-[11px] font-medium text-muted-foreground">공급일</label>
+              <label className="text-xs font-medium text-muted-foreground">공급일</label>
               <Input
                 type="date"
                 className="h-9"
@@ -284,7 +284,7 @@ export function InvoiceTaxInvoiceSection({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[11px] font-medium text-muted-foreground">발행 마감(참고)</label>
+              <label className="text-xs font-medium text-muted-foreground">발행 마감(참고)</label>
               <Input
                 type="date"
                 className="h-9"
@@ -295,7 +295,7 @@ export function InvoiceTaxInvoiceSection({
             </div>
           </div>
           {dueWarning ? (
-            <p className="flex items-start gap-1.5 text-[11px] text-amber-900 dark:text-amber-100">
+            <p className="flex items-start gap-1.5 text-xs text-amber-900 dark:text-amber-100">
               <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
               발행 마감일이 지났습니다. 일정을 갱신하거나 발행을 서두르세요.
             </p>
@@ -312,7 +312,7 @@ export function InvoiceTaxInvoiceSection({
             {readiness.ok ? (
               <p className="text-xs text-emerald-900 dark:text-emerald-100">필수 항목이 채워져 있습니다. 발행 준비를 진행할 수 있습니다.</p>
             ) : (
-              <ul className="space-y-1.5 text-[11px]">
+              <ul className="space-y-1.5 text-xs">
                 {readiness.issues.map((issue) => (
                   <li key={issue.field} className="rounded border border-destructive/25 bg-destructive/[0.06] px-2 py-1.5">
                     <p className="font-medium text-destructive">{issue.message}</p>
@@ -341,7 +341,7 @@ export function InvoiceTaxInvoiceSection({
         ) : null}
 
         {tax ? (
-          <div className="grid gap-2 text-[11px] sm:grid-cols-2">
+          <div className="grid gap-2 text-xs sm:grid-cols-2">
             <div className="rounded border border-border/40 p-2">
               <p className="text-muted-foreground">공급가액 / 부가세 / 합계</p>
               <p className="mt-0.5 font-medium tabular-nums">
@@ -370,7 +370,7 @@ export function InvoiceTaxInvoiceSection({
         ) : null}
 
         {tax?.failureReason ? (
-          <div className="rounded-md border border-destructive/30 bg-destructive/[0.06] p-2 text-[11px]">
+          <div className="rounded-md border border-destructive/30 bg-destructive/[0.06] p-2 text-xs">
             <p className="font-semibold text-destructive">실패 사유</p>
             <p className="mt-1 whitespace-pre-wrap text-foreground/90">{tax.failureReason}</p>
           </div>
@@ -410,7 +410,7 @@ export function InvoiceTaxInvoiceSection({
           </Button>
         </div>
         {issued ? (
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             이미 발행 완료된 문서입니다. 수정·취소·재발행은 사용 중인 ASP 정책에 따릅니다.
           </p>
         ) : null}

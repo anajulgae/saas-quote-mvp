@@ -148,7 +148,7 @@ export function PublicInquiryRequestPage({
       {!embed && (
         <header className="border-b border-neutral-200/80 bg-white/90 backdrop-blur-sm">
           <div className="mx-auto flex max-w-2xl flex-col gap-1 px-4 py-6">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-500">문의</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">문의</p>
             <h1 className="text-2xl font-bold tracking-tight text-neutral-900">{p.businessName}</h1>
             {p.ownerName ? <p className="text-sm text-neutral-600">담당 {p.ownerName}</p> : null}
           </div>

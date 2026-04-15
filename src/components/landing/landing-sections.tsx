@@ -43,7 +43,7 @@ export function LandingHero() {
       <div className="relative mx-auto max-w-6xl">
         <div className="grid items-center gap-12 lg:grid-cols-[1.02fr_1fr] lg:gap-14 xl:grid-cols-[1.08fr_0.98fr]">
           <div className="space-y-7 sm:space-y-8">
-            <p className="inline-flex max-w-full items-center gap-2 rounded-full border border-primary/35 bg-primary/[0.14] px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-primary">
+            <p className="inline-flex max-w-full items-center gap-2 rounded-full border border-primary/35 bg-primary/[0.14] px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-primary">
               프리랜서 · 1인 사업 · 소규모 서비스업
             </p>
             <div className="space-y-4 sm:space-y-5">
@@ -93,7 +93,7 @@ export function LandingHero() {
               </Link>
             </div>
             <div className="rounded-2xl border border-border/65 bg-card/95 p-4 shadow-md ring-1 ring-black/[0.04] backdrop-blur-sm sm:p-5">
-              <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 5초 만에 요약
               </p>
               <ul className="grid gap-3 sm:gap-2.5">
@@ -149,7 +149,7 @@ export function LandingProblemSolution() {
     >
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto mb-12 max-w-3xl text-center">
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/90">현실부터</p>
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-primary/90">현실부터</p>
           <h2
             id="pain-heading"
             className="text-2xl font-extrabold tracking-tight text-foreground sm:text-[1.95rem] sm:leading-snug"
@@ -168,11 +168,11 @@ export function LandingProblemSolution() {
               className="group flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm ring-1 ring-black/[0.04] transition-[box-shadow,border-color] duration-200 hover:border-primary/28 hover:shadow-md"
             >
               <div className="border-b border-border/50 bg-muted/25 px-4 py-3.5 sm:px-5 sm:py-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-rose-700/90">지금 이렇게 돌아가죠</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-rose-700/90">지금 이렇게 돌아가죠</p>
                 <p className="mt-2 text-sm font-bold leading-snug text-foreground">{row.problem}</p>
               </div>
               <div className="flex flex-1 flex-col border-l-[3px] border-l-primary bg-gradient-to-b from-primary/[0.06] to-card px-4 py-3.5 sm:px-5 sm:py-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Bill-IO에선</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-primary">Bill-IO에선</p>
                 <p className="mt-2 text-sm font-semibold leading-relaxed text-muted-foreground">{row.solve}</p>
               </div>
             </article>
@@ -265,7 +265,7 @@ export function LandingDifferentiators() {
     >
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto mb-14 max-w-3xl text-center">
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/90">왜 Bill-IO인가</p>
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-primary/90">왜 Bill-IO인가</p>
           <h2
             id="why-heading"
             className="text-2xl font-extrabold tracking-tight text-foreground sm:text-[1.95rem] sm:leading-snug"
@@ -287,7 +287,7 @@ export function LandingDifferentiators() {
               className="flex flex-col rounded-2xl border-2 border-border/55 bg-gradient-to-b from-card via-card to-muted/20 p-6 shadow-md ring-1 ring-black/[0.04] transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-lg sm:p-7"
             >
               <div className="mb-4 flex items-start justify-between gap-3">
-                <span className="inline-flex rounded-full bg-primary/12 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary ring-1 ring-primary/20">
+                <span className="inline-flex rounded-full bg-primary/12 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-primary ring-1 ring-primary/20">
                   {badge}
                 </span>
                 <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/18">
@@ -309,7 +309,7 @@ export function LandingDifferentiators() {
         </div>
 
         <div className="mt-14">
-          <p className="mb-5 text-center text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+          <p className="mb-5 text-center text-xs font-bold uppercase tracking-wider text-muted-foreground">
             같은 계정 안에서 이어지는 나머지
           </p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -399,7 +399,7 @@ export function LandingIndustries() {
     >
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto mb-12 max-w-3xl text-center">
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/90">업종별로</p>
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-primary/90">업종별로</p>
           <h2
             id="industries-heading"
             className="text-2xl font-extrabold tracking-tight text-foreground sm:text-[1.95rem] sm:leading-snug"
@@ -426,15 +426,15 @@ export function LandingIndustries() {
               </div>
               <dl className="space-y-3 text-sm">
                 <div>
-                  <dt className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">받는 문의</dt>
+                  <dt className="text-xs font-bold uppercase tracking-wide text-muted-foreground">받는 문의</dt>
                   <dd className="mt-1 font-semibold leading-snug text-foreground">{inquiry}</dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">보내는 문서</dt>
+                  <dt className="text-xs font-bold uppercase tracking-wide text-muted-foreground">보내는 문서</dt>
                   <dd className="mt-1 font-semibold leading-snug text-foreground">{docs}</dd>
                 </div>
                 <div className="rounded-xl border border-primary/15 bg-primary/[0.04] p-3">
-                  <dt className="text-[10px] font-bold uppercase tracking-wide text-primary">Bill-IO로</dt>
+                  <dt className="text-xs font-bold uppercase tracking-wide text-primary">Bill-IO로</dt>
                   <dd className="mt-1 font-semibold leading-relaxed text-muted-foreground">{flow}</dd>
                 </div>
               </dl>
@@ -494,7 +494,7 @@ export function LandingHowItWorks() {
     >
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto mb-12 max-w-3xl text-center">
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/90">사용 흐름</p>
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-primary/90">사용 흐름</p>
           <h2
             id="how-heading"
             className="text-2xl font-extrabold tracking-tight text-foreground sm:text-[1.95rem] sm:leading-snug"
@@ -624,7 +624,7 @@ export function LandingPricing() {
     >
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto mb-12 max-w-3xl text-center">
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/90">요금</p>
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-primary/90">요금</p>
           <h2
             id="pricing-heading"
             className="text-2xl font-extrabold tracking-tight text-foreground sm:text-[1.95rem] sm:leading-snug"
@@ -647,7 +647,7 @@ export function LandingPricing() {
               {PLAN_LABEL.starter}
             </div>
             <div className="flex items-center gap-2 border-b border-border/50 bg-primary/[0.1] px-3 py-3 sm:border-b-0 sm:border-r sm:py-4 sm:pl-5">
-              <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
+              <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">
                 추천
               </span>
               {PLAN_LABEL.pro}
@@ -697,7 +697,7 @@ export function LandingPricing() {
             >
               <div className="mb-2 min-h-[1.75rem]">
                 {plan.highlight ? (
-                  <span className="inline-flex rounded-full bg-primary px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-primary-foreground shadow-sm">
+                  <span className="inline-flex rounded-full bg-primary px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-primary-foreground shadow-sm">
                     수금까지 쓸 때
                   </span>
                 ) : null}
@@ -798,7 +798,7 @@ export function LandingFaq() {
     >
       <div className="mx-auto max-w-3xl">
         <div className="mb-11 text-center">
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/90">FAQ</p>
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-primary/90">FAQ</p>
           <h2
             id="faq-heading"
             className="text-2xl font-extrabold tracking-tight text-foreground sm:text-[1.95rem]"
@@ -886,7 +886,7 @@ export function LandingFinalCta() {
             이미 계정이 있으면 로그인
           </Link>
         </div>
-        <p className="mt-8 text-[11px] font-bold uppercase tracking-wider text-primary-foreground/75">
+        <p className="mt-8 text-xs font-bold uppercase tracking-wider text-primary-foreground/75">
           브라우저만 있으면 OK · 데이터는 계정별로 분리
         </p>
       </div>

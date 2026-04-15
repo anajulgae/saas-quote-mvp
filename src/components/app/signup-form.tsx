@@ -51,7 +51,7 @@ export function SignupForm() {
                 사업장명 <span className="font-normal text-muted-foreground">(선택)</span>
               </label>
             </div>
-            <p className="text-xs leading-snug text-muted-foreground">
+            <p className="text-sm leading-snug text-muted-foreground">
               비워 두면 이름이 사업장명으로 저장됩니다. 청구서·견적에 쓰일 표기입니다.
             </p>
             <Input
@@ -80,7 +80,7 @@ export function SignupForm() {
           <div className="space-y-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-3">
             <p
               id="signup-password-hint"
-              className="text-xs leading-relaxed text-muted-foreground"
+              className="text-sm leading-relaxed text-muted-foreground"
             >
               <span className="font-medium text-foreground">비밀번호 조건</span>
               <br />

@@ -95,7 +95,7 @@ export function SettingsPublicInquiryCard({
       <Card className="border-border/70 border-dashed border-primary/25">
         <CardHeader className="space-y-1 pb-3">
           <CardTitle className="text-base font-semibold">고객 공개 문의 폼</CardTitle>
-          <CardDescription className="text-xs leading-relaxed">
+          <CardDescription className="text-sm leading-relaxed">
             고객이 이름·연락처·문의만 입력하면 Bill-IO에 고객·문의가 자동 생성됩니다. 업종별 폼은 나누지 않고
             범용 폼 하나로 운영합니다. DB에{" "}
             <code className="rounded bg-muted px-1">0007_public_inquiry_form.sql</code> 적용이 필요합니다.
@@ -185,11 +185,11 @@ export function SettingsPublicInquiryCard({
           </div>
 
           {formUrl ? (
-            <p className="text-[11px] leading-relaxed text-muted-foreground break-all">
+            <p className="text-sm leading-relaxed text-muted-foreground break-all">
               공개 URL: <span className="font-mono text-foreground">{formUrl}</span>
             </p>
           ) : enabled ? (
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               저장하면 고유 링크가 발급됩니다. 최초 1회 「설정 저장」을 눌러 주세요.
             </p>
           ) : null}

@@ -1,43 +1,43 @@
 "use client"
 
-import Link from "next/link"
-import { useEffect, useState, useTransition } from "react"
-import { Loader2, Receipt } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { toast } from "sonner"
+import Link from"next/link"
+import { useEffect, useState, useTransition } from"react"
+import { Loader2, Receipt } from"lucide-react"
+import { useRouter } from"next/navigation"
+import { toast } from"sonner"
 
-import { updateCustomerTaxInvoiceProfileAction } from "@/app/actions"
-import { BILLING_PAGE_PATH } from "@/lib/billing/catalog"
-import { formatBusinessRegNoInput, formatDate } from "@/lib/format"
-import { planAllowsFeature } from "@/lib/plan-features"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { updateCustomerTaxInvoiceProfileAction } from"@/app/actions"
+import { BILLING_PAGE_PATH } from"@/lib/billing/catalog"
+import { formatBusinessRegNoInput, formatDate } from"@/lib/format"
+import { planAllowsFeature } from"@/lib/plan-features"
+import { cn } from"@/lib/utils"
+import { Button } from"@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from"@/components/ui/card"
+import { Input } from"@/components/ui/input"
+import { Textarea } from"@/components/ui/textarea"
 import type {
   BillingPlan,
   Customer,
   CustomerTaxInvoiceSummary,
   TaxInvoiceStatus,
-} from "@/types/domain"
+} from"@/types/domain"
 
 function taxStatusLabel(s?: TaxInvoiceStatus): string {
   switch (s) {
-    case "draft":
-      return "초안"
-    case "ready":
-      return "발행 준비"
-    case "issuing":
-      return "발행 중"
-    case "issued":
-      return "발행 완료"
-    case "failed":
-      return "발행 실패"
-    case "canceled":
-      return "취소"
+    case"draft":
+      return"초안"
+    case"ready":
+      return"발행 준비"
+    case"issuing":
+      return"발행 중"
+    case"issued":
+      return"발행 완료"
+    case"failed":
+      return"발행 실패"
+    case"canceled":
+      return"취소"
     default:
-      return "—"
+      return"—"
   }
 }
 
@@ -52,24 +52,24 @@ export function CustomerTaxInvoiceSidebarCard({
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
-  const allowed = planAllowsFeature(currentPlan, "e_tax_invoice_asp")
+  const allowed = planAllowsFeature(currentPlan,"e_tax_invoice_asp")
 
-  const [taxBusinessName, setTaxBusinessName] = useState(customer.taxBusinessName ?? "")
+  const [taxBusinessName, setTaxBusinessName] = useState(customer.taxBusinessName ??"")
   const [taxBusinessRegistrationNumber, setTaxBusinessRegistrationNumber] = useState(
-    customer.taxBusinessRegistrationNumber ?? ""
+    customer.taxBusinessRegistrationNumber ??""
   )
-  const [taxCeoName, setTaxCeoName] = useState(customer.taxCeoName ?? "")
-  const [taxInvoiceEmail, setTaxInvoiceEmail] = useState(customer.taxInvoiceEmail ?? "")
-  const [taxContactName, setTaxContactName] = useState(customer.taxContactName ?? "")
-  const [taxAddress, setTaxAddress] = useState(customer.taxAddress ?? "")
+  const [taxCeoName, setTaxCeoName] = useState(customer.taxCeoName ??"")
+  const [taxInvoiceEmail, setTaxInvoiceEmail] = useState(customer.taxInvoiceEmail ??"")
+  const [taxContactName, setTaxContactName] = useState(customer.taxContactName ??"")
+  const [taxAddress, setTaxAddress] = useState(customer.taxAddress ??"")
 
   useEffect(() => {
-    setTaxBusinessName(customer.taxBusinessName ?? "")
-    setTaxBusinessRegistrationNumber(customer.taxBusinessRegistrationNumber ?? "")
-    setTaxCeoName(customer.taxCeoName ?? "")
-    setTaxInvoiceEmail(customer.taxInvoiceEmail ?? "")
-    setTaxContactName(customer.taxContactName ?? "")
-    setTaxAddress(customer.taxAddress ?? "")
+    setTaxBusinessName(customer.taxBusinessName ??"")
+    setTaxBusinessRegistrationNumber(customer.taxBusinessRegistrationNumber ??"")
+    setTaxCeoName(customer.taxCeoName ??"")
+    setTaxInvoiceEmail(customer.taxInvoiceEmail ??"")
+    setTaxContactName(customer.taxContactName ??"")
+    setTaxAddress(customer.taxAddress ??"")
   }, [customer])
 
   const save = () => {
@@ -98,7 +98,7 @@ export function CustomerTaxInvoiceSidebarCard({
           <Receipt className="mt-0.5 size-4 text-muted-foreground" aria-hidden />
           <div>
             <CardTitle className="text-base font-semibold">세금계산서(참고)</CardTitle>
-            <CardDescription className="text-[11px] leading-snug">
+            <CardDescription>
               발행 작업은 청구 상세에서 진행합니다. 여기서는 공급받는자 정보를 보관합니다.
             </CardDescription>
           </div>
@@ -110,9 +110,9 @@ export function CustomerTaxInvoiceSidebarCard({
           {taxInvoiceSummary?.lastStatus ? (
             <ul className="mt-2 space-y-1 text-muted-foreground">
               <li>상태: {taxStatusLabel(taxInvoiceSummary.lastStatus)}</li>
-              <li>발행일: {taxInvoiceSummary.lastIssueDate ? formatDate(taxInvoiceSummary.lastIssueDate) : "—"}</li>
-              <li className="font-mono text-[11px]">
-                승인번호: {taxInvoiceSummary.lastApprovalNumber?.trim() || "—"}
+              <li>발행일: {taxInvoiceSummary.lastIssueDate ? formatDate(taxInvoiceSummary.lastIssueDate) :"—"}</li>
+              <li className="font-mono text-xs">
+                승인번호: {taxInvoiceSummary.lastApprovalNumber?.trim() ||"—"}
               </li>
               {taxInvoiceSummary.linkedInvoiceId ? (
                 <li>
@@ -120,10 +120,10 @@ export function CustomerTaxInvoiceSidebarCard({
                     href={`/invoices?focus=${taxInvoiceSummary.linkedInvoiceId}`}
                     className="font-medium text-primary underline-offset-4 hover:underline"
                   >
-                    연결 청구{" "}
+                    연결 청구{""}
                     {taxInvoiceSummary.linkedInvoiceNumber
                       ? `(${taxInvoiceSummary.linkedInvoiceNumber})`
-                      : ""}
+                      :""}
                     로 이동
                   </Link>
                 </li>
@@ -136,7 +136,7 @@ export function CustomerTaxInvoiceSidebarCard({
 
         {!allowed ? (
           <p className="text-xs text-muted-foreground">
-            세금계산서용 필드 편집은 Pro 이상 플랜에서 가능합니다.{" "}
+            세금계산서용 필드 편집은 Pro 이상 플랜에서 가능합니다.{""}
             <Link href={BILLING_PAGE_PATH} className="font-medium text-primary underline-offset-4 hover:underline">
               플랜 안내
             </Link>
@@ -145,11 +145,11 @@ export function CustomerTaxInvoiceSidebarCard({
           <>
             <div className="grid gap-2 sm:grid-cols-2">
               <div className="space-y-1 sm:col-span-2">
-                <label className="text-[11px] font-medium text-muted-foreground">세금계산서 상호</label>
+                <label className="text-xs font-medium text-muted-foreground">세금계산서 상호</label>
                 <Input className="h-9 text-sm" value={taxBusinessName} onChange={(e) => setTaxBusinessName(e.target.value)} />
               </div>
               <div className="space-y-1 sm:col-span-2">
-                <label className="text-[11px] font-medium text-muted-foreground">사업자등록번호</label>
+                <label className="text-xs font-medium text-muted-foreground">사업자등록번호</label>
                 <Input
                   className="h-9 text-sm tabular-nums"
                   value={taxBusinessRegistrationNumber}
@@ -160,11 +160,11 @@ export function CustomerTaxInvoiceSidebarCard({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-muted-foreground">대표자명</label>
+                <label className="text-xs font-medium text-muted-foreground">대표자명</label>
                 <Input className="h-9 text-sm" value={taxCeoName} onChange={(e) => setTaxCeoName(e.target.value)} />
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-muted-foreground">수신 이메일</label>
+                <label className="text-xs font-medium text-muted-foreground">수신 이메일</label>
                 <Input
                   className="h-9 text-sm"
                   type="email"
@@ -173,11 +173,11 @@ export function CustomerTaxInvoiceSidebarCard({
                 />
               </div>
               <div className="space-y-1 sm:col-span-2">
-                <label className="text-[11px] font-medium text-muted-foreground">담당자명 (선택)</label>
+                <label className="text-xs font-medium text-muted-foreground">담당자명 (선택)</label>
                 <Input className="h-9 text-sm" value={taxContactName} onChange={(e) => setTaxContactName(e.target.value)} />
               </div>
               <div className="space-y-1 sm:col-span-2">
-                <label className="text-[11px] font-medium text-muted-foreground">주소 (선택)</label>
+                <label className="text-xs font-medium text-muted-foreground">주소 (선택)</label>
                 <Textarea
                   className="min-h-[3.5rem] text-sm"
                   value={taxAddress}

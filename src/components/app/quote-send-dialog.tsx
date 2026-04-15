@@ -401,7 +401,7 @@ export function QuoteSendDialog({
       <DialogContent className="max-w-lg sm:max-w-lg" showCloseButton>
         <DialogHeader>
           <DialogTitle>견적서 보내기</DialogTitle>
-          <DialogDescription className="text-xs leading-relaxed">
+          <DialogDescription className="text-sm leading-relaxed">
             고객에게 공유 링크·이메일·PDF로 견적서를 전달합니다. 공개 링크는 로그인 없이 열립니다.
           </DialogDescription>
         </DialogHeader>
@@ -468,7 +468,7 @@ export function QuoteSendDialog({
                 </Button>
               </div>
             ) : shareUrl ? (
-              <p className="break-all rounded border border-dashed border-border/70 bg-background px-2 py-1.5 font-mono text-[11px] text-muted-foreground">
+              <p className="break-all rounded border border-dashed border-border/70 bg-background px-2 py-1.5 font-mono text-xs text-muted-foreground">
                 {shareUrl}
               </p>
             ) : null}
@@ -476,14 +476,14 @@ export function QuoteSendDialog({
             {kakaoByoaAllowed ? (
               <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/[0.04] p-3">
                 <p className="text-xs font-semibold text-foreground">카카오 알림톡 (BYOA)</p>
-                <p className="text-[11px] leading-snug text-muted-foreground">
+                <p className="text-sm leading-snug text-muted-foreground">
                   설정의 본인 프록시로 발송 요청만 전달합니다. 견적 금액:{" "}
                   <span className="font-medium tabular-nums text-foreground/90">
                     {quote ? formatCurrency(quote.total) : "—"}
                   </span>
                 </p>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-muted-foreground">수신 번호</label>
+                  <label className="text-xs font-medium text-muted-foreground">수신 번호</label>
                   <Input
                     className="h-9 font-mono text-xs"
                     value={alimPhone}
@@ -492,9 +492,9 @@ export function QuoteSendDialog({
                   />
                 </div>
                 {previewVariables ? (
-                  <details className="text-[11px] text-muted-foreground">
+                  <details className="text-xs text-muted-foreground">
                     <summary className="cursor-pointer font-medium text-foreground/80">미리보기 (variables)</summary>
-                    <pre className="mt-2 max-h-32 overflow-auto rounded border border-border/60 bg-muted/30 p-2 font-mono text-[10px]">
+                    <pre className="mt-2 max-h-32 overflow-auto rounded border border-border/60 bg-muted/30 p-2 font-mono text-xs">
                       {JSON.stringify(
                         { billIoVersion: 1, channelKind: "kakao_alimtalk", variables: previewVariables },
                         null,
@@ -503,7 +503,7 @@ export function QuoteSendDialog({
                     </pre>
                   </details>
                 ) : (
-                  <p className="text-[11px] text-muted-foreground">공유 링크가 준비되면 미리보기가 표시됩니다.</p>
+                  <p className="text-xs text-muted-foreground">공유 링크가 준비되면 미리보기가 표시됩니다.</p>
                 )}
                 <Button
                   type="button"
@@ -516,21 +516,17 @@ export function QuoteSendDialog({
                   알림톡 발송 요청
                 </Button>
               </div>
-            ) : (
-              <p className="text-[11px] leading-snug text-muted-foreground">
-                Pro에서 BYOA 알림톡 연동을 켜면 이곳에서 발송 요청을 보낼 수 있습니다.
-              </p>
-            )}
+            ) : null}
 
             <div className="space-y-2 border-t border-border/50 pt-3">
               <p className="text-xs font-semibold text-foreground">이메일 보내기</p>
-              <p className="text-[11px] leading-snug text-muted-foreground">
+              <p className="text-sm leading-snug text-muted-foreground">
                 발신 주소는 설정에 등록한 이메일을 사용합니다. 도메인 인증이 필요하면 Vercel에{" "}
                 <code className="rounded bg-muted px-1">RESEND_FROM</code>을 추가하세요.
               </p>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                 <div className="min-w-0 flex-1 space-y-1">
-                  <label className="text-[11px] font-medium text-muted-foreground">문체</label>
+                  <label className="text-xs font-medium text-muted-foreground">문체</label>
                   <Select
                     value={messageTone}
                     items={messageToneSelectItems}
@@ -559,15 +555,15 @@ export function QuoteSendDialog({
                 </Button>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-medium text-muted-foreground">받는 사람</label>
+                <label className="text-xs font-medium text-muted-foreground">받는 사람</label>
                 <Input className="h-9" value={to} onChange={(e) => setTo(e.target.value)} type="email" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-medium text-muted-foreground">제목</label>
+                <label className="text-xs font-medium text-muted-foreground">제목</label>
                 <Input className="h-9" value={subject} onChange={(e) => setSubject(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-medium text-muted-foreground">본문</label>
+                <label className="text-xs font-medium text-muted-foreground">본문</label>
                 <Textarea className="min-h-[8rem] text-sm" value={body} onChange={(e) => setBody(e.target.value)} />
               </div>
               <label className="flex cursor-pointer items-start gap-2 text-xs">
