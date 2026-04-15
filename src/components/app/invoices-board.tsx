@@ -1,6 +1,6 @@
 "use client"
 
-import Link from"next/link"
+import Link from "next/link"
 import {
   useEffect,
   useMemo,
@@ -9,7 +9,7 @@ import {
   useState,
   useTransition,
   type MutableRefObject,
-} from"react"
+} from "react"
 import {
   ArrowRight,
   BellRing,
@@ -24,9 +24,9 @@ import {
   Receipt,
   Sparkles,
   Trash2,
-} from"lucide-react"
-import { usePathname, useRouter, useSearchParams } from"next/navigation"
-import { toast } from"sonner"
+} from "lucide-react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { toast } from "sonner"
 
 import {
   createInvoiceAction,
@@ -35,30 +35,30 @@ import {
   updateInvoiceCollectionFieldsAction,
   deleteInvoiceAction,
   updateInvoicePaymentStatusAction,
-} from"@/app/actions"
-import { InvoiceTaxInvoiceSection } from"@/components/app/invoice-tax-invoice-section"
-import { CoreCapabilityStrip } from"@/components/app/core-capability-strip"
-import { InvoiceCollectionAiPanel } from"@/components/app/invoice-collection-ai-panel"
-import { EmptyState } from"@/components/app/empty-state"
-import { InvoiceSendDialog } from"@/components/app/invoice-send-dialog"
-import { PageHeader } from"@/components/app/page-header"
-import { OpsTimeHintChip, OpsToolbarFilterButton } from"@/components/app/ops-status-chip"
-import { OpsCollapsibleFilters } from"@/components/operations/ops-collapsible-filters"
-import { OpsDetailSheet } from"@/components/operations/ops-detail-sheet"
-import { OpsSearchField } from"@/components/operations/ops-search-field"
-import { OpsTableShell } from"@/components/operations/ops-table-shell"
-import { OpsToolbar } from"@/components/operations/ops-toolbar"
-import { OpsCalendarView } from"@/components/operations/ops-calendar-view"
+} from "@/app/actions"
+import { InvoiceTaxInvoiceSection } from "@/components/app/invoice-tax-invoice-section"
+import { CoreCapabilityStrip } from "@/components/app/core-capability-strip"
+import { InvoiceCollectionAiPanel } from "@/components/app/invoice-collection-ai-panel"
+import { EmptyState } from "@/components/app/empty-state"
+import { InvoiceSendDialog } from "@/components/app/invoice-send-dialog"
+import { PageHeader } from "@/components/app/page-header"
+import { OpsTimeHintChip, OpsToolbarFilterButton } from "@/components/app/ops-status-chip"
+import { OpsCollapsibleFilters } from "@/components/operations/ops-collapsible-filters"
+import { OpsDetailSheet } from "@/components/operations/ops-detail-sheet"
+import { OpsSearchField } from "@/components/operations/ops-search-field"
+import { OpsTableShell } from "@/components/operations/ops-table-shell"
+import { OpsToolbar } from "@/components/operations/ops-toolbar"
+import { OpsCalendarView } from "@/components/operations/ops-calendar-view"
 import {
   opsTableCellClass,
   opsTableClass,
   opsTableHeadCellClass,
   opsTableHeadRowClass,
   opsTableRowClass,
-} from"@/components/operations/ops-table-styles"
-import { Button } from"@/components/ui/button"
-import { buttonVariants } from"@/components/ui/button-variants"
-import { Card, CardContent } from"@/components/ui/card"
+} from "@/components/operations/ops-table-styles"
+import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button-variants"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -66,44 +66,44 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from"@/components/ui/dialog"
-import { Input } from"@/components/ui/input"
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from"@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from"@/components/ui/select"
-import { Textarea } from"@/components/ui/textarea"
+} from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import {
   invoiceTypeOptions,
   paymentStatusOptions,
   quoteStatusOptions,
   reminderChannelOptions,
-} from"@/lib/constants"
-import { mapInvoicesToCalendarEvents } from"@/lib/calendar-events"
-import { resolveActivityHeadline } from"@/lib/activity-presentation"
-import { formatCurrency, formatDate, formatDateTime } from"@/lib/format"
+} from "@/lib/constants"
+import { mapInvoicesToCalendarEvents } from "@/lib/calendar-events"
+import { resolveActivityHeadline } from "@/lib/activity-presentation"
+import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
 import {
   getPaymentStatusMeta,
   opsStatusChipVariants,
   opsStatusSelectTriggerClass,
-} from"@/lib/ops-status-meta"
+} from "@/lib/ops-status-meta"
 import {
   getTaxInvoiceListChipMeta,
   matchesTaxInvoiceListFilter,
   type TaxInvoiceListFilter,
-} from"@/lib/tax-invoice/list-ui"
-import { cn } from"@/lib/utils"
-import { planAllowsFeature } from"@/lib/plan-features"
+} from "@/lib/tax-invoice/list-ui"
+import { cn } from "@/lib/utils"
+import { planAllowsFeature } from "@/lib/plan-features"
 import type {
   ActivityLog,
   BillingPlan,
@@ -116,12 +116,12 @@ import type {
   PaymentStatus,
   Quote,
   ReminderChannel,
-} from"@/types/domain"
+} from "@/types/domain"
 
-type PaymentQuickFilter ="all" |"unpaid" |"overdue" |"paid"
+type PaymentQuickFilter = "all" | "unpaid" | "overdue" | "paid"
 
-type InvoiceListSort ="requested_desc" |"due_asc" |"amount_desc" |"customer"
-type InvoiceViewMode ="list" |"calendar"
+type InvoiceListSort = "requested_desc" | "due_asc" | "amount_desc" | "customer"
+type InvoiceViewMode = "list" | "calendar"
 
 const paymentStatusSelectItemsRecord = Object.fromEntries(
   paymentStatusOptions.map((o) => [o.value, o.label])
@@ -132,19 +132,19 @@ const invoiceTypeSelectItemsRecord = Object.fromEntries(
 ) as Record<string, string>
 
 const invoiceTypeFilterSelectItems: Record<string, string> = {
-  all:"전체",
+  all: "전체",
   ...invoiceTypeSelectItemsRecord,
 }
 
 const invoiceSortSelectItemsRecord: Record<string, string> = {
-  requested_desc:"최신 청구순",
-  due_asc:"입금 기한 임박순",
-  amount_desc:"금액 높은순",
-  customer:"고객명순",
+  requested_desc: "최신 청구순",
+  due_asc: "입금 기한 임박순",
+  amount_desc: "금액 높은순",
+  customer: "고객명순",
 }
 
 const paymentStatusFilterSelectItems: Record<string, string> = {
-  all:"상세 상태 · 전체",
+  all: "상세 상태 · 전체",
   ...paymentStatusSelectItemsRecord,
 }
 
@@ -153,36 +153,36 @@ const reminderChannelSelectItemsRecord = Object.fromEntries(
 ) as Record<string, string>
 
 const reminderToneSelectItemsRecord: Record<string, string> = {
-  polite:"정중형",
-  neutral:"기본형",
-  firm:"단호형",
+  polite: "정중형",
+  neutral: "기본형",
+  firm: "단호형",
 }
 
 function toDatetimeLocalValue(iso?: string): string {
   if (!iso?.trim()) {
-    return""
+    return ""
   }
   const d = new Date(iso)
   if (!Number.isFinite(d.getTime())) {
-    return""
+    return ""
   }
-  const p = (n: number) => String(n).padStart(2,"0")
+  const p = (n: number) => String(n).padStart(2, "0")
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
 function collectionNextStepHint(inv: InvoiceWithReminders): string {
   switch (inv.paymentStatus) {
-    case"pending":
-      return"첫 안내를 보내 보세요. 발송에서 링크·이메일·알림톡·문자 문구를 쓸 수 있습니다."
-    case"deposit_paid":
-    case"partially_paid":
-      return"잔금이 남았을 수 있습니다. 금액·기한을 다시 안내하고, 입금 약속이 있으면 아래에 적어 두세요."
-    case"overdue":
-      return"기한이 지났습니다. 정중한 재안내와 다음 연락일을 정해 두면 관리가 쉬워집니다."
-    case"paid":
-      return"입금이 완료된 청구입니다."
+    case "pending":
+      return "첫 안내를 보내 보세요. 발송에서 링크·이메일·알림톡·문자 문구를 쓸 수 있습니다."
+    case "deposit_paid":
+    case "partially_paid":
+      return "잔금이 남았을 수 있습니다. 금액·기한을 다시 안내하고, 입금 약속이 있으면 아래에 적어 두세요."
+    case "overdue":
+      return "기한이 지났습니다. 정중한 재안내와 다음 연락일을 정해 두면 관리가 쉬워집니다."
+    case "paid":
+      return "입금이 완료된 청구입니다."
     default:
-      return"상태에 맞춰 고객에게 안내해 보세요."
+      return "상태에 맞춰 고객에게 안내해 보세요."
   }
 }
 
@@ -196,27 +196,27 @@ function invoiceListSearchHaystack(inv: InvoiceWithReminders): string {
     c?.phone,
   ]
     .filter(Boolean)
-    .join("")
+    .join(" ")
     .toLowerCase()
 }
 
 function invoiceTypeTableLabel(type: InvoiceType): string {
-  if (type ==="deposit") {
-    return"선금"
+  if (type === "deposit") {
+    return "선금"
   }
-  if (type ==="balance") {
-    return"잔금"
+  if (type === "balance") {
+    return "잔금"
   }
-  return"최종"
+  return "최종"
 }
 
 /** 입금 완료 전·기한 기준 행 강조(연체·임박) */
-function invoiceRowReceivableHint(inv: InvoiceWithReminders):"overdue" |"due_soon" | null {
-  if (inv.paymentStatus ==="paid") {
+function invoiceRowReceivableHint(inv: InvoiceWithReminders): "overdue" | "due_soon" | null {
+  if (inv.paymentStatus === "paid") {
     return null
   }
-  if (inv.paymentStatus ==="overdue") {
-    return"overdue"
+  if (inv.paymentStatus === "overdue") {
+    return "overdue"
   }
   if (!inv.dueDate) {
     return null
@@ -226,22 +226,22 @@ function invoiceRowReceivableHint(inv: InvoiceWithReminders):"overdue" |"due_soo
   due.setHours(0, 0, 0, 0)
   today.setHours(0, 0, 0, 0)
   if (due < today) {
-    return"overdue"
+    return "overdue"
   }
   const diffDays = (due.getTime() - today.getTime()) / 86400000
   if (diffDays <= 3) {
-    return"due_soon"
+    return "due_soon"
   }
   return null
 }
 
 function linkedQuoteSummary(inv: InvoiceWithReminders, quoteList: Quote[]): string {
   if (!inv.quoteId) {
-    return"—"
+    return "—"
   }
   const q = quoteList.find((x) => x.id === inv.quoteId)
   if (!q) {
-    return"견적 연결"
+    return "견적 연결"
   }
   const title = q.title.trim() || q.quoteNumber
   const short = title.length > 28 ? `${title.slice(0, 28)}…` : title
@@ -265,35 +265,35 @@ type InvoiceFormState = {
 
 function createEmptyInvoiceForm(customers: Customer[]): InvoiceFormState {
   return {
-    customerId: customers[0]?.id ??"",
-    quoteId:"",
-    invoiceType:"deposit",
-    amount:"",
-    paymentStatus:"pending",
-    dueDate:"",
+    customerId: customers[0]?.id ?? "",
+    quoteId: "",
+    invoiceType: "deposit",
+    amount: "",
+    paymentStatus: "pending",
+    dueDate: "",
     requestedAt: todayDateInput(),
-    paidAt:"",
-    notes:"",
-    promisedPaymentDate:"",
-    nextCollectionFollowupAt:"",
-    collectionTone:"neutral",
+    paidAt: "",
+    notes: "",
+    promisedPaymentDate: "",
+    nextCollectionFollowupAt: "",
+    collectionTone: "neutral",
   }
 }
 
 function toInvoiceForm(invoice: InvoiceWithReminders): InvoiceFormState {
   return {
     customerId: invoice.customerId,
-    quoteId: invoice.quoteId ??"",
+    quoteId: invoice.quoteId ?? "",
     invoiceType: invoice.invoiceType,
     amount: String(invoice.amount),
     paymentStatus: invoice.paymentStatus,
-    dueDate: invoice.dueDate ??"",
-    requestedAt: invoice.requestedAt ??"",
-    paidAt: invoice.paidAt ??"",
-    notes: invoice.notes ??"",
-    promisedPaymentDate: invoice.promisedPaymentDate?.slice(0, 10) ??"",
+    dueDate: invoice.dueDate ?? "",
+    requestedAt: invoice.requestedAt ?? "",
+    paidAt: invoice.paidAt ?? "",
+    notes: invoice.notes ?? "",
+    promisedPaymentDate: invoice.promisedPaymentDate?.slice(0, 10) ?? "",
     nextCollectionFollowupAt: toDatetimeLocalValue(invoice.nextCollectionFollowupAt),
-    collectionTone: invoice.collectionTone ??"neutral",
+    collectionTone: invoice.collectionTone ?? "neutral",
   }
 }
 
@@ -302,12 +302,12 @@ function todayDateInput(): string {
 }
 
 function parseAmountInput(raw: string): number {
-  return Number(String(raw ??"").replace(/,/g,"").replace(/[\s원₩]/g,"").trim())
+  return Number(String(raw ?? "").replace(/,/g, "").replace(/[\s원₩]/g, "").trim())
 }
 
 function formatAmountDigitsDisplay(digits: string): string {
   if (!digits) {
-    return""
+    return ""
   }
   if (!/^\d+$/.test(digits)) {
     return digits
@@ -323,17 +323,17 @@ function formatCustomerLines(customer: Customer): { primary: string; secondary: 
     customer.phone?.trim() || null,
   ]
     .filter(Boolean)
-    .join(" ·")
+    .join(" · ")
   return { primary, secondary }
 }
 
 function formatQuoteLines(quote: Quote, customers: Customer[]): { primary: string; secondary: string } {
   const cust = customers.find((c) => c.id === quote.customerId)
-  const custLine = cust?.companyName?.trim() || cust?.name ||"고객"
-  const st = quoteStatusOptions.find((o) => o.value === quote.status)?.label ??""
+  const custLine = cust?.companyName?.trim() || cust?.name || "고객"
+  const st = quoteStatusOptions.find((o) => o.value === quote.status)?.label ?? ""
   return {
     primary: quote.title.trim() || quote.quoteNumber,
-    secondary: `${quote.quoteNumber} · ${custLine} · ${formatCurrency(quote.total)}${st ? ` · ${st}` :""}`,
+    secondary: `${quote.quoteNumber} · ${custLine} · ${formatCurrency(quote.total)}${st ? ` · ${st}` : ""}`,
   }
 }
 
@@ -355,7 +355,7 @@ function suggestedAmountForQuote(
   invoiceType: InvoiceFormInput["invoiceType"],
   invoicedSum: number
 ): number {
-  if (invoiceType ==="deposit") {
+  if (invoiceType === "deposit") {
     return Math.round(quote.total * 0.5)
   }
   return Math.max(0, quote.total - invoicedSum)
@@ -374,29 +374,31 @@ function nextInvoiceSuggestionForQuote(
 
   if (linked.length === 0) {
     return {
-      invoiceType:"deposit",
-      amount: suggestedAmountForQuote(quote,"deposit", sum),
+      invoiceType: "deposit",
+      amount: suggestedAmountForQuote(quote, "deposit", sum),
     }
   }
 
-  const balanceAmt = suggestedAmountForQuote(quote,"balance", sum)
+  const balanceAmt = suggestedAmountForQuote(quote, "balance", sum)
   if (balanceAmt > 0) {
-    return { invoiceType:"balance", amount: balanceAmt }
+    return { invoiceType: "balance", amount: balanceAmt }
   }
 
   return {
-    invoiceType:"final",
-    amount: suggestedAmountForQuote(quote,"final", sum),
+    invoiceType: "final",
+    amount: suggestedAmountForQuote(quote, "final", sum),
   }
 }
 
-const invoiceFormDialogClass = cn("!flex !h-auto !max-h-[100dvh] !w-full !max-w-full !translate-x-0 !translate-y-0 !flex-col !gap-0 !overflow-hidden !rounded-none !p-0 sm:!left-1/2 sm:!top-1/2 sm:!h-auto sm:!max-h-[min(92vh,920px)] sm:!w-full sm:!max-w-[min(56rem,calc(100vw-1.5rem))] sm:!-translate-x-1/2 sm:!-translate-y-1/2 sm:!rounded-xl","max-sm:!inset-x-2 max-sm:!top-3 max-sm:!bottom-auto max-sm:!max-h-[calc(100dvh-1.5rem)]"
+const invoiceFormDialogClass = cn(
+  "!flex !h-auto !max-h-[100dvh] !w-full !max-w-full !translate-x-0 !translate-y-0 !flex-col !gap-0 !overflow-hidden !rounded-none !p-0 sm:!left-1/2 sm:!top-1/2 sm:!h-auto sm:!max-h-[min(92vh,920px)] sm:!w-full sm:!max-w-[min(56rem,calc(100vw-1.5rem))] sm:!-translate-x-1/2 sm:!-translate-y-1/2 sm:!rounded-xl",
+  "max-sm:!inset-x-2 max-sm:!top-3 max-sm:!bottom-auto max-sm:!max-h-[calc(100dvh-1.5rem)]"
 )
 
 const flowSteps = [
-  { step: 1, title:"견적 확인", hint:"금액·항목이 확정된 견적을 고릅니다" },
-  { step: 2, title:"선금·잔금 청구", hint:"청구 타입과 금액을 나눠 기록합니다" },
-  { step: 3, title:"결제·리마인드", hint:"입금 상태를 바꾸고 미수 알림을 남깁니다" },
+  { step: 1, title: "견적 확인", hint: "금액·항목이 확정된 견적을 고릅니다" },
+  { step: 2, title: "선금·잔금 청구", hint: "청구 타입과 금액을 나눠 기록합니다" },
+  { step: 3, title: "결제·리마인드", hint: "입금 상태를 바꾸고 미수 알림을 남깁니다" },
 ] as const
 
 function InvoicesBoardPanel({
@@ -462,7 +464,7 @@ function InvoicesBoardPanel({
   }, [initialCustomerFilterId])
 
   useEffect(() => {
-    if (!initialTaxInvoiceFilter || initialTaxInvoiceFilter ==="all") {
+    if (!initialTaxInvoiceFilter || initialTaxInvoiceFilter === "all") {
       taxFilterDeepLinkConsumedRef.current = false
     }
   }, [initialTaxInvoiceFilter])
@@ -499,7 +501,7 @@ function InvoicesBoardPanel({
       return
     }
     const tf = initialTaxInvoiceFilter
-    if (!tf || tf ==="all" || taxFilterDeepLinkConsumedRef.current) {
+    if (!tf || tf === "all" || taxFilterDeepLinkConsumedRef.current) {
       return
     }
     taxFilterDeepLinkConsumedRef.current = true
@@ -515,12 +517,12 @@ function InvoicesBoardPanel({
   const [paymentQuickFilter, setPaymentQuickFilter] =
     useState<PaymentQuickFilter>("all")
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<
-    PaymentStatus |"all"
+    PaymentStatus | "all"
   >("all")
   const [invoiceListSearch, setInvoiceListSearch] = useState("")
-  const [invoiceTypeFilter, setInvoiceTypeFilter] = useState<InvoiceType |"all">("all")
+  const [invoiceTypeFilter, setInvoiceTypeFilter] = useState<InvoiceType | "all">("all")
   const [invoiceSort, setInvoiceSort] = useState<InvoiceListSort>("requested_desc")
-  const [customerFilterId, setCustomerFilterId] = useState<string |"all">("all")
+  const [customerFilterId, setCustomerFilterId] = useState<string | "all">("all")
   const [taxInvoiceFilter, setTaxInvoiceFilter] = useState<TaxInvoiceListFilter>("all")
   const [extraInvoiceFiltersOpen, setExtraInvoiceFiltersOpen] = useState(false)
   const [viewMode, setViewMode] = useState<InvoiceViewMode>("list")
@@ -528,7 +530,7 @@ function InvoicesBoardPanel({
   const [flashHighlightInvoiceId, setFlashHighlightInvoiceId] = useState<string | null>(null)
   const [sendInvoiceTarget, setSendInvoiceTarget] = useState<InvoiceWithReminders | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<InvoiceWithReminders | null>(null)
-  const [quickQuoteId, setQuickQuoteId] = useState(quotes[0]?.id ??"")
+  const [quickQuoteId, setQuickQuoteId] = useState(quotes[0]?.id ?? "")
   const [form, setForm] = useState<InvoiceFormState>(() => createEmptyInvoiceForm(customers))
   /** true면 견적·청구 타입 변경 시 금액 제안을 자동 반영, false면 사용자가 금액을 직접 조정한 상태 */
   const [amountFollowsSuggestion, setAmountFollowsSuggestion] = useState(true)
@@ -536,24 +538,29 @@ function InvoicesBoardPanel({
     channel: ReminderChannel
     message: string
   }>({
-    channel:"kakao",
-    message:"",
+    channel: "kakao",
+    message: "",
   })
-  const [reminderTone, setReminderTone] = useState<"polite" |"neutral" |"firm">("neutral")
+  const [reminderTone, setReminderTone] = useState<"polite" | "neutral" | "firm">("neutral")
   const [reminderAiBusy, setReminderAiBusy] = useState(false)
 
   const hasQuotes = quotes.length > 0
   const hasInvoices = invoices.length > 0
 
-  type InvoicePaymentPatch = { type:"payment"; id: string; paymentStatus: PaymentStatus }
+  type InvoicePaymentPatch =
+    | { type: "payment"; id: string; paymentStatus: PaymentStatus }
+    | { type: "delete"; id: string }
 
   const [optimisticInvoices, patchInvoicePaymentOptimistic] = useOptimistic(
     invoices,
     (state, action: InvoicePaymentPatch) => {
-      if (action.type ==="payment") {
+      if (action.type === "payment") {
         return state.map((inv) =>
           inv.id === action.id ? { ...inv, paymentStatus: action.paymentStatus } : inv
         )
+      }
+      if (action.type === "delete") {
+        return state.filter((inv) => inv.id !== action.id)
       }
       return state
     }
@@ -584,7 +591,7 @@ function InvoicesBoardPanel({
   }, [customers])
 
   const invoiceListCustomerFilterItems = useMemo(() => {
-    const r: Record<string, string> = { all:"전체 고객" }
+    const r: Record<string, string> = { all: "전체 고객" }
     for (const c of customers) {
       r[c.id] = c.companyName?.trim() || c.name
     }
@@ -604,7 +611,7 @@ function InvoicesBoardPanel({
       if (current && quotes.some((q) => q.id === current)) {
         return current
       }
-      return quotes[0]?.id ??""
+      return quotes[0]?.id ?? ""
     })
   }, [quotes])
 
@@ -634,7 +641,7 @@ function InvoicesBoardPanel({
     createOpenSourceRef.current = null
     onOpenChange(true)
     toast.success("견적을 반영해 청구 작성 화면을 열었습니다.", {
-      description:"청구 유형·금액은 저장 전에 확인해 주세요.",
+      description: "청구 유형·금액은 저장 전에 확인해 주세요.",
       duration: 3200,
     })
     router.replace("/invoices")
@@ -653,7 +660,7 @@ function InvoicesBoardPanel({
     if (!isCreateOpen) {
       return
     }
-    if (createOpenSourceRef.current ==="header") {
+    if (createOpenSourceRef.current === "header") {
       setEditingInvoiceId(null)
       setErrorMessage("")
       setAmountFollowsSuggestion(true)
@@ -709,19 +716,19 @@ function InvoicesBoardPanel({
   const formValidation = useMemo(() => {
     const issues: { key: string; text: string }[] = []
     if (!form.customerId.trim()) {
-      issues.push({ key:"customer", text:"거래처(고객)를 선택해 주세요." })
+      issues.push({ key: "customer", text: "거래처(고객)를 선택해 주세요." })
     }
     const needsQuote = availableQuotes.length > 0
     if (needsQuote && !form.quoteId.trim()) {
-      issues.push({ key:"quote", text:"연결 견적을 선택해 주세요." })
+      issues.push({ key: "quote", text: "연결 견적을 선택해 주세요." })
     }
     const amt = parseAmountInput(form.amount)
     if (!Number.isFinite(amt) || amt <= 0) {
-      issues.push({ key:"amount", text:"청구 금액을 0보다 큰 숫자로 입력해 주세요." })
+      issues.push({ key: "amount", text: "청구 금액을 0보다 큰 숫자로 입력해 주세요." })
     }
-    const reqDate = form.requestedAt?.trim() ??""
+    const reqDate = form.requestedAt?.trim() ?? ""
     if (!reqDate) {
-      issues.push({ key:"requestedAt", text:"청구일(발행일)을 선택해 주세요." })
+      issues.push({ key: "requestedAt", text: "청구일(발행일)을 선택해 주세요." })
     }
     return { ok: issues.length === 0, issues }
   }, [form.customerId, form.quoteId, form.amount, form.requestedAt, availableQuotes.length])
@@ -736,7 +743,7 @@ function InvoicesBoardPanel({
     return c ? formatCustomerLines(c) : null
   }, [customers, form.customerId])
 
-  const showPaidAtField = ["paid","partially_paid","deposit_paid"].includes(form.paymentStatus)
+  const showPaidAtField = ["paid", "partially_paid", "deposit_paid"].includes(form.paymentStatus)
 
   const invoiceTypeLabel =
     invoiceTypeOptions.find((o) => o.value === form.invoiceType)?.label ?? form.invoiceType
@@ -746,25 +753,25 @@ function InvoicesBoardPanel({
   const filteredInvoices = useMemo(() => {
     const q = invoiceListSearch.trim().toLowerCase()
     return optimisticInvoices.filter((inv) => {
-      if (customerFilterId !=="all" && inv.customerId !== customerFilterId) {
+      if (customerFilterId !== "all" && inv.customerId !== customerFilterId) {
         return false
       }
-      if (invoiceTypeFilter !=="all" && inv.invoiceType !== invoiceTypeFilter) {
+      if (invoiceTypeFilter !== "all" && inv.invoiceType !== invoiceTypeFilter) {
         return false
       }
       if (q && !invoiceListSearchHaystack(inv).includes(q)) {
         return false
       }
-      if (paymentQuickFilter ==="unpaid" && inv.paymentStatus ==="paid") {
+      if (paymentQuickFilter === "unpaid" && inv.paymentStatus === "paid") {
         return false
       }
-      if (paymentQuickFilter ==="overdue" && inv.paymentStatus !=="overdue") {
+      if (paymentQuickFilter === "overdue" && inv.paymentStatus !== "overdue") {
         return false
       }
-      if (paymentQuickFilter ==="paid" && inv.paymentStatus !=="paid") {
+      if (paymentQuickFilter === "paid" && inv.paymentStatus !== "paid") {
         return false
       }
-      if (paymentStatusFilter !=="all" && inv.paymentStatus !== paymentStatusFilter) {
+      if (paymentStatusFilter !== "all" && inv.paymentStatus !== paymentStatusFilter) {
         return false
       }
       if (!matchesTaxInvoiceListFilter(inv, taxInvoiceFilter)) {
@@ -798,17 +805,17 @@ function InvoicesBoardPanel({
     }
     const customerLabel = (inv: InvoiceWithReminders) => {
       const c = inv.customer
-      return (c?.companyName?.trim() || c?.name ||"").toLowerCase()
+      return (c?.companyName?.trim() || c?.name || "").toLowerCase()
     }
     arr.sort((a, b) => {
       switch (invoiceSort) {
-        case"due_asc":
+        case "due_asc":
           return dueTs(a) - dueTs(b)
-        case"amount_desc":
+        case "amount_desc":
           return b.amount - a.amount
-        case"customer":
-          return customerLabel(a).localeCompare(customerLabel(b),"ko")
-        case"requested_desc":
+        case "customer":
+          return customerLabel(a).localeCompare(customerLabel(b), "ko")
+        case "requested_desc":
         default:
           return requestedTs(b) - requestedTs(a)
       }
@@ -845,9 +852,9 @@ function InvoicesBoardPanel({
     if (!drawerInvoice) {
       return
     }
-    setCollPromised(drawerInvoice.promisedPaymentDate?.slice(0, 10) ??"")
+    setCollPromised(drawerInvoice.promisedPaymentDate?.slice(0, 10) ?? "")
     setCollNext(toDatetimeLocalValue(drawerInvoice.nextCollectionFollowupAt))
-    setCollTone(drawerInvoice.collectionTone ??"neutral")
+    setCollTone(drawerInvoice.collectionTone ?? "neutral")
   }, [drawerInvoice])
 
   const saveDrawerCollection = () => {
@@ -879,15 +886,16 @@ function InvoicesBoardPanel({
   const runDeleteInvoice = () => {
     if (!deleteTarget) return
     const id = deleteTarget.id
+    setDeleteTarget(null)
     startTransition(async () => {
+      patchInvoicePaymentOptimistic({ type: "delete", id })
       const result = await deleteInvoiceAction(id)
       if (!result.ok) {
         toast.error(result.error)
-        return
+      } else {
+        toast.success("청구를 삭제했습니다.")
+        if (editingInvoiceId === id) setEditingInvoiceId(null)
       }
-      setDeleteTarget(null)
-      toast.success("청구를 삭제했습니다.")
-      if (editingInvoiceId === id) setEditingInvoiceId(null)
       router.refresh()
     })
   }
@@ -905,7 +913,7 @@ function InvoicesBoardPanel({
     setReminderInvoiceId(invoice.id)
     setReminderTone("neutral")
     setReminderForm({
-      channel:"kakao",
+      channel: "kakao",
       message: defaultReminderMessage,
     })
   }
@@ -937,7 +945,7 @@ function InvoicesBoardPanel({
     onOpenChange(true)
   }
 
-  const scrollToFlow = () => flowRef.current?.scrollIntoView({ behavior:"smooth", block:"start" })
+  const scrollToFlow = () => flowRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
 
   const saveCreate = () => {
     setErrorMessage("")
@@ -969,7 +977,7 @@ function InvoicesBoardPanel({
       const prev = optimisticInvoices.find((i) => i.id === editingInvoiceId)
       if (prev && form.paymentStatus !== prev.paymentStatus) {
         patchInvoicePaymentOptimistic({
-          type:"payment",
+          type: "payment",
           id: editingInvoiceId,
           paymentStatus: form.paymentStatus,
         })
@@ -994,7 +1002,7 @@ function InvoicesBoardPanel({
     customerId?: string
   ) => {
     startTransition(async () => {
-      patchInvoicePaymentOptimistic({ type:"payment", id: invoiceId, paymentStatus: status })
+      patchInvoicePaymentOptimistic({ type: "payment", id: invoiceId, paymentStatus: status })
       const result = await updateInvoicePaymentStatusAction(invoiceId, status, customerId)
 
       if (!result.ok) {
@@ -1041,8 +1049,8 @@ function InvoicesBoardPanel({
       toast.success("리마인드가 기록되었습니다.")
       setReminderInvoiceId(null)
       setReminderForm({
-        channel:"kakao",
-        message:"",
+        channel: "kakao",
+        message: "",
       })
       router.refresh()
     })
@@ -1054,18 +1062,18 @@ function InvoicesBoardPanel({
       return
     }
     const customer = inv.customer
-    const name = customer?.companyName?.trim() || customer?.name ||""
+    const name = customer?.companyName?.trim() || customer?.name || ""
     const overdueLike =
-      inv.paymentStatus ==="overdue" || invoiceRowReceivableHint(inv) ==="overdue"
+      inv.paymentStatus === "overdue" || invoiceRowReceivableHint(inv) === "overdue"
     const kind = overdueLike ? ("overdue_reminder" as const) : ("invoice_notice" as const)
 
     setReminderAiBusy(true)
     void (async () => {
       try {
         const res = await fetch("/api/ai/compose-message", {
-          method:"POST",
-          headers: {"Content-Type":"application/json" },
-          credentials:"include",
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({
             kind,
             tone: reminderTone,
@@ -1083,7 +1091,7 @@ function InvoicesBoardPanel({
         })
         const data = (await res.json()) as { error?: string; message?: { body: string } }
         if (!res.ok) {
-          toast.error(data.error ??"문구 생성에 실패했습니다.")
+          toast.error(data.error ?? "문구 생성에 실패했습니다.")
           return
         }
         setReminderForm((current) => ({
@@ -1116,10 +1124,10 @@ function InvoicesBoardPanel({
       ) : null}
 
       <section className="rounded-lg border border-border/60 bg-muted/10 px-3 py-2.5 sm:px-4">
-        <p className="mb-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           1) 고객 · 연결 견적
         </p>
-        <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-md border border-border/50 bg-background/60 px-2 py-1.5 text-sm leading-snug text-muted-foreground">
+        <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-md border border-border/50 bg-background/60 px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
           <span className="shrink-0 rounded bg-primary/12 px-1.5 py-0.5 text-[9px] font-semibold text-primary">
             동기화
           </span>
@@ -1145,17 +1153,17 @@ function InvoicesBoardPanel({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-7 px-2 text-xs text-muted-foreground"
+                  className="h-7 px-2 text-[10px] text-muted-foreground"
                   onClick={() => {
                     setAmountFollowsSuggestion(true)
-                    setForm((c) => ({ ...c, quoteId:"" }))
+                    setForm((c) => ({ ...c, quoteId: "" }))
                   }}
                 >
                   견적 연결 해제
                 </Button>
               ) : null}
             </div>
-            <p className="text-sm leading-snug text-muted-foreground">
+            <p className="text-[10px] leading-snug text-muted-foreground">
               연락처 정보는 목록과 동일하게 보입니다.
             </p>
             {customers.length === 0 ? (
@@ -1172,22 +1180,23 @@ function InvoicesBoardPanel({
                   setForm((current) => ({
                     ...current,
                     customerId: value ?? current.customerId,
-                    quoteId:"",
+                    quoteId: "",
                   }))
                 }}
               >
                 <SelectTrigger
-                  className={cn("h-auto min-h-10 w-full justify-between py-2 text-left",
-                    form.quoteId ?"bg-muted/40 opacity-[0.92]" :""
+                  className={cn(
+                    "h-auto min-h-10 w-full justify-between py-2 text-left",
+                    form.quoteId ? "bg-muted/40 opacity-[0.92]" : ""
                   )}
                   title={
                     form.quoteId
-                      ?"견적이 연결되어 있어 고객은 견적과 동일하게 고정됩니다. 바꾸려면 「견적 연결 해제」를 누르세요."
+                      ? "견적이 연결되어 있어 고객은 견적과 동일하게 고정됩니다. 바꾸려면 「견적 연결 해제」를 누르세요."
                       : undefined
                   }
                 >
                   <SelectValue className="sr-only">
-                    {selectedCustomerLines?.primary ??"고객 선택"}
+                    {selectedCustomerLines?.primary ?? "고객 선택"}
                   </SelectValue>
                   <span className="line-clamp-3 flex-1 pr-1 text-left text-sm leading-snug">
                     {selectedCustomerLines ? (
@@ -1196,7 +1205,7 @@ function InvoicesBoardPanel({
                           {selectedCustomerLines.primary}
                         </span>
                         {selectedCustomerLines.secondary ? (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-[11px] text-muted-foreground">
                             {selectedCustomerLines.secondary}
                           </span>
                         ) : null}
@@ -1235,10 +1244,10 @@ function InvoicesBoardPanel({
                 </span>
               ) : null}
             </div>
-            <p className="text-sm leading-snug text-muted-foreground">
+            <p className="text-[10px] leading-snug text-muted-foreground">
               {form.customerId
-                ?"위 고객 견적만 나옵니다. 고르면 고객·금액이 이 견적에 맞춰집니다."
-                :"고객을 먼저 고르면 견적 목록이 열립니다."}
+                ? "위 고객 견적만 나옵니다. 고르면 고객·금액이 이 견적에 맞춰집니다."
+                : "고객을 먼저 고르면 견적 목록이 열립니다."}
             </p>
             {!form.customerId ? (
               <div className="flex min-h-9 items-center rounded-lg border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
@@ -1249,7 +1258,7 @@ function InvoicesBoardPanel({
                 <div className="flex min-h-9 items-center rounded-lg border border-border/60 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
                   이 고객에 연결할 견적이 없습니다
                 </div>
-                <p className="text-sm leading-snug text-muted-foreground">
+                <p className="text-[10px] leading-snug text-muted-foreground">
                   견적 없이도 청구는 저장할 수 있습니다(선택 사항).
                 </p>
               </div>
@@ -1263,7 +1272,7 @@ function InvoicesBoardPanel({
                   if (!q) {
                     setForm((current) => ({
                       ...current,
-                      quoteId: value ??"",
+                      quoteId: value ?? "",
                     }))
                     return
                   }
@@ -1275,19 +1284,19 @@ function InvoicesBoardPanel({
                   const nextAmt = suggestedAmountForQuote(q, form.invoiceType, sum)
                   setForm((current) => ({
                     ...current,
-                    quoteId: value ??"",
+                    quoteId: value ?? "",
                     customerId: q.customerId,
                     amount: String(nextAmt),
                   }))
                   toast.message("견적에 맞춰 반영", {
-                    description:"고객·금액이 갱신되었습니다. 금액은 언제든 수정 가능합니다.",
+                    description: "고객·금액이 갱신되었습니다. 금액은 언제든 수정 가능합니다.",
                     duration: 2200,
                   })
                 }}
               >
                 <SelectTrigger className="h-auto min-h-10 w-full justify-between py-2 text-left">
                   <SelectValue className="sr-only">
-                    {selectedQuote ? formatQuoteLines(selectedQuote, customers).primary :"견적 선택"}
+                    {selectedQuote ? formatQuoteLines(selectedQuote, customers).primary : "견적 선택"}
                   </SelectValue>
                   <span className="line-clamp-4 flex-1 pr-1 text-left text-sm leading-snug">
                     {selectedQuote ? (
@@ -1295,7 +1304,7 @@ function InvoicesBoardPanel({
                         <span className="font-medium text-foreground">
                           {formatQuoteLines(selectedQuote, customers).primary}
                         </span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-[11px] text-muted-foreground">
                           {formatQuoteLines(selectedQuote, customers).secondary}
                         </span>
                       </span>
@@ -1324,10 +1333,10 @@ function InvoicesBoardPanel({
       </section>
 
       <section className="rounded-lg border border-border/60 bg-muted/5 px-3 py-2.5 sm:px-4">
-        <p className="mb-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           2) 청구 타입 · 결제 상태 · 금액
         </p>
-        <p className="mb-3 text-sm leading-snug text-muted-foreground">
+        <p className="mb-3 text-[10px] leading-snug text-muted-foreground">
           타입·견적 기준으로 금액을 제안합니다. 숫자만 입력해도 되며 쉼표는 저장 시 정리됩니다.
         </p>
         <div className="grid gap-3 lg:grid-cols-3">
@@ -1369,7 +1378,7 @@ function InvoicesBoardPanel({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] text-muted-foreground">
               선금 ≈ 총액 50% · 잔금/최종 = 총액 − 이미 청구된 합계
             </p>
           </div>
@@ -1384,11 +1393,11 @@ function InvoicesBoardPanel({
               onValueChange={(value) => {
                 setForm((current) => {
                   const next = (value as PaymentStatus | null) ?? current.paymentStatus
-                  const keepPaidAt = ["paid","partially_paid","deposit_paid"].includes(next)
+                  const keepPaidAt = ["paid", "partially_paid", "deposit_paid"].includes(next)
                   return {
                     ...current,
                     paymentStatus: next,
-                    paidAt: keepPaidAt ? current.paidAt :"",
+                    paidAt: keepPaidAt ? current.paidAt : "",
                   }
                 })
               }}
@@ -1416,13 +1425,13 @@ function InvoicesBoardPanel({
                 className="h-10 pr-10 tabular-nums"
                 value={formatAmountDigitsDisplay(form.amount)}
                 onChange={(event) => {
-                  const digits = event.target.value.replace(/\D/g,"")
+                  const digits = event.target.value.replace(/\D/g, "")
                   setAmountFollowsSuggestion(false)
                   setForm((current) => ({ ...current, amount: digits }))
                 }}
                 inputMode="numeric"
                 placeholder="예: 3300000"
-                aria-invalid={!formValidation.ok && formValidation.issues.some((i) => i.key ==="amount")}
+                aria-invalid={!formValidation.ok && formValidation.issues.some((i) => i.key === "amount")}
               />
               <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-foreground">
                 원
@@ -1445,17 +1454,17 @@ function InvoicesBoardPanel({
                         </span>
                       ) : null}
                     </div>
-                    <p className="text-sm leading-snug text-muted-foreground">
-                      {form.invoiceType ==="deposit" ? (
+                    <p className="text-[10px] leading-snug text-muted-foreground">
+                      {form.invoiceType === "deposit" ? (
                         <>
-                          선금 제안: 견적 총액의 약 50% →{""}
+                          선금 제안: 견적 총액의 약 50% →{" "}
                           <span className="font-medium text-foreground">{formatCurrency(suggestedAmountValue)}</span>
-                          {""}(총액 {formatCurrency(selectedQuote.total)})
+                          {" "}(총액 {formatCurrency(selectedQuote.total)})
                         </>
                       ) : (
                         <>
-                          잔여 제안: 총액 {formatCurrency(selectedQuote.total)} − 기청구{""}
-                          {formatCurrency(invoicedSumForSelectedQuote)} →{""}
+                          잔여 제안: 총액 {formatCurrency(selectedQuote.total)} − 기청구{" "}
+                          {formatCurrency(invoicedSumForSelectedQuote)} →{" "}
                           <span className="font-medium text-foreground">{formatCurrency(suggestedAmountValue)}</span>
                         </>
                       )}
@@ -1483,10 +1492,10 @@ function InvoicesBoardPanel({
       </section>
 
       <section className="rounded-lg border border-border/60 bg-muted/5 px-3 py-2.5 sm:px-4">
-        <p className="mb-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           3) 청구일 · 입금 기한
         </p>
-        <p className="mb-2 text-sm leading-snug text-muted-foreground">
+        <p className="mb-2 text-[10px] leading-snug text-muted-foreground">
           발행일·납부 마감을 먼저 정합니다. 실제 입금일은 아래 <span className="font-medium">결제 처리 정보</span>
           (추가)에서 입력합니다.
         </p>
@@ -1496,11 +1505,11 @@ function InvoicesBoardPanel({
               <label className="text-sm font-semibold">청구일</label>
               <span className="text-destructive">*</span>
             </div>
-            <p className="text-xs text-muted-foreground">발행·요청일</p>
+            <p className="text-[10px] text-muted-foreground">발행·요청일</p>
             <Input
               type="date"
               className="h-10 max-w-full sm:max-w-xs"
-              value={form.requestedAt ? form.requestedAt.slice(0, 10) :""}
+              value={form.requestedAt ? form.requestedAt.slice(0, 10) : ""}
               onChange={(event) =>
                 setForm((current) => ({ ...current, requestedAt: event.target.value }))
               }
@@ -1508,7 +1517,7 @@ function InvoicesBoardPanel({
           </div>
           <div className="space-y-1">
             <label className="text-sm font-semibold">입금 기한</label>
-            <p className="text-xs text-muted-foreground">납부 마감일</p>
+            <p className="text-[10px] text-muted-foreground">납부 마감일</p>
             <Input
               type="date"
               className="h-10 max-w-full sm:max-w-xs"
@@ -1522,15 +1531,16 @@ function InvoicesBoardPanel({
       </section>
 
       <details
-        className={cn("rounded-lg border [&_summary]:cursor-pointer [&_summary]:select-none",
+        className={cn(
+          "rounded-lg border [&_summary]:cursor-pointer [&_summary]:select-none",
           showPaidAtField
-            ?"border-primary/30 bg-primary/[0.06] shadow-sm"
-            :"border-border/50 bg-muted/15"
+            ? "border-primary/30 bg-primary/[0.06] shadow-sm"
+            : "border-border/50 bg-muted/15"
         )}
       >
         <summary className="px-3 py-2 text-xs font-medium text-muted-foreground">
           결제 처리 정보
-          <span className="ml-1.5 font-normal text-xs text-muted-foreground/90">(추가)</span>
+          <span className="ml-1.5 font-normal text-[10px] text-muted-foreground/90">(추가)</span>
           {showPaidAtField ? (
             <span className="ml-2 font-semibold text-primary">— 입금일 입력</span>
           ) : null}
@@ -1539,23 +1549,23 @@ function InvoicesBoardPanel({
           {showPaidAtField ? (
             <div className="space-y-1">
               <label className="text-sm font-semibold">실제 입금일</label>
-              <p className="text-xs text-muted-foreground">입금 확인일(미수·정산 참고)</p>
+              <p className="text-[10px] text-muted-foreground">입금 확인일(미수·정산 참고)</p>
               <Input
                 type="date"
                 className="h-10 max-w-xs"
-                value={form.paidAt ? form.paidAt.slice(0, 10) :""}
+                value={form.paidAt ? form.paidAt.slice(0, 10) : ""}
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
                     paidAt: event.target.value
                       ? new Date(`${event.target.value}T12:00:00`).toISOString()
-                      :"",
+                      : "",
                   }))
                 }
               />
             </div>
           ) : (
-            <p className="text-sm leading-snug text-muted-foreground">
+            <p className="text-[10px] leading-snug text-muted-foreground">
               상태를 <span className="font-medium text-foreground/85">입금 완료·선금 입금·부분 입금</span>으로
               바꾸면 입금일을 넣을 수 있습니다.
             </p>
@@ -1564,10 +1574,10 @@ function InvoicesBoardPanel({
       </details>
 
       <section className="rounded-lg border border-border/60 bg-muted/5 px-3 py-2.5 sm:px-4">
-        <p className="mb-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           메모 (선택)
         </p>
-        <p className="mb-1.5 text-sm leading-snug text-muted-foreground">
+        <p className="mb-1.5 text-[10px] leading-snug text-muted-foreground">
           입금 안내·분할 조건·내부 참고(청구·리마인드 시 참고)
         </p>
         <Textarea
@@ -1582,10 +1592,10 @@ function InvoicesBoardPanel({
       </section>
 
       <section className="rounded-lg border border-border/60 bg-muted/5 px-3 py-2.5 sm:px-4">
-        <p className="mb-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           4) 추심·연락 일정 (선택)
         </p>
-        <p className="mb-2 text-sm leading-snug text-muted-foreground">
+        <p className="mb-2 text-[10px] leading-snug text-muted-foreground">
           입금 약속일·다음 연락 시점·리마인드 톤을 기록해 두면 미수 관리에 도움이 됩니다.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -1619,7 +1629,7 @@ function InvoicesBoardPanel({
               onValueChange={(value) =>
                 setForm((c) => ({
                   ...c,
-                  collectionTone: (value as CollectionToneHint | null) ??"neutral",
+                  collectionTone: (value as CollectionToneHint | null) ?? "neutral",
                 }))
               }
             >
@@ -1659,7 +1669,7 @@ function InvoicesBoardPanel({
           <div className="shrink-0 border-b border-border/60 px-4 pb-3 pt-4 pr-12 sm:px-6 sm:pr-14">
             <DialogHeader className="gap-1">
               <DialogTitle className="text-lg">청구 생성</DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-[11px] leading-snug">
                 필수는 <span className="text-destructive">*</span> · 견적 고르면 고객·금액이 맞춰집니다.
               </DialogDescription>
             </DialogHeader>
@@ -1668,7 +1678,7 @@ function InvoicesBoardPanel({
             {formFields}
           </div>
           <div className="flex shrink-0 flex-col gap-2.5 border-t border-border/60 bg-background/95 px-4 py-3 shadow-[0_-6px_16px_rgba(0,0,0,0.06)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 dark:shadow-[0_-6px_20px_rgba(0,0,0,0.25)]">
-            <p className="text-sm leading-snug text-muted-foreground sm:max-w-[56%] sm:min-w-0">
+            <p className="text-[11px] leading-snug text-muted-foreground sm:max-w-[56%] sm:min-w-0">
               {!formValidation.ok ? (
                 <span className="font-medium text-amber-900 dark:text-amber-100">
                   노란 박스 항목을 채우면 저장됩니다. 저장 버튼에 마우스를 올리면 요약이 보입니다.
@@ -1682,12 +1692,13 @@ function InvoicesBoardPanel({
                 취소
               </Button>
               <span
-                className={cn("inline-flex",
-                  !formValidation.ok && !isPending ?"cursor-help" :""
+                className={cn(
+                  "inline-flex",
+                  !formValidation.ok && !isPending ? "cursor-help" : ""
                 )}
                 title={
                   !formValidation.ok && !isPending
-                    ? validationSummaryForTitle ||"필수 항목을 채워 주세요"
+                    ? validationSummaryForTitle || "필수 항목을 채워 주세요"
                     : undefined
                 }
               >
@@ -1697,7 +1708,7 @@ function InvoicesBoardPanel({
                   disabled={isPending || !formValidation.ok}
                   className="gap-2"
                   title={
-                    formValidation.ok && !isPending ?"입력한 내용으로 청구를 저장합니다" : undefined
+                    formValidation.ok && !isPending ? "입력한 내용으로 청구를 저장합니다" : undefined
                   }
                 >
                   {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
@@ -1730,7 +1741,7 @@ function InvoicesBoardPanel({
               value={invoiceTypeFilter}
               items={invoiceTypeFilterSelectItems}
               onValueChange={(value) =>
-                setInvoiceTypeFilter((value as InvoiceType |"all" | null) ??"all")
+                setInvoiceTypeFilter((value as InvoiceType | "all" | null) ?? "all")
               }
             >
               <SelectTrigger className="h-9 w-full min-w-[7rem] sm:w-[130px]">
@@ -1752,7 +1763,7 @@ function InvoicesBoardPanel({
               value={invoiceSort}
               items={invoiceSortSelectItemsRecord}
               onValueChange={(value) =>
-                setInvoiceSort((value as InvoiceListSort | null) ??"requested_desc")
+                setInvoiceSort((value as InvoiceListSort | null) ?? "requested_desc")
               }
             >
               <SelectTrigger className="h-9 w-full min-w-[9rem] sm:w-[160px]">
@@ -1771,10 +1782,10 @@ function InvoicesBoardPanel({
             <div className="flex flex-wrap gap-1.5">
               {(
                 [
-                  { key:"all" as const, label:"전체", accent:"default" as const },
-                  { key:"unpaid" as const, label:"미수금", accent:"default" as const },
-                  { key:"overdue" as const, label:"연체", accent:"danger" as const },
-                  { key:"paid" as const, label:"입금완료", accent:"default" as const },
+                  { key: "all" as const, label: "전체", accent: "default" as const },
+                  { key: "unpaid" as const, label: "미수금", accent: "default" as const },
+                  { key: "overdue" as const, label: "연체", accent: "danger" as const },
+                  { key: "paid" as const, label: "입금완료", accent: "default" as const },
                 ] as const
               ).map(({ key, label, accent }) => (
                 <OpsToolbarFilterButton
@@ -1794,7 +1805,7 @@ function InvoicesBoardPanel({
               value={paymentStatusFilter}
               items={paymentStatusFilterSelectItems}
               onValueChange={(value) => {
-                setPaymentStatusFilter((value as PaymentStatus |"all") ??"all")
+                setPaymentStatusFilter((value as PaymentStatus | "all") ?? "all")
                 setPaymentQuickFilter("all")
               }}
             >
@@ -1816,11 +1827,11 @@ function InvoicesBoardPanel({
             <div className="flex flex-wrap gap-1.5">
               {(
                 [
-                  { key:"all" as const, label:"전체", accent:"default" as const },
-                  { key:"need" as const, label:"발행 필요", accent:"default" as const },
-                  { key:"failed" as const, label:"실패", accent:"danger" as const },
-                  { key:"issued" as const, label:"발행 완료", accent:"default" as const },
-                  { key:"target" as const, label:"대상만", accent:"default" as const },
+                  { key: "all" as const, label: "전체", accent: "default" as const },
+                  { key: "need" as const, label: "발행 필요", accent: "default" as const },
+                  { key: "failed" as const, label: "실패", accent: "danger" as const },
+                  { key: "issued" as const, label: "발행 완료", accent: "default" as const },
+                  { key: "target" as const, label: "대상만", accent: "default" as const },
                 ] as const
               ).map(({ key, label, accent }) => (
                 <OpsToolbarFilterButton
@@ -1840,11 +1851,11 @@ function InvoicesBoardPanel({
             label="고객 필터"
           >
             <div className="min-w-0 flex-1 space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">고객으로 좁히기</label>
+              <label className="text-[11px] font-medium text-muted-foreground">고객으로 좁히기</label>
               <Select
                 value={customerFilterId}
                 items={invoiceListCustomerFilterItems}
-                onValueChange={(v) => setCustomerFilterId((v as string | null) ??"all")}
+                onValueChange={(v) => setCustomerFilterId((v as string | null) ?? "all")}
               >
                 <SelectTrigger className="h-9 w-full sm:min-w-[14rem]">
                   <SelectValue placeholder="전체" />
@@ -1867,17 +1878,18 @@ function InvoicesBoardPanel({
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/15 px-3 py-2">
           <div className="min-w-0">
             <p className="text-xs font-semibold text-foreground">보기 방식</p>
-            <p className="text-sm leading-snug text-muted-foreground">
+            <p className="text-[11px] leading-snug text-muted-foreground">
               기본 목록은 그대로 두고, 캘린더에서 입금 기한·약속일·재연락 일정을 보조로 확인합니다.
             </p>
           </div>
           <div className="inline-flex items-center rounded-lg border border-border/70 bg-background p-1">
             <button
               type="button"
-              className={cn("inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors",
-                viewMode ==="list"
-                  ?"bg-primary/12 text-primary"
-                  :"text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              className={cn(
+                "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors",
+                viewMode === "list"
+                  ? "bg-primary/12 text-primary"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
               )}
               onClick={() => setViewMode("list")}
             >
@@ -1886,10 +1898,11 @@ function InvoicesBoardPanel({
             </button>
             <button
               type="button"
-              className={cn("inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors",
-                viewMode ==="calendar"
-                  ?"bg-primary/12 text-primary"
-                  :"text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              className={cn(
+                "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors",
+                viewMode === "calendar"
+                  ? "bg-primary/12 text-primary"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
               )}
               onClick={() => setViewMode("calendar")}
             >
@@ -1916,13 +1929,13 @@ function InvoicesBoardPanel({
                 </span>
               </div>
               <div className="space-y-0.5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-primary">시작하기</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">시작하기</p>
                 <h2 className="text-sm font-bold tracking-tight sm:text-base">
                   {hasQuotes
-                    ?"견적을 확인한 뒤 첫 청구를 만들어보세요"
-                    :"견적을 먼저 준비한 뒤 청구를 시작하세요"}
+                    ? "견적을 확인한 뒤 첫 청구를 만들어보세요"
+                    : "견적을 먼저 준비한 뒤 청구를 시작하세요"}
                 </h2>
-                <p className="text-sm leading-snug text-muted-foreground">
+                <p className="text-xs leading-snug text-muted-foreground">
                   견적을 바탕으로 선금·잔금을 나누고, 입금 상태와 리마인드 이력을 한곳에서 관리합니다.
                 </p>
               </div>
@@ -1930,13 +1943,13 @@ function InvoicesBoardPanel({
               {hasQuotes ? (
                 <div className="flex flex-col gap-1.5 rounded-md border border-border/60 bg-background/80 p-2 sm:flex-row sm:items-end">
                   <div className="min-w-0 flex-1 space-y-0.5">
-                    <label className="text-xs font-medium text-muted-foreground">
+                    <label className="text-[10px] font-medium text-muted-foreground">
                       빠른 시작 · 견적 선택
                     </label>
                     <Select
                       value={quickQuoteId}
                       items={quickQuoteSelectItems}
-                      onValueChange={(value) => setQuickQuoteId(value ??"")}
+                      onValueChange={(value) => setQuickQuoteId(value ?? "")}
                     >
                       <SelectTrigger className="h-8 w-full text-sm">
                         <SelectValue placeholder="견적 선택" />
@@ -1976,7 +1989,7 @@ function InvoicesBoardPanel({
                   {flowSteps.map((item) => (
                     <li
                       key={item.step}
-                      className="flex gap-1 rounded border border-border/50 bg-background/70 px-1.5 py-1 text-xs"
+                      className="flex gap-1 rounded border border-border/50 bg-background/70 px-1.5 py-1 text-[11px]"
                     >
                       <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/12 text-[9px] font-bold text-primary">
                         {item.step}
@@ -1994,10 +2007,11 @@ function InvoicesBoardPanel({
                 <Link
                   href="/quotes"
                   className={cn(
-                    buttonVariants({ size:"sm", variant: hasQuotes ?"outline" :"default" }),"inline-flex h-8 items-center justify-center gap-1.5 text-sm font-semibold"
+                    buttonVariants({ size: "sm", variant: hasQuotes ? "outline" : "default" }),
+                    "inline-flex h-8 items-center justify-center gap-1.5 text-sm font-semibold"
                   )}
                 >
-                  {hasQuotes ?"견적 보기" :"견적 만들기"}
+                  {hasQuotes ? "견적 보기" : "견적 만들기"}
                   <ArrowRight className="size-3.5" />
                 </Link>
                 <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5 text-sm" onClick={scrollToFlow}>
@@ -2040,20 +2054,21 @@ function InvoicesBoardPanel({
             <div className="min-w-0 flex-1 space-y-2 sm:space-y-0">
               <div>
                 <p className="text-sm font-semibold text-foreground">아직 생성된 청구가 없습니다</p>
-                <p className="mt-0.5 text-sm leading-snug text-muted-foreground">
+                <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
                   {hasQuotes
-                    ?"공개 청구 링크·리마인드·이메일·추심 메모를 같은 화면에서 이어 가고, 알림 설정으로 운영자 알림까지 맞출 수 있습니다."
-                    :"견적을 만든 뒤 위 카드에서 선금·잔금 청구를 시작하세요. 설정의 리마인드·알림을 미리 켜 두면 수금 단계가 수월합니다."}
+                    ? "공개 청구 링크·리마인드·이메일·추심 메모를 같은 화면에서 이어 가고, 알림 설정으로 운영자 알림까지 맞출 수 있습니다."
+                    : "견적을 만든 뒤 위 카드에서 선금·잔금 청구를 시작하세요. 설정의 리마인드·알림을 미리 켜 두면 수금 단계가 수월합니다."}
                 </p>
               </div>
               <div className="flex flex-wrap gap-1.5 sm:mt-2 sm:justify-end">
                 <Link
                   href="/quotes"
                   className={cn(
-                    buttonVariants({ variant:"outline", size:"sm" }),"inline-flex h-8 items-center gap-1.5"
+                    buttonVariants({ variant: "outline", size: "sm" }),
+                    "inline-flex h-8 items-center gap-1.5"
                   )}
                 >
-                  {hasQuotes ?"견적 보기" :"견적 만들기"}
+                  {hasQuotes ? "견적 보기" : "견적 만들기"}
                   <ArrowRight className="size-3" />
                 </Link>
                 <Button type="button" variant="ghost" size="sm" className="h-8 gap-1.5 px-2" onClick={scrollToFlow}>
@@ -2071,7 +2086,7 @@ function InvoicesBoardPanel({
         />
       ) : null}
 
-      {displayInvoices.length > 0 && viewMode ==="calendar" ? (
+      {displayInvoices.length > 0 && viewMode === "calendar" ? (
         <OpsCalendarView
           events={invoiceCalendarEvents}
           emptyTitle="날짜가 지정된 청구 일정이 없습니다"
@@ -2080,25 +2095,25 @@ function InvoicesBoardPanel({
         />
       ) : null}
 
-      {displayInvoices.length > 0 && viewMode ==="list" ? (
+      {displayInvoices.length > 0 && viewMode === "list" ? (
         <>
           <OpsTableShell className="hidden md:block">
-            <table className={cn(opsTableClass,"!min-w-0 w-full max-w-full table-fixed")}>
+            <table className={cn(opsTableClass, "!min-w-0 w-full max-w-full table-fixed")}>
               <thead>
                 <tr className={opsTableHeadRowClass}>
                   <th className={opsTableHeadCellClass}>청구 번호</th>
                   <th className={opsTableHeadCellClass}>고객</th>
-                  <th className={cn(opsTableHeadCellClass,"max-w-[200px]")}>연결 견적</th>
+                  <th className={cn(opsTableHeadCellClass, "max-w-[200px]")}>연결 견적</th>
                   <th className={opsTableHeadCellClass}>유형</th>
-                  <th className={cn(opsTableHeadCellClass,"w-[148px] min-w-[140px]")}>결제 상태</th>
-                  <th className={cn(opsTableHeadCellClass,"w-[104px] min-w-[96px] max-w-[120px]")}>
+                  <th className={cn(opsTableHeadCellClass, "w-[148px] min-w-[140px]")}>결제 상태</th>
+                  <th className={cn(opsTableHeadCellClass, "w-[104px] min-w-[96px] max-w-[120px]")}>
                     세금계산서
                   </th>
-                  <th className={cn(opsTableHeadCellClass,"text-right")}>금액</th>
+                  <th className={cn(opsTableHeadCellClass, "text-right")}>금액</th>
                   <th className={opsTableHeadCellClass}>청구일</th>
                   <th className={opsTableHeadCellClass}>입금 기한</th>
                   <th className={opsTableHeadCellClass}>입금일</th>
-                  <th className={cn(opsTableHeadCellClass,"w-12 text-right")} aria-label="작업" />
+                  <th className={cn(opsTableHeadCellClass, "w-12 text-right")} aria-label="작업" />
                 </tr>
               </thead>
               <tbody>
@@ -2110,38 +2125,40 @@ function InvoicesBoardPanel({
                     <tr
                       key={invoice.id}
                       className={cn(
-                        opsTableRowClass,"cursor-pointer",
-                        flashHighlightInvoiceId === invoice.id &&"ring-1 ring-primary/25 bg-primary/[0.07] transition-colors duration-500",
-                        recvHint ==="overdue" &&"bg-destructive/[0.08]",
-                        recvHint ==="due_soon" &&"bg-amber-500/[0.07]"
+                        opsTableRowClass,
+                        "cursor-pointer",
+                        flashHighlightInvoiceId === invoice.id &&
+                          "ring-1 ring-primary/25 bg-primary/[0.07] transition-colors duration-500",
+                        recvHint === "overdue" && "bg-destructive/[0.08]",
+                        recvHint === "due_soon" && "bg-amber-500/[0.07]"
                       )}
-                      data-state={drawerInvoiceId === invoice.id ?"selected" : undefined}
+                      data-state={drawerInvoiceId === invoice.id ? "selected" : undefined}
                       onClick={() => setDrawerInvoiceId(invoice.id)}
                     >
-                      <td className={cn(opsTableCellClass,"font-mono text-xs tabular-nums text-muted-foreground")}>
+                      <td className={cn(opsTableCellClass, "font-mono text-xs tabular-nums text-muted-foreground")}>
                         <span className="flex flex-col gap-0.5">
                           {invoice.invoiceNumber}
-                          {recvHint ==="overdue" ? (
+                          {recvHint === "overdue" ? (
                             <OpsTimeHintChip kind="invoice_overdue" size="sm" />
                           ) : null}
-                          {recvHint ==="due_soon" ? (
+                          {recvHint === "due_soon" ? (
                             <OpsTimeHintChip kind="invoice_due_soon" size="sm" />
                           ) : null}
                         </span>
                       </td>
-                      <td className={cn(opsTableCellClass,"max-w-[160px]")}>
+                      <td className={cn(opsTableCellClass, "max-w-[160px]")}>
                         <span className="line-clamp-2 text-sm font-medium">
-                          {customer?.companyName?.trim() || customer?.name ||"—"}
+                          {customer?.companyName?.trim() || customer?.name || "—"}
                         </span>
                       </td>
-                      <td className={cn(opsTableCellClass,"max-w-[200px] truncate text-xs text-muted-foreground")}>
+                      <td className={cn(opsTableCellClass, "max-w-[200px] truncate text-xs text-muted-foreground")}>
                         {linkedQuoteSummary(invoice, quotes)}
                       </td>
-                      <td className={cn(opsTableCellClass,"text-xs")}>
+                      <td className={cn(opsTableCellClass, "text-xs")}>
                         {invoiceTypeTableLabel(invoice.invoiceType)}
                       </td>
                       <td
-                        className={cn(opsTableCellClass,"w-[148px] min-w-[140px] max-w-[160px]")}
+                        className={cn(opsTableCellClass, "w-[148px] min-w-[140px] max-w-[160px]")}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="flex max-w-[148px] flex-col gap-1.5">
@@ -2157,7 +2174,8 @@ function InvoicesBoardPanel({
                             }
                           >
                             <SelectTrigger
-                              className={cn("h-8 w-full max-w-[148px] text-xs font-medium",
+                              className={cn(
+                                "h-8 w-full max-w-[148px] text-xs font-medium",
                                 opsStatusSelectTriggerClass(paymentMeta.tone, paymentMeta.emphasis)
                               )}
                             >
@@ -2173,14 +2191,14 @@ function InvoicesBoardPanel({
                           </Select>
                         </div>
                       </td>
-                      <td className={cn(opsTableCellClass,"max-w-[120px]")}>
+                      <td className={cn(opsTableCellClass, "max-w-[120px]")}>
                         {(() => {
                           const tm = getTaxInvoiceListChipMeta(invoice)
                           return (
                             <span
                               className={opsStatusChipVariants({
                                 tone: tm.tone,
-                                size:"sm",
+                                size: "sm",
                                 emphasis: tm.emphasis,
                               })}
                             >
@@ -2189,29 +2207,30 @@ function InvoicesBoardPanel({
                           )
                         })()}
                       </td>
-                      <td className={cn(opsTableCellClass,"text-right text-sm font-semibold tabular-nums")}>
+                      <td className={cn(opsTableCellClass, "text-right text-sm font-semibold tabular-nums")}>
                         {formatCurrency(invoice.amount)}
                       </td>
-                      <td className={cn(opsTableCellClass,"whitespace-nowrap text-xs text-muted-foreground")}>
+                      <td className={cn(opsTableCellClass, "whitespace-nowrap text-xs text-muted-foreground")}>
                         {formatDate(invoice.requestedAt)}
                       </td>
                       <td
                         className={cn(
-                          opsTableCellClass,"whitespace-nowrap text-xs",
-                          recvHint ==="overdue" &&"font-semibold text-destructive",
-                          recvHint ==="due_soon" &&"font-medium text-amber-900 dark:text-amber-100",
-                          !recvHint &&"text-muted-foreground"
+                          opsTableCellClass,
+                          "whitespace-nowrap text-xs",
+                          recvHint === "overdue" && "font-semibold text-destructive",
+                          recvHint === "due_soon" && "font-medium text-amber-900 dark:text-amber-100",
+                          !recvHint && "text-muted-foreground"
                         )}
                       >
                         {formatDate(invoice.dueDate)}
                       </td>
-                      <td className={cn(opsTableCellClass,"whitespace-nowrap text-xs text-muted-foreground")}>
+                      <td className={cn(opsTableCellClass, "whitespace-nowrap text-xs text-muted-foreground")}>
                         {formatDate(invoice.paidAt)}
                       </td>
-                      <td className={cn(opsTableCellClass,"text-right")} onClick={(e) => e.stopPropagation()}>
+                      <td className={cn(opsTableCellClass, "text-right")} onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger
-                            className={cn(buttonVariants({ variant:"ghost", size:"icon-sm" }),"size-8")}
+                            className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-8")}
                           >
                             <MoreHorizontal className="size-4" />
                           </DropdownMenuTrigger>
@@ -2232,7 +2251,9 @@ function InvoicesBoardPanel({
                               className="gap-2"
                               onClick={() =>
                                 window.open(
-                                  `/invoices/${invoice.id}/print`,"_blank","noopener,noreferrer"
+                                  `/invoices/${invoice.id}/print`,
+                                  "_blank",
+                                  "noopener,noreferrer"
                                 )
                               }
                             >
@@ -2266,26 +2287,27 @@ function InvoicesBoardPanel({
                 <button
                   key={invoice.id}
                   type="button"
-                  className={cn("flex w-full flex-col gap-2 rounded-xl border border-border/60 bg-card p-3 text-left shadow-sm",
-                    flashHighlightInvoiceId === invoice.id &&"ring-2 ring-primary/30",
-                    recvHint ==="overdue" &&"border-destructive/35",
-                    recvHint ==="due_soon" &&"border-amber-500/35"
+                  className={cn(
+                    "flex w-full flex-col gap-2 rounded-xl border border-border/60 bg-card p-3 text-left shadow-sm",
+                    flashHighlightInvoiceId === invoice.id && "ring-2 ring-primary/30",
+                    recvHint === "overdue" && "border-destructive/35",
+                    recvHint === "due_soon" && "border-amber-500/35"
                   )}
                   onClick={() => setDrawerInvoiceId(invoice.id)}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="font-mono text-xs text-muted-foreground">{invoice.invoiceNumber}</p>
+                      <p className="font-mono text-[11px] text-muted-foreground">{invoice.invoiceNumber}</p>
                       <div className="mt-1 flex flex-wrap gap-1">
-                        {recvHint ==="overdue" ? (
+                        {recvHint === "overdue" ? (
                           <OpsTimeHintChip kind="invoice_overdue" size="sm" />
                         ) : null}
-                        {recvHint ==="due_soon" ? (
+                        {recvHint === "due_soon" ? (
                           <OpsTimeHintChip kind="invoice_due_soon" size="sm" />
                         ) : null}
                       </div>
                       <p className="mt-0.5 font-medium leading-snug">
-                        {customer?.companyName?.trim() || customer?.name ||"—"}
+                        {customer?.companyName?.trim() || customer?.name || "—"}
                       </p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {invoiceTypeTableLabel(invoice.invoiceType)} · {formatCurrency(invoice.amount)}
@@ -2305,7 +2327,8 @@ function InvoicesBoardPanel({
                           }
                         >
                           <SelectTrigger
-                            className={cn("h-8 w-[7.25rem] text-xs font-medium",
+                            className={cn(
+                              "h-8 w-[7.25rem] text-xs font-medium",
                               opsStatusSelectTriggerClass(mobPaymentMeta.tone, mobPaymentMeta.emphasis)
                             )}
                           >
@@ -2326,7 +2349,7 @@ function InvoicesBoardPanel({
                           <span
                             className={opsStatusChipVariants({
                               tone: tm.tone,
-                              size:"sm",
+                              size: "sm",
                               emphasis: tm.emphasis,
                             })}
                           >
@@ -2352,16 +2375,18 @@ function InvoicesBoardPanel({
               <span className="font-mono text-xs text-muted-foreground">{drawerInvoice.invoiceNumber}</span>
               <span>
                 {drawerInvoice.customer?.companyName?.trim() ||
-                  drawerInvoice.customer?.name ||"고객"}
+                  drawerInvoice.customer?.name ||
+                  "고객"}
               </span>
             </span>
-          ) : (""
+          ) : (
+            ""
           )
         }
         description={
           drawerInvoice ? (
             <span>
-              {invoiceTypeTableLabel(drawerInvoice.invoiceType)} 청구 ·{""}
+              {invoiceTypeTableLabel(drawerInvoice.invoiceType)} 청구 ·{" "}
               {formatCurrency(drawerInvoice.amount)}
             </span>
           ) : null
@@ -2387,7 +2412,7 @@ function InvoicesBoardPanel({
                 href={`/invoices/${drawerInvoice.id}/print`}
                 target="_blank"
                 rel="noreferrer"
-                className={cn(buttonVariants({ size:"sm", variant:"outline" }),"inline-flex gap-1.5")}
+                className={cn(buttonVariants({ size: "sm", variant: "outline" }), "inline-flex gap-1.5")}
               >
                 <ExternalLink className="size-3.5" />
                 인쇄·PDF
@@ -2397,7 +2422,7 @@ function InvoicesBoardPanel({
                   href={`/quotes/${drawerInvoice.quoteId}/print`}
                   target="_blank"
                   rel="noreferrer"
-                  className={cn(buttonVariants({ size:"sm", variant:"outline" }),"inline-flex")}
+                  className={cn(buttonVariants({ size: "sm", variant: "outline" }), "inline-flex")}
                 >
                   연결 견적서
                 </Link>
@@ -2409,28 +2434,29 @@ function InvoicesBoardPanel({
         {drawerInvoice ? (
           <div className="space-y-4 text-sm">
             <div className="flex flex-wrap items-center gap-2">
-              {invoiceRowReceivableHint(drawerInvoice) ==="overdue" ? (
+              {invoiceRowReceivableHint(drawerInvoice) === "overdue" ? (
                 <OpsTimeHintChip kind="invoice_overdue" />
               ) : null}
-              {invoiceRowReceivableHint(drawerInvoice) ==="due_soon" ? (
+              {invoiceRowReceivableHint(drawerInvoice) === "due_soon" ? (
                 <OpsTimeHintChip kind="invoice_due_soon" />
               ) : null}
             </div>
             <div
-              className={cn("rounded-lg border px-3 py-2.5",
-                drawerInvoice.paymentStatus ==="overdue" || invoiceRowReceivableHint(drawerInvoice) ==="overdue"
-                  ?"border-amber-500/45 bg-amber-500/[0.07]"
-                  :"border-border/60 bg-muted/20"
+              className={cn(
+                "rounded-lg border px-3 py-2.5",
+                drawerInvoice.paymentStatus === "overdue" || invoiceRowReceivableHint(drawerInvoice) === "overdue"
+                  ? "border-amber-500/45 bg-amber-500/[0.07]"
+                  : "border-border/60 bg-muted/20"
               )}
             >
-              <p className="text-xs font-semibold text-muted-foreground">다음으로 할 일</p>
-              <p className="mt-1 text-sm leading-relaxed text-foreground/90">
+              <p className="text-[11px] font-semibold text-muted-foreground">다음으로 할 일</p>
+              <p className="mt-1 text-xs leading-relaxed text-foreground/90">
                 {collectionNextStepHint(drawerInvoice)}
               </p>
             </div>
             <InvoiceCollectionAiPanel
               invoiceId={drawerInvoice.id}
-              aiAssistEnabled={planAllowsFeature(currentPlan,"ai_assist")}
+              aiAssistEnabled={planAllowsFeature(currentPlan, "ai_assist")}
               onSuggestedTone={(tone) => setCollTone(tone)}
             />
             <InvoiceTaxInvoiceSection
@@ -2443,7 +2469,7 @@ function InvoicesBoardPanel({
               <p className="text-xs font-semibold text-muted-foreground">추심·연락 일정</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">입금 약속일</label>
+                  <label className="text-[11px] font-medium text-muted-foreground">입금 약속일</label>
                   <Input
                     type="date"
                     className="h-9"
@@ -2452,7 +2478,7 @@ function InvoicesBoardPanel({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">다음 연락 예정</label>
+                  <label className="text-[11px] font-medium text-muted-foreground">다음 연락 예정</label>
                   <Input
                     type="datetime-local"
                     className="h-9"
@@ -2461,12 +2487,12 @@ function InvoicesBoardPanel({
                   />
                 </div>
                 <div className="space-y-1 sm:col-span-2">
-                  <label className="text-xs font-medium text-muted-foreground">리마인드 톤</label>
+                  <label className="text-[11px] font-medium text-muted-foreground">리마인드 톤</label>
                   <Select
                     value={collTone}
                     items={reminderToneSelectItemsRecord}
                     onValueChange={(value) =>
-                      setCollTone((value as CollectionToneHint | null) ??"neutral")
+                      setCollTone((value as CollectionToneHint | null) ?? "neutral")
                     }
                   >
                     <SelectTrigger className="h-9">
@@ -2505,7 +2531,8 @@ function InvoicesBoardPanel({
                 }
               >
                 <SelectTrigger
-                  className={cn("h-9 w-full max-w-xs font-medium",
+                  className={cn(
+                    "h-9 w-full max-w-xs font-medium",
                     drawerInvoicePaymentMeta &&
                       opsStatusSelectTriggerClass(
                         drawerInvoicePaymentMeta.tone,
@@ -2542,9 +2569,12 @@ function InvoicesBoardPanel({
               <div className="rounded-lg border border-border/50 p-2">
                 <p className="text-muted-foreground">입금 기한</p>
                 <p
-                  className={cn("mt-0.5 tabular-nums",
-                    invoiceRowReceivableHint(drawerInvoice) ==="overdue" &&"font-semibold text-destructive",
-                    invoiceRowReceivableHint(drawerInvoice) ==="due_soon" &&"font-medium text-amber-900 dark:text-amber-100"
+                  className={cn(
+                    "mt-0.5 tabular-nums",
+                    invoiceRowReceivableHint(drawerInvoice) === "overdue" &&
+                      "font-semibold text-destructive",
+                    invoiceRowReceivableHint(drawerInvoice) === "due_soon" &&
+                      "font-medium text-amber-900 dark:text-amber-100"
                   )}
                 >
                   {formatDate(drawerInvoice.dueDate)}
@@ -2563,7 +2593,7 @@ function InvoicesBoardPanel({
                     <li key={log.id} className="rounded-md border border-border/40 px-2 py-1.5">
                       <p className="font-medium text-foreground">{resolveActivityHeadline(log.action)}</p>
                       <p className="mt-0.5 leading-snug text-muted-foreground">{log.description}</p>
-                      <p className="mt-1 tabular-nums text-xs text-muted-foreground">
+                      <p className="mt-1 tabular-nums text-[10px] text-muted-foreground">
                         {formatDateTime(log.createdAt)}
                       </p>
                     </li>
@@ -2576,7 +2606,7 @@ function InvoicesBoardPanel({
             <div>
               <p className="text-xs font-semibold text-muted-foreground">메모</p>
               <p className="mt-1 leading-relaxed text-muted-foreground">
-                {drawerInvoice.notes?.trim() ||"메모가 없습니다."}
+                {drawerInvoice.notes?.trim() || "메모가 없습니다."}
               </p>
             </div>
             <div>
@@ -2623,7 +2653,7 @@ function InvoicesBoardPanel({
           <div className="shrink-0 border-b border-border/60 px-4 pb-3 pt-4 pr-12 sm:px-6 sm:pr-14">
             <DialogHeader className="gap-1">
               <DialogTitle className="text-lg">청구 수정</DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-[11px] leading-snug">
                 필수는 <span className="text-destructive">*</span> · 저장 시 DB에 반영됩니다.
               </DialogDescription>
             </DialogHeader>
@@ -2632,7 +2662,7 @@ function InvoicesBoardPanel({
             {formFields}
           </div>
           <div className="flex shrink-0 flex-col gap-2.5 border-t border-border/60 bg-background/95 px-4 py-3 shadow-[0_-6px_16px_rgba(0,0,0,0.06)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 dark:shadow-[0_-6px_20px_rgba(0,0,0,0.25)]">
-            <p className="text-sm leading-snug text-muted-foreground sm:max-w-[56%] sm:min-w-0">
+            <p className="text-[11px] leading-snug text-muted-foreground sm:max-w-[56%] sm:min-w-0">
               {!formValidation.ok ? (
                 <span className="font-medium text-amber-900 dark:text-amber-100">
                   노란 박스를 채우면 저장됩니다.
@@ -2646,12 +2676,13 @@ function InvoicesBoardPanel({
                 닫기
               </Button>
               <span
-                className={cn("inline-flex",
-                  !formValidation.ok && !isPending ?"cursor-help" :""
+                className={cn(
+                  "inline-flex",
+                  !formValidation.ok && !isPending ? "cursor-help" : ""
                 )}
                 title={
                   !formValidation.ok && !isPending
-                    ? validationSummaryForTitle ||"필수 항목을 채워 주세요"
+                    ? validationSummaryForTitle || "필수 항목을 채워 주세요"
                     : undefined
                 }
               >
@@ -2662,7 +2693,7 @@ function InvoicesBoardPanel({
                   className="gap-2"
                   title={
                     formValidation.ok && !isPending && editingInvoice
-                      ?"수정한 내용을 저장합니다"
+                      ? "수정한 내용을 저장합니다"
                       : undefined
                   }
                 >
@@ -2680,7 +2711,7 @@ function InvoicesBoardPanel({
         onOpenChange={(open) => {
           if (!open) {
             setReminderInvoiceId(null)
-            setReminderForm({ channel:"kakao", message:"" })
+            setReminderForm({ channel: "kakao", message: "" })
             setReminderTone("neutral")
           }
         }}
@@ -2727,7 +2758,7 @@ function InvoicesBoardPanel({
                   value={reminderTone}
                   items={reminderToneSelectItemsRecord}
                   onValueChange={(value) =>
-                    setReminderTone((value as"polite" |"neutral" |"firm" | null) ??"neutral")
+                    setReminderTone((value as "polite" | "neutral" | "firm" | null) ?? "neutral")
                   }
                 >
                   <SelectTrigger className="w-full">
@@ -2799,7 +2830,7 @@ function InvoicesBoardPanel({
         paymentTerms={paymentTerms}
         bankAccount={bankAccount}
         businessName={businessName}
-        kakaoByoaAllowed={planAllowsFeature(currentPlan,"kakao_byoa_messaging") && kakaoByoaConfigured}
+        kakaoByoaAllowed={planAllowsFeature(currentPlan, "kakao_byoa_messaging") && kakaoByoaConfigured}
         onAfterSend={() => router.refresh()}
       />
 
@@ -2885,11 +2916,11 @@ export function InvoicesWorkspace({
         capabilityStrip={
           <CoreCapabilityStrip
             items={[
-              { label:"리마인드·메일·알림", href:"/settings#notifications-prefs", emphasis: true },
-              { label:"공개 청구 URL" },
-              { label:"AI 추천·문구" },
-              { label:"입금 약속·추심" },
-              { label:"캘린더 뷰", href: undefined },
+              { label: "리마인드·메일·알림", href: "/settings#notifications-prefs", emphasis: true },
+              { label: "공개 청구 URL" },
+              { label: "AI 추천·문구" },
+              { label: "입금 약속·추심" },
+              { label: "캘린더 뷰", href: undefined },
             ]}
           />
         }
@@ -2901,7 +2932,8 @@ export function InvoicesWorkspace({
                   <Link
                     href="/quotes"
                     className={cn(
-                      buttonVariants({ variant:"outline", size:"sm" }),"inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5 font-medium sm:w-auto"
+                      buttonVariants({ variant: "outline", size: "sm" }),
+                      "inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5 font-medium sm:w-auto"
                     )}
                   >
                     견적 보기
@@ -2912,7 +2944,7 @@ export function InvoicesWorkspace({
                     size="sm"
                     className="h-9 w-full gap-1.5 font-semibold sm:w-auto"
                     onClick={() => {
-                      createOpenSourceRef.current ="header"
+                      createOpenSourceRef.current = "header"
                       setIsCreateOpen(true)
                     }}
                   >
@@ -2920,7 +2952,7 @@ export function InvoicesWorkspace({
                     청구 만들기
                   </Button>
                 </div>
-                <p className="mt-2 border-t border-border/50 pt-2 text-center text-sm leading-snug text-muted-foreground sm:text-right">
+                <p className="mt-2 border-t border-border/50 pt-2 text-center text-[11px] leading-snug text-muted-foreground sm:text-right">
                   견적을 확인한 뒤 청구를 저장할 수 있습니다
                 </p>
               </div>
@@ -2930,7 +2962,8 @@ export function InvoicesWorkspace({
                   <Link
                     href="/quotes"
                     className={cn(
-                      buttonVariants({ size:"sm" }),"inline-flex h-9 flex-1 items-center justify-center gap-1.5 font-semibold"
+                      buttonVariants({ size: "sm" }),
+                      "inline-flex h-9 flex-1 items-center justify-center gap-1.5 font-semibold"
                     )}
                   >
                     견적 만들기
@@ -2952,8 +2985,8 @@ export function InvoicesWorkspace({
                     </Button>
                   </span>
                 </div>
-                <p className="mt-2 border-t border-border/50 pt-2 text-sm leading-snug text-muted-foreground">
-                  <span className="text-foreground/80">먼저 견적을 준비해 주세요.</span>{""}
+                <p className="mt-2 border-t border-border/50 pt-2 text-[11px] leading-snug text-muted-foreground">
+                  <span className="text-foreground/80">먼저 견적을 준비해 주세요.</span>{" "}
                   준비되면 청구 만들기가 활성화됩니다.
                 </p>
               </div>

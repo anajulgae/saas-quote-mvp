@@ -170,13 +170,18 @@ export function InquiriesBoard({
   const focusHandledRef = useRef<string | null>(null)
   const aiAssistEnabled = planAllowsFeature(currentPlan, "ai_assist")
 
-  type InquiryOptimisticPatch = { type: "stage"; id: string; stage: InquiryStage }
+  type InquiryOptimisticPatch =
+    | { type: "stage"; id: string; stage: InquiryStage }
+    | { type: "delete"; id: string }
 
   const [optimisticInquiries, patchInquiryOptimistic] = useOptimistic(
     inquiries,
     (state, action: InquiryOptimisticPatch) => {
       if (action.type === "stage") {
         return state.map((i) => (i.id === action.id ? { ...i, stage: action.stage } : i))
+      }
+      if (action.type === "delete") {
+        return state.filter((i) => i.id !== action.id)
       }
       return state
     }
@@ -485,14 +490,15 @@ export function InquiriesBoard({
   const runDeleteInquiry = () => {
     if (!deleteTarget) return
     const id = deleteTarget.id
+    setDeleteTarget(null)
     startTransition(async () => {
+      patchInquiryOptimistic({ type: "delete", id })
       const result = await deleteInquiryAction(id)
       if (!result.ok) {
         toast.error(result.error)
-        return
+      } else {
+        toast.success("문의를 삭제했습니다.")
       }
-      setDeleteTarget(null)
-      toast.success("문의를 삭제했습니다.")
       router.refresh()
     })
   }

@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto"
 import { shortId } from "@/lib/short-id"
+import { createServiceSupabaseClient } from "@/lib/supabase/service"
 
 import {
   countTaxInvoiceDashboardSignals,
@@ -537,6 +538,12 @@ async function getDataContext(): Promise<AppDataContext> {
     userId: session.user.id,
     supabase: supabase as unknown as QueryableSupabase,
   }
+}
+
+function getAdminClientForDelete() {
+  const admin = createServiceSupabaseClient()
+  if (!admin) throw new Error("Service role key가 설정되지 않아 삭제할 수 없습니다.")
+  return admin as unknown as QueryableSupabase
 }
 
 export async function createActivityLog(input: {
@@ -1319,7 +1326,8 @@ export async function deleteQuoteRecord(quoteId: string) {
     throw new Error("QUOTE_NOT_FOUND")
   }
 
-  const { error: delError } = await context.supabase.from("quotes").delete().eq("id", quoteId)
+  const admin = getAdminClientForDelete()
+  const { error: delError } = await admin.from("quotes").delete().eq("id", quoteId).eq("user_id", context.userId)
 
   if (delError) {
     throw delError
@@ -1359,7 +1367,8 @@ export async function deleteInquiryRecord(inquiryId: string) {
 
   const inq = row as { id: string; title: string; customer_id: string }
 
-  const { error: delErr } = await context.supabase
+  const admin = getAdminClientForDelete()
+  const { error: delErr } = await admin
     .from("inquiries")
     .delete()
     .eq("id", inquiryId)
@@ -1395,10 +1404,12 @@ export async function deleteInvoiceRecord(invoiceId: string) {
 
   const inv = row as { id: string; invoice_number: string; customer_id: string }
 
-  // 연결된 리마인더 삭제
-  await context.supabase.from("reminders").delete().eq("invoice_id", invoiceId)
+  const admin = getAdminClientForDelete()
 
-  const { error: delErr } = await context.supabase
+  // 연결된 리마인더 삭제
+  await admin.from("reminders").delete().eq("invoice_id", invoiceId)
+
+  const { error: delErr } = await admin
     .from("invoices")
     .delete()
     .eq("id", invoiceId)
@@ -1435,29 +1446,31 @@ export async function deleteCustomerRecord(customerId: string) {
   const cust = row as { id: string; name: string; company_name: string | null }
   const label = cust.company_name?.trim() || cust.name
 
+  const admin = getAdminClientForDelete()
+
   // 연결된 데이터 삭제 (리마인더 → 청구 → 견적항목 → 견적 → 문의 → 활동 → 고객)
   const { data: invoiceIds } = await context.supabase
     .from("invoices")
     .select("id")
     .eq("customer_id", customerId)
   for (const inv of (invoiceIds ?? []) as { id: string }[]) {
-    await context.supabase.from("reminders").delete().eq("invoice_id", inv.id)
+    await admin.from("reminders").delete().eq("invoice_id", inv.id)
   }
-  await context.supabase.from("invoices").delete().eq("customer_id", customerId)
+  await admin.from("invoices").delete().eq("customer_id", customerId)
 
   const { data: quoteIds } = await context.supabase
     .from("quotes")
     .select("id")
     .eq("customer_id", customerId)
   for (const q of (quoteIds ?? []) as { id: string }[]) {
-    await context.supabase.from("quote_items").delete().eq("quote_id", q.id)
+    await admin.from("quote_items").delete().eq("quote_id", q.id)
   }
-  await context.supabase.from("quotes").delete().eq("customer_id", customerId)
+  await admin.from("quotes").delete().eq("customer_id", customerId)
 
-  await context.supabase.from("inquiries").delete().eq("customer_id", customerId)
-  await context.supabase.from("activity_logs").delete().eq("customer_id", customerId)
+  await admin.from("inquiries").delete().eq("customer_id", customerId)
+  await admin.from("activity_logs").delete().eq("customer_id", customerId)
 
-  const { error: delErr } = await context.supabase
+  const { error: delErr } = await admin
     .from("customers")
     .delete()
     .eq("id", customerId)
