@@ -1319,22 +1319,20 @@ export async function deleteQuoteRecord(quoteId: string) {
     throw new Error("QUOTE_NOT_FOUND")
   }
 
-  await createActivityLog({
-    action: "quote.deleted",
-    description: `「${quoteRow.title}」(${quoteRow.quote_number}) 견적을 삭제했습니다.`,
-    customerId: quoteRow.customer_id,
-    inquiryId: quoteRow.inquiry_id ?? undefined,
-    quoteId,
-    metadata: {
-      quote_number: quoteRow.quote_number,
-    },
-  })
-
   const { error: delError } = await context.supabase.from("quotes").delete().eq("id", quoteId)
 
   if (delError) {
     throw delError
   }
+
+  await createActivityLog({
+    action: "quote.deleted",
+    description: `「${quoteRow.title}」(${quoteRow.quote_number}) 견적을 삭제했습니다.`,
+    customerId: quoteRow.customer_id,
+    metadata: {
+      quote_number: quoteRow.quote_number,
+    },
+  })
 
   return {
     mode: "supabase" as const,
@@ -1361,13 +1359,6 @@ export async function deleteInquiryRecord(inquiryId: string) {
 
   const inq = row as { id: string; title: string; customer_id: string }
 
-  await createActivityLog({
-    action: "inquiry.deleted",
-    description: `「${inq.title}」 문의를 삭제했습니다.`,
-    customerId: inq.customer_id,
-    inquiryId,
-  })
-
   const { error: delErr } = await context.supabase
     .from("inquiries")
     .delete()
@@ -1375,6 +1366,12 @@ export async function deleteInquiryRecord(inquiryId: string) {
     .eq("user_id", context.userId)
 
   if (delErr) throw delErr
+
+  await createActivityLog({
+    action: "inquiry.deleted",
+    description: `「${inq.title}」 문의를 삭제했습니다.`,
+    customerId: inq.customer_id,
+  })
 
   return { mode: "supabase" as const, customerId: inq.customer_id }
 }
@@ -1398,13 +1395,6 @@ export async function deleteInvoiceRecord(invoiceId: string) {
 
   const inv = row as { id: string; invoice_number: string; customer_id: string }
 
-  await createActivityLog({
-    action: "invoice.deleted",
-    description: `「${inv.invoice_number}」 청구를 삭제했습니다.`,
-    customerId: inv.customer_id,
-    invoiceId,
-  })
-
   // 연결된 리마인더 삭제
   await context.supabase.from("reminders").delete().eq("invoice_id", invoiceId)
 
@@ -1415,6 +1405,12 @@ export async function deleteInvoiceRecord(invoiceId: string) {
     .eq("user_id", context.userId)
 
   if (delErr) throw delErr
+
+  await createActivityLog({
+    action: "invoice.deleted",
+    description: `「${inv.invoice_number}」 청구를 삭제했습니다.`,
+    customerId: inv.customer_id,
+  })
 
   return { mode: "supabase" as const, customerId: inv.customer_id }
 }
@@ -1461,11 +1457,6 @@ export async function deleteCustomerRecord(customerId: string) {
   await context.supabase.from("inquiries").delete().eq("customer_id", customerId)
   await context.supabase.from("activity_logs").delete().eq("customer_id", customerId)
 
-  await createActivityLog({
-    action: "customer.deleted",
-    description: `「${label}」 고객과 연결된 모든 데이터를 삭제했습니다.`,
-  })
-
   const { error: delErr } = await context.supabase
     .from("customers")
     .delete()
@@ -1473,6 +1464,11 @@ export async function deleteCustomerRecord(customerId: string) {
     .eq("user_id", context.userId)
 
   if (delErr) throw delErr
+
+  await createActivityLog({
+    action: "customer.deleted",
+    description: `「${label}」 고객과 연결된 모든 데이터를 삭제했습니다.`,
+  })
 
   return { mode: "supabase" as const }
 }

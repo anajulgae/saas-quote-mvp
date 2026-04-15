@@ -877,6 +877,7 @@ export async function deleteInquiryAction(inquiryId: string) {
     revalidatePath("/inquiries")
     return { ok: true as const }
   } catch (error) {
+    console.error("[deleteInquiryAction]", inquiryId, error)
     return {
       ok: false as const,
       error: toUserFacingActionError(error, "문의 삭제에 실패했습니다."),
