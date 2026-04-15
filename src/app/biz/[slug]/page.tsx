@@ -189,9 +189,9 @@ export default async function PublicBizLandingPage({ params }: { params: Promise
     notFound()
   }
   const page = mapPagePayload(slug, pageRaw)
-  const token = typeof root.inquiryToken === "string" && root.inquiryToken.length >= 16 ? root.inquiryToken : null
+  const token = typeof root.inquiryToken === "string" && root.inquiryToken.length >= 6 ? root.inquiryToken : null
   const inquiryHref = token
-    ? `/request/${encodeURIComponent(token)}?source=landing_page&slug=${encodeURIComponent(slug)}`
+    ? `/r/${encodeURIComponent(token)}?source=landing_page&slug=${encodeURIComponent(slug)}`
     : null
 
   const origin = getSiteOrigin()

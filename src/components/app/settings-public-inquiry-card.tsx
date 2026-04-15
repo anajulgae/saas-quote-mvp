@@ -67,7 +67,7 @@ export function SettingsPublicInquiryCard({
       return ""
     }
     const base = siteOrigin.replace(/\/$/, "")
-    return `${base}/request/${token}`
+    return `${base}/r/${token}`
   }, [siteOrigin, token])
 
   const save = (regenerateToken: boolean) => {

@@ -159,7 +159,7 @@ export function CustomerPortalView({
 }) {
   const inquiryHref =
     payload.publicInquiryFormOn && payload.publicInquiryFormToken?.trim()
-      ? `${siteOrigin}/request/${encodeURIComponent(payload.publicInquiryFormToken.trim())}?source=customer_portal`
+      ? `${siteOrigin}/r/${encodeURIComponent(payload.publicInquiryFormToken.trim())}?source=customer_portal`
       : null
 
   const business = payload.businessName.trim() || "거래처"
@@ -341,7 +341,7 @@ export function CustomerPortalView({
                   <div className="px-4 py-3">
                     {q.publicToken ? (
                       <Link
-                        href={`/quote-view/${encodeURIComponent(q.publicToken)}`}
+                        href={`/q/${encodeURIComponent(q.publicToken)}`}
                         className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0f172a] py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 dark:bg-white dark:text-[#0f172a]"
                       >
                         견적 보기
@@ -434,7 +434,7 @@ export function CustomerPortalView({
                   <div className="px-4 py-3">
                     {inv.publicToken ? (
                       <Link
-                        href={`/invoice-view/${encodeURIComponent(inv.publicToken)}`}
+                        href={`/i/${encodeURIComponent(inv.publicToken)}`}
                         className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0f172a] py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 dark:bg-white dark:text-[#0f172a]"
                       >
                         청구 보기

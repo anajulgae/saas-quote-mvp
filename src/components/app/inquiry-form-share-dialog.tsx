@@ -47,7 +47,7 @@ export function InquiryFormShareDialog({
     if (!formUrl) return ""
     try {
       const origin = new URL(formUrl).origin
-      const urlToken = formUrl.split("/request/")[1]?.split("?")[0] ?? ""
+      const urlToken = formUrl.split("/r/")[1]?.split("?")[0] ?? ""
       return `<script src="${origin}/widget.js" data-token="${urlToken}"></script>`
     } catch {
       return ""
@@ -158,7 +158,7 @@ export function InquiryFormShareDialog({
                 void logInquiryFormShareAction("qr_viewed")
               }}
             />
-            <p className="mt-2 text-center text-xs text-muted-foreground">
+            <p className="mt-2 text-center text-[11px] text-muted-foreground">
               인쇄·현장 안내에 활용해 보세요.
             </p>
           </div>
@@ -177,7 +177,7 @@ export function InquiryFormShareDialog({
             </button>
             {showEmbed && (
               <div className="mt-3 space-y-3">
-                <p className="rounded-md bg-amber-50 px-2.5 py-1.5 text-xs leading-snug text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                <p className="rounded-md bg-amber-50 px-2.5 py-1.5 text-[11px] leading-snug text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
                   직접 HTML을 편집할 수 있는 자체 웹사이트에서만 동작합니다. 네이버 블로그·티스토리·Wix 등 외부 플랫폼에서는 보안 정책으로 차단될 수 있으며, 이 경우 위의 <strong>링크 복사</strong>를 이용해 주세요.
                 </p>
                 <div className="flex gap-1 rounded-lg bg-muted/40 p-0.5">
@@ -208,12 +208,12 @@ export function InquiryFormShareDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[11px] text-muted-foreground">
                     {embedTab === "iframe"
                       ? "문의 폼을 페이지에 직접 삽입합니다."
                       : "페이지 우하단에 플로팅 버튼이 나타납니다."}
                   </p>
-                  <pre className="whitespace-pre-wrap break-all rounded-lg border border-border/50 bg-muted/30 p-2 text-sm leading-relaxed text-foreground">
+                  <pre className="whitespace-pre-wrap break-all rounded-lg border border-border/50 bg-muted/30 p-2 text-[11px] leading-relaxed text-foreground">
                     {embedTab === "iframe" ? iframeSnippet : scriptSnippet}
                   </pre>
                   <Button
@@ -233,7 +233,7 @@ export function InquiryFormShareDialog({
         ) : null}
 
         {replyEmail ? (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground">
             회신 주소 안내: <span className="font-medium text-foreground">{replyEmail}</span>
           </p>
         ) : null}

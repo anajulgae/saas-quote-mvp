@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto"
+import { shortId } from "@/lib/short-id"
 
 import {
   countTaxInvoiceDashboardSignals,
@@ -1931,7 +1932,7 @@ export async function ensureQuoteShareTokenForQuote(quoteId: string): Promise<{ 
   }
 
   for (let attempt = 0; attempt < 5; attempt++) {
-    const token = randomBytes(18).toString("base64url")
+    const token = shortId(10)
     const { data: updatedRows, error: upError } = await context.supabase
       .from("quotes")
       .update({ public_share_token: token })
@@ -1997,7 +1998,7 @@ export async function ensureInvoiceShareTokenForInvoice(invoiceId: string): Prom
   }
 
   for (let attempt = 0; attempt < 5; attempt++) {
-    const token = randomBytes(18).toString("base64url")
+    const token = shortId(10)
     const { data: updatedRows, error: upError } = await context.supabase
       .from("invoices")
       .update({ public_share_token: token })
@@ -2664,7 +2665,7 @@ export async function ensureCustomerPortalTokenRecord(
     }
   }
 
-  const token = randomBytes(20).toString("hex")
+  const token = shortId(10)
 
   const { error: uErr } = await context.supabase
     .from("customers")
@@ -2735,7 +2736,7 @@ export async function sendKakaoAlimtalkForInvoiceRecord(
   }
 
   const { token } = await ensureInvoiceShareTokenForInvoice(invoiceId)
-  const shareUrl = `${getSiteOrigin()}/invoice-view/${encodeURIComponent(token)}`
+  const shareUrl = `${getSiteOrigin()}/i/${encodeURIComponent(token)}`
 
   const payload = {
     billIoVersion: 1 as const,
@@ -2832,7 +2833,7 @@ export async function sendKakaoAlimtalkForQuoteRecord(
   }
 
   const { token } = await ensureQuoteShareTokenForQuote(quoteId)
-  const shareUrl = `${getSiteOrigin()}/quote-view/${encodeURIComponent(token)}`
+  const shareUrl = `${getSiteOrigin()}/q/${encodeURIComponent(token)}`
 
   const payload = {
     billIoVersion: 1 as const,
@@ -3156,7 +3157,7 @@ export async function savePublicInquiryFormRecord(input: {
   let nextToken = prevToken ?? null
   if (input.enabled) {
     if (!nextToken || input.regenerateToken) {
-      nextToken = randomBytes(16).toString("hex")
+      nextToken = shortId(10)
     }
   }
 

@@ -26,7 +26,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { token } = await params
   const raw = token?.trim()
-  if (!raw || raw.length < 12) {
+  if (!raw || raw.length < 6) {
     return { title: "거래 안내" }
   }
   const supabase = createAnonSupabaseClient()
@@ -48,7 +48,7 @@ export default async function CustomerPortalPage({
 }) {
   const { token } = await params
   const raw = token?.trim()
-  if (!raw || raw.length < 12) {
+  if (!raw || raw.length < 6) {
     notFound()
   }
 

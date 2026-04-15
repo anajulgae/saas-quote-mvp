@@ -18,7 +18,7 @@
   var text = script.getAttribute("data-text") || "\uacac\uc801 \uc694\uccad"
   var position = script.getAttribute("data-position") === "left" ? "left" : "right"
   var origin = script.src.replace(/\/widget\.js.*$/, "")
-  var iframeUrl = origin + "/request/" + encodeURIComponent(token) + "?embed=1"
+  var iframeUrl = origin + "/r/" + encodeURIComponent(token) + "?embed=1"
 
   var isOpen = false
   var container = document.createElement("div")

@@ -110,7 +110,7 @@ export function DashboardMockPreview({ className }: { className?: string }) {
                 <div className="rounded-xl border border-primary/25 bg-gradient-to-r from-primary/[0.08] to-teal-500/[0.05] px-3 py-2 ring-1 ring-primary/15">
                   <p className="text-[9px] font-bold uppercase tracking-wide text-primary">공개 문의 URL</p>
                   <p className="mt-0.5 truncate font-mono text-[9px] text-muted-foreground">
-                    …/request/<span className="text-foreground/70">고객이 여기로 접수</span>
+                    …/r/<span className="text-foreground/70">고객이 여기로 접수</span>
                   </p>
                 </div>
 

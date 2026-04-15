@@ -1264,7 +1264,7 @@ export async function ensureQuoteShareLinkAction(quoteId: string) {
   try {
     const id = z.string().trim().min(1).parse(quoteId)
     const { token } = await ensureQuoteShareTokenForQuote(id)
-    const url = `${getSiteOrigin()}/quote-view/${encodeURIComponent(token)}`
+    const url = `${getSiteOrigin()}/q/${encodeURIComponent(token)}`
     revalidatePath("/quotes")
     return { ok: true as const, url, token }
   } catch (error) {
@@ -1381,7 +1381,7 @@ export async function ensureInvoiceShareLinkAction(invoiceId: string) {
   try {
     const id = z.string().trim().min(1).parse(invoiceId)
     const { token } = await ensureInvoiceShareTokenForInvoice(id)
-    const url = `${getSiteOrigin()}/invoice-view/${encodeURIComponent(token)}`
+    const url = `${getSiteOrigin()}/i/${encodeURIComponent(token)}`
     revalidatePath("/invoices")
     return { ok: true as const, url, token }
   } catch (error) {

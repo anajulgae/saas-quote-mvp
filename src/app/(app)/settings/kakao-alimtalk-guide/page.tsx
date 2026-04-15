@@ -1,11 +1,11 @@
-import type { ReactNode } from"react"
-import Link from"next/link"
-import { ArrowLeft, ExternalLink } from"lucide-react"
+import type { ReactNode } from "react"
+import Link from "next/link"
+import { ArrowLeft, ExternalLink } from "lucide-react"
 
-import { PageHeader } from"@/components/app/page-header"
-import { buttonVariants } from"@/components/ui/button-variants"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from"@/components/ui/card"
-import { cn } from"@/lib/utils"
+import { PageHeader } from "@/components/app/page-header"
+import { buttonVariants } from "@/components/ui/button-variants"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 
 function OutLink({ href, children }: { href: string; children: ReactNode }) {
   return (
@@ -21,7 +21,19 @@ function OutLink({ href, children }: { href: string; children: ReactNode }) {
   )
 }
 
-const payloadExample = `{"billIoVersion": 1,"channelKind":"kakao_alimtalk","senderKey":"설정에 입력한 발신 프로필 키","templateCode":"설정에 입력한 템플릿 코드","recipientPhone":"01012345678","variables": {"shareUrl":"https://…/invoice-view/… 또는 /quote-view/…","docType":"invoice | quote","invoiceNumber":"청구 시에만","amountWon":"청구 시에만 (원 단위 문자열)","quoteNumber":"견적 시에만","title":"견적 시에만 (제목 일부)"
+const payloadExample = `{
+  "billIoVersion": 1,
+  "channelKind": "kakao_alimtalk",
+  "senderKey": "설정에 입력한 발신 프로필 키",
+  "templateCode": "설정에 입력한 템플릿 코드",
+  "recipientPhone": "01012345678",
+  "variables": {
+    "shareUrl": "https://…/i/… 또는 /q/…",
+    "docType": "invoice | quote",
+    "invoiceNumber": "청구 시에만",
+    "amountWon": "청구 시에만 (원 단위 문자열)",
+    "quoteNumber": "견적 시에만",
+    "title": "견적 시에만 (제목 일부)"
   }
 }`
 
@@ -34,7 +46,7 @@ export default function KakaoAlimtalkGuidePage() {
         action={
           <Link
             href="/settings#messaging-byoa"
-            className={cn(buttonVariants({ variant:"outline", size:"sm" }),"inline-flex gap-1.5")}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "inline-flex gap-1.5")}
           >
             <ArrowLeft className="size-3.5" aria-hidden />
             설정으로 돌아가기
@@ -45,7 +57,7 @@ export default function KakaoAlimtalkGuidePage() {
       <Card className="border-border/70">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">1. 전체 흐름 이해하기</CardTitle>
-          <CardDescription className="text-sm leading-relaxed">
+          <CardDescription className="text-xs leading-relaxed">
             BYOA(Bring Your Own Account)는 Bill-IO 서버가 <strong className="text-foreground">귀하가 지정한 HTTPS 주소</strong>
             로 JSON만 POST하고, 그 뒤 알림톡 API 호출·과금은 <strong className="text-foreground">귀하의 프록시 + 발송 대행사</strong>가
             담당하는 방식입니다.
@@ -62,7 +74,7 @@ export default function KakaoAlimtalkGuidePage() {
             </li>
             <li>
               Bill-IO가 보내는 페이로드 형식(
-              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">BillIoMessagingPayloadV1</code>)을 대행사 API
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">BillIoMessagingPayloadV1</code>)을 대행사 API
               형식으로 바꿔 주는 <span className="text-foreground">프록시</span>(서버리스·자체 API)를 만듭니다.
             </li>
             <li>
@@ -77,7 +89,7 @@ export default function KakaoAlimtalkGuidePage() {
       <Card className="border-border/70">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">2. 카카오·발송 대행사 (공식 페이지)</CardTitle>
-          <CardDescription className="text-sm leading-relaxed">
+          <CardDescription className="text-xs leading-relaxed">
             아래에서 채널 개설, 알림톡 템플릿 작성·검수, 발신 프로필 키 확인을 진행합니다.
           </CardDescription>
         </CardHeader>
@@ -106,7 +118,7 @@ export default function KakaoAlimtalkGuidePage() {
               </OutLink>
             </li>
           </ul>
-          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
             사용 중인 대행사가 다르면 해당 업체 문서에서「알림톡」「카카오 비즈메시지」「senderKey·templateCode」항목을 검색해 주세요.
           </p>
         </CardContent>
@@ -121,7 +133,7 @@ export default function KakaoAlimtalkGuidePage() {
             <div>
               <dt className="font-medium text-foreground">HTTPS 발송 엔드포인트</dt>
               <dd className="mt-1 text-xs">
-                Bill-IO가 <code className="rounded bg-muted px-1 font-mono">POST</code>로 JSON을 보낼 수 있는 주소입니다. 반드시{""}
+                Bill-IO가 <code className="rounded bg-muted px-1 font-mono">POST</code>로 JSON을 보낼 수 있는 주소입니다. 반드시{" "}
                 <code className="rounded bg-muted px-1 font-mono">https://</code> 로 시작해야 합니다. Cloudflare Workers, Vercel
                 Serverless, 자체 백엔드 등 어디든 가능합니다.
               </dd>
@@ -141,7 +153,7 @@ export default function KakaoAlimtalkGuidePage() {
             <div>
               <dt className="font-medium text-foreground">알림톡 템플릿 코드</dt>
               <dd className="mt-1 text-xs">
-                검수 승인된 템플릿의 코드입니다. 템플릿 본문의 변수 칸은 아래 <code className="rounded bg-muted px-1 font-mono">variables</code>{""}
+                검수 승인된 템플릿의 코드입니다. 템플릿 본문의 변수 칸은 아래 <code className="rounded bg-muted px-1 font-mono">variables</code>{" "}
                 키와 맞춰 대행사 규칙에 따라 매핑해야 합니다.
               </dd>
             </div>
@@ -152,29 +164,29 @@ export default function KakaoAlimtalkGuidePage() {
       <Card className="border-border/70">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">4. Bill-IO가 보내는 JSON (BillIoMessagingPayloadV1)</CardTitle>
-          <CardDescription>
-            <code className="rounded bg-muted px-1 font-mono text-xs">Content-Type: application/json</code> 본문 예시입니다.{""}
-            <code className="rounded bg-muted px-1 font-mono text-xs">variables</code>는 템플릿에 맞게 프록시에서 대행사 필드로 옮깁니다.
+          <CardDescription className="text-xs">
+            <code className="rounded bg-muted px-1 font-mono text-[11px]">Content-Type: application/json</code> 본문 예시입니다.{" "}
+            <code className="rounded bg-muted px-1 font-mono text-[11px]">variables</code>는 템플릿에 맞게 프록시에서 대행사 필드로 옮깁니다.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <pre className="max-h-[min(420px,55vh)] overflow-auto rounded-lg border border-border/70 bg-muted/25 p-3 font-mono text-sm leading-relaxed text-foreground">
+          <pre className="max-h-[min(420px,55vh)] overflow-auto rounded-lg border border-border/70 bg-muted/25 p-3 font-mono text-[11px] leading-relaxed text-foreground">
             {payloadExample}
           </pre>
           <div className="space-y-2 text-xs text-muted-foreground">
             <p className="font-medium text-foreground">청구 발송 시 variables</p>
             <ul className="list-inside list-disc space-y-1">
               <li>
-                <code className="font-mono">shareUrl</code>, <code className="font-mono">docType</code> ={""}
-                <code className="font-mono">invoice</code>, <code className="font-mono">invoiceNumber</code>,{""}
+                <code className="font-mono">shareUrl</code>, <code className="font-mono">docType</code> ={" "}
+                <code className="font-mono">invoice</code>, <code className="font-mono">invoiceNumber</code>,{" "}
                 <code className="font-mono">amountWon</code>
               </li>
             </ul>
             <p className="font-medium text-foreground">견적 발송 시 variables</p>
             <ul className="list-inside list-disc space-y-1">
               <li>
-                <code className="font-mono">shareUrl</code>, <code className="font-mono">docType</code> ={""}
-                <code className="font-mono">quote</code>, <code className="font-mono">quoteNumber</code>,{""}
+                <code className="font-mono">shareUrl</code>, <code className="font-mono">docType</code> ={" "}
+                <code className="font-mono">quote</code>, <code className="font-mono">quoteNumber</code>,{" "}
                 <code className="font-mono">title</code>
               </li>
             </ul>
@@ -211,7 +223,7 @@ export default function KakaoAlimtalkGuidePage() {
       </Card>
 
       <div className="flex flex-wrap gap-2">
-        <Link href="/settings#messaging-byoa" className={cn(buttonVariants({ size:"default" }),"inline-flex")}>
+        <Link href="/settings#messaging-byoa" className={cn(buttonVariants({ size: "default" }), "inline-flex")}>
           설정에서 엔드포인트 입력하기
         </Link>
       </div>
