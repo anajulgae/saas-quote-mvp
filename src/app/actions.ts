@@ -2164,6 +2164,7 @@ export async function saveTaxInvoiceAspSettingsAction(input: {
   apiSecret: string
   companyCode: string
   supplierAddress: string
+  extraFields?: Record<string, string>
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const gate = await requireTaxInvoiceSupabase()
   if ("error" in gate) {
@@ -2179,8 +2180,15 @@ export async function saveTaxInvoiceAspSettingsAction(input: {
     const raw = row?.tax_invoice_provider_config
     const prev: TaxInvoiceAspProviderConfig =
       raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as TaxInvoiceAspProviderConfig) : {}
+    const extra: Record<string, string> = {}
+    if (input.extraFields) {
+      for (const [k, v] of Object.entries(input.extraFields)) {
+        if (typeof v === "string" && v.trim()) extra[k] = v.trim()
+      }
+    }
     const config: TaxInvoiceAspProviderConfig = {
       ...prev,
+      ...extra,
       enabled: input.enabled,
       apiKey: input.apiKey.trim() || prev.apiKey,
       apiSecret: input.apiSecret.trim() || prev.apiSecret,
