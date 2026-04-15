@@ -15,6 +15,7 @@ import { SettingsNotificationPreferencesCard } from "@/components/app/settings-n
 import { SettingsMessagingChannelCard } from "@/components/app/settings-messaging-channel-card"
 import { SettingsPublicInquiryCard } from "@/components/app/settings-public-inquiry-card"
 import { SettingsTaxInvoiceAspCard } from "@/components/app/settings-tax-invoice-aspcard"
+import { SettingsAccordionItem, SettingsAccordionGroup } from "@/components/app/settings-accordion"
 import { Button } from "@/components/ui/button"
 import { buttonVariants } from "@/components/ui/button-variants"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -41,7 +42,7 @@ import type {
 
 function FieldHint({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <p className={cn("text-sm leading-snug text-muted-foreground", className)}>{children}</p>
+    <p className={cn("text-xs leading-snug text-muted-foreground", className)}>{children}</p>
   )
 }
 
@@ -55,28 +56,6 @@ function SectionBadge({ children, className }: { children: React.ReactNode; clas
     >
       {children}
     </span>
-  )
-}
-
-function SettingsSection({
-  title,
-  badge,
-  children,
-  className,
-}: {
-  title: string
-  badge?: React.ReactNode
-  children: React.ReactNode
-  className?: string
-}) {
-  return (
-    <section className={cn("space-y-3 border-t border-border/50 pt-4 first:border-t-0 first:pt-0", className)}>
-      <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-sm font-semibold tracking-tight text-foreground">{title}</h3>
-        {badge}
-      </div>
-      {children}
-    </section>
   )
 }
 
@@ -134,15 +113,13 @@ export function SettingsForm({
 
   const templatesServerKey = useMemo(() => computeTemplatesSyncKey(templates), [templates])
 
-  // 사업자 카드는 페이지 `key`로 리마운트. 템플릿만 서버와 동기화.
   useEffect(() => {
     setTemplateState(templates.length ? templates : defaultTemplates(initialSettings.userId))
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- templatesServerKey에 요약 포함
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templatesServerKey])
 
   const saveBusiness = () => {
     setErrorBusiness("")
-
     startBizTransition(async () => {
       const result = await saveBusinessSettingsOnlyAction({
         businessName: settings.businessName,
@@ -154,13 +131,11 @@ export function SettingsForm({
         bankAccount: settings.bankAccount,
         reminderMessage: settings.reminderMessage,
       })
-
       if (!result.ok) {
         setErrorBusiness(result.error)
         toast.error(result.error)
         return
       }
-
       setSettings(result.settings)
       setSealUrl(result.settings.sealImageUrl ?? null)
       setSealEnabled(result.settings.sealEnabled)
@@ -171,7 +146,6 @@ export function SettingsForm({
 
   const saveTemplates = () => {
     setErrorTemplates("")
-
     startTplTransition(async () => {
       const result = await saveTemplatesSettingsAction({
         templates: templateState.map((template) => ({
@@ -182,13 +156,11 @@ export function SettingsForm({
           isDefault: template.isDefault,
         })),
       })
-
       if (!result.ok) {
         setErrorTemplates(result.error)
         toast.error(result.error)
         return
       }
-
       toast.success("기본 템플릿이 저장되었습니다.")
       router.refresh()
     })
@@ -206,7 +178,7 @@ export function SettingsForm({
         toast.error(result.error)
         return
       }
-      toast.success("직인 설정을 저장했습니다.")
+      toast.success("직인 설정이 저장되었습니다.")
       router.refresh()
     })
   }
@@ -215,8 +187,8 @@ export function SettingsForm({
     if (!file) {
       return
     }
-    if (file.size > 400 * 1024) {
-      toast.error("파일 크기는 400KB 이하를 권장합니다. PNG로 줄여 주세요.")
+    if (file.size > 1_000_000) {
+      toast.error("1MB 이하의 이미지를 사용해 주세요.")
       return
     }
     const reader = new FileReader()
@@ -226,8 +198,11 @@ export function SettingsForm({
     reader.readAsDataURL(file)
   }
 
+  const effectivePlan = getEffectiveBillingPlan(billing)
+  const usageLimits = getUsageLimitsForEffectivePlan(effectivePlan)
+
   return (
-    <div className="space-y-5 md:space-y-6">
+    <div className="space-y-3 md:space-y-4">
       {planColumnMissing ? (
         <div
           className="rounded-xl border border-amber-500/40 bg-amber-500/[0.08] px-4 py-3 text-sm text-amber-950 dark:text-amber-50/95"
@@ -235,25 +210,21 @@ export function SettingsForm({
         >
           <p className="font-semibold text-foreground">데이터베이스: 플랜·구독 컬럼 미적용</p>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            <code className="rounded bg-background/80 px-1">0004_user_plan.sql</code> 및{" "}
-            <code className="rounded bg-background/80 px-1">0014_saas_plans_trial_usage_support.sql</code> 이
-            적용되지 않은 것으로 보입니다. 체험·사용량·빌링 이벤트·고객센터 티켓은 마이그레이션 후 정상 동작합니다.
+            마이그레이션 적용 후 체험·사용량·빌링 기능이 정상 동작합니다.
           </p>
         </div>
       ) : null}
 
+      {/* 구독 요약 — 항상 열림 */}
       <Card className="border-border/60 bg-muted/10">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">구독 및 요금</CardTitle>
           <CardDescription>
-            청구 플랜·체험·이번 달 사용량 요약입니다. 플랜 변경·해지·타임라인은{" "}
+            플랜 변경·해지는{" "}
             <Link href={BILLING_PAGE_PATH} className="font-medium text-primary underline-offset-4 hover:underline">
               구독 콘솔
             </Link>
-            에서 관리합니다.{" "}
-            <Link href="/help" className="font-medium text-primary underline-offset-4 hover:underline">
-              고객센터
-            </Link>
+            에서 관리합니다.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
@@ -264,209 +235,93 @@ export function SettingsForm({
             <span
               className={cn(
                 "rounded-full border border-border/70 px-3 py-1 text-xs font-semibold",
-                getEffectiveBillingPlan(billing) === "business"
+                effectivePlan === "business"
                   ? "bg-violet-500/10 text-violet-950 dark:text-violet-100"
-                  : getEffectiveBillingPlan(billing) === "pro"
+                  : effectivePlan === "pro"
                     ? "bg-primary/10 text-primary"
                     : "bg-muted text-muted-foreground"
               )}
             >
-              기능 적용: {PLAN_LABEL[getEffectiveBillingPlan(billing)]}
+              기능 적용: {PLAN_LABEL[effectivePlan]}
             </span>
             {billing.subscriptionStatus === "trialing" ? (
               <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-950 dark:text-amber-50">
                 7일 체험 · {trialRemainingLabel(billing) ?? "진행 중"}
               </span>
             ) : null}
-            {billing.cancelAtPeriodEnd ? (
-              <span className="rounded-full border border-rose-500/35 bg-rose-500/10 px-2.5 py-0.5 text-xs font-semibold text-rose-950">
-                해지 예약됨
-              </span>
-            ) : null}
-            {billing.pendingPlan ? (
-              <span className="rounded-full border border-border/70 bg-muted/50 px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                예정: {PLAN_LABEL[billing.pendingPlan]}
-              </span>
-            ) : null}
           </div>
           <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
-            <p>
-              AI 사용(이번 달):{" "}
-              <span className="font-medium tabular-nums text-foreground">
-                {billing.aiCallsThisMonth} / {getUsageLimitsForEffectivePlan(getEffectiveBillingPlan(billing)).aiCallsPerMonth}
-              </span>{" "}
-              회
-            </p>
-            <p>
-              문서 이메일 발송:{" "}
-              <span className="font-medium tabular-nums text-foreground">
-                {billing.documentSendsThisMonth} /{" "}
-                {getUsageLimitsForEffectivePlan(getEffectiveBillingPlan(billing)).documentSendsPerMonth}
-              </span>{" "}
-              건
-            </p>
-            <p>
-              고객 포털 한도:{" "}
-              <span className="font-medium tabular-nums text-foreground">
-                {getUsageLimitsForEffectivePlan(getEffectiveBillingPlan(billing)).maxPortalCustomers}
-              </span>
-              명까지 활성
-            </p>
-            <p>
-              팀 좌석(표시 한도):{" "}
-              <span className="font-medium tabular-nums text-foreground">
-                {getUsageLimitsForEffectivePlan(getEffectiveBillingPlan(billing)).seats}
-              </span>
-            </p>
+            <p>AI 사용: <span className="font-medium tabular-nums text-foreground">{billing.aiCallsThisMonth} / {usageLimits.aiCallsPerMonth}</span> 회</p>
+            <p>이메일 발송: <span className="font-medium tabular-nums text-foreground">{billing.documentSendsThisMonth} / {usageLimits.documentSendsPerMonth}</span> 건</p>
+            <p>고객 포털: <span className="font-medium tabular-nums text-foreground">{usageLimits.maxPortalCustomers}</span>명</p>
+            <p>팀 좌석: <span className="font-medium tabular-nums text-foreground">{usageLimits.seats}</span></p>
           </div>
           {billing.currentPeriodEnd ? (
             <p className="text-xs text-muted-foreground">
-              다음 갱신·정산 기준일(예정):{" "}
-              <span className="font-medium text-foreground">
-                {new Date(billing.currentPeriodEnd).toLocaleDateString("ko-KR")}
-              </span>
-              {billing.subscriptionStatus === "past_due" ? (
-                <span className="ml-2 text-rose-600 dark:text-rose-400">결제 확인 필요</span>
-              ) : null}
+              다음 갱신: <span className="font-medium text-foreground">{new Date(billing.currentPeriodEnd).toLocaleDateString("ko-KR")}</span>
             </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              자동결제(PG) 연결 전까지 갱신일은 «미정»으로 표시될 수 있습니다.{" "}
-              <code className="rounded bg-muted px-1">current_period_end</code> 는 PG 웹훅에서 채웁니다.
-            </p>
-          )}
+          ) : null}
           <div className="flex flex-wrap gap-2 pt-1">
-            <Link
-              href={BILLING_PAGE_PATH}
-              className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
-            >
+            <Link href={BILLING_PAGE_PATH} className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}>
               구독 콘솔 열기
             </Link>
-            <Link
-              href="/help"
-              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}
-            >
+            <Link href="/help" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}>
               결제·구독 가이드
             </Link>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="border-border/70">
-        <CardHeader className="space-y-1 pb-3">
-          <CardTitle className="text-base font-semibold">사업자 및 안내 설정</CardTitle>
-          <CardDescription className="text-sm leading-relaxed">
-            아래 내용은 Supabase에 저장되며, 견적·청구 화면과 리마인드 작성에 반복 반영됩니다.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-0 pb-4">
-          <SettingsSection
-            title="사업자 기본 정보"
-            badge={<SectionBadge>견적·청구 문구에 사용</SectionBadge>}
-          >
-            <FieldHint>상호·대표·연락처가 견적서·청구 안내에 함께 쓰입니다.</FieldHint>
+      {/* 사업자 기본 정보 */}
+      <SettingsAccordionItem
+        title="사업자 및 안내 설정"
+        description="상호·대표·결제조건·계좌·직인·리마인드 문구"
+        defaultOpen={false}
+      >
+        <div className="space-y-5">
+          <div>
+            <h4 className="text-sm font-medium mb-2">사업자 기본 정보</h4>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium">사업장명</label>
-                <Input
-                  className="h-9"
-                  value={settings.businessName}
-                  onChange={(event) =>
-                    setSettings((current) => ({
-                      ...current,
-                      businessName: event.target.value,
-                    }))
-                  }
-                />
+                <label className="text-sm font-medium">사업장명</label>
+                <Input className="h-9" value={settings.businessName} onChange={(e) => setSettings((s) => ({ ...s, businessName: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium">대표자명</label>
-                <Input
-                  className="h-9"
-                  value={settings.ownerName}
-                  onChange={(event) =>
-                    setSettings((current) => ({ ...current, ownerName: event.target.value }))
-                  }
-                />
+                <label className="text-sm font-medium">대표자명</label>
+                <Input className="h-9" value={settings.ownerName} onChange={(e) => setSettings((s) => ({ ...s, ownerName: e.target.value }))} />
               </div>
               <div className="space-y-1.5 sm:col-span-2">
-                <label className="text-xs font-medium">사업자 등록번호</label>
-                <FieldHint>견적서 발신 정보에 표시됩니다. 없으면 비워 두어도 됩니다.</FieldHint>
-                <Input
-                  className="h-9 max-w-md tabular-nums"
-                  value={settings.businessRegistrationNumber}
-                  onChange={(event) =>
-                    setSettings((current) => ({
-                      ...current,
-                      businessRegistrationNumber: formatBusinessRegNoInput(event.target.value),
-                    }))
-                  }
-                  placeholder="예: 123-45-67890"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  maxLength={12}
-                />
+                <label className="text-sm font-medium">사업자 등록번호</label>
+                <Input className="h-9 max-w-md tabular-nums" value={settings.businessRegistrationNumber} onChange={(e) => setSettings((s) => ({ ...s, businessRegistrationNumber: formatBusinessRegNoInput(e.target.value) }))} placeholder="123-45-67890" inputMode="numeric" autoComplete="off" maxLength={12} />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium">이메일</label>
-                <Input
-                  className="h-9"
-                  type="email"
-                  value={settings.email}
-                  onChange={(event) =>
-                    setSettings((current) => ({ ...current, email: event.target.value }))
-                  }
-                />
+                <label className="text-sm font-medium">이메일</label>
+                <Input className="h-9" type="email" value={settings.email} onChange={(e) => setSettings((s) => ({ ...s, email: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium">연락처</label>
-                <Input
-                  className="h-9"
-                  value={settings.phone}
-                  onChange={(event) =>
-                    setSettings((current) => ({ ...current, phone: event.target.value }))
-                  }
-                />
+                <label className="text-sm font-medium">연락처</label>
+                <Input className="h-9" value={settings.phone} onChange={(e) => setSettings((s) => ({ ...s, phone: e.target.value }))} />
               </div>
             </div>
-          </SettingsSection>
+          </div>
 
-          <SettingsSection
-            title="결제 및 안내"
-            badge={<SectionBadge>상대방 안내 문구</SectionBadge>}
-          >
+          <div className="border-t border-border/40 pt-4">
+            <h4 className="text-sm font-medium mb-2">결제 및 안내</h4>
             <div className="grid gap-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium">결제 조건</label>
-                <FieldHint>견적·청구 생성 시 기본 안내 문구로 활용할 수 있습니다.</FieldHint>
-                <Input
-                  className="h-9"
-                  value={settings.paymentTerms}
-                  onChange={(event) =>
-                    setSettings((current) => ({ ...current, paymentTerms: event.target.value }))
-                  }
-                  placeholder="예: 선금 50%, 잔금 납품 전"
-                />
+                <label className="text-sm font-medium">결제 조건</label>
+                <Input className="h-9" value={settings.paymentTerms} onChange={(e) => setSettings((s) => ({ ...s, paymentTerms: e.target.value }))} placeholder="예: 선금 50%, 잔금 납품 전" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium">계좌 안내</label>
-                <FieldHint>상대방에게 보여줄 기본 입금 안내입니다.</FieldHint>
-                <Input
-                  className="h-9"
-                  value={settings.bankAccount}
-                  onChange={(event) =>
-                    setSettings((current) => ({ ...current, bankAccount: event.target.value }))
-                  }
-                  placeholder="은행·계좌·예금주"
-                />
+                <label className="text-sm font-medium">계좌 안내</label>
+                <Input className="h-9" value={settings.bankAccount} onChange={(e) => setSettings((s) => ({ ...s, bankAccount: e.target.value }))} placeholder="은행·계좌·예금주" />
               </div>
             </div>
-          </SettingsSection>
+          </div>
 
-          <SettingsSection title="직인·서명" badge={<SectionBadge>견적서·PDF</SectionBadge>}>
-            <FieldHint>
-              PNG·투명 배경을 권장합니다. 견적서 하단 발신 블록에 표시되며, 인쇄·PDF·고객 공유 페이지에 동일하게 반영됩니다.
-            </FieldHint>
+          <div className="border-t border-border/40 pt-4">
+            <h4 className="text-sm font-medium mb-2">직인·서명</h4>
+            <FieldHint className="mb-2">PNG 투명 배경 권장. 견적서·청구서에 표시됩니다.</FieldHint>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
               <div className="flex min-h-[88px] min-w-[88px] items-center justify-center rounded-lg border border-dashed border-border/80 bg-muted/20 p-2">
                 {sealUrl ? (
@@ -478,409 +333,219 @@ export function SettingsForm({
               </div>
               <div className="flex flex-1 flex-col gap-2">
                 <div className="flex flex-wrap gap-2">
-                  <label className="inline-flex h-9 cursor-pointer items-center rounded-md border border-border/70 bg-background px-3 text-xs font-medium hover:bg-muted/40">
+                  <label className="inline-flex h-9 cursor-pointer items-center rounded-md border border-border/70 bg-background px-3 text-sm font-medium hover:bg-muted/40">
                     이미지 선택
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      className="sr-only"
-                      onChange={(e) => onSealFile(e.target.files?.[0] ?? null)}
-                    />
+                    <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => onSealFile(e.target.files?.[0] ?? null)} />
                   </label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-9"
-                    disabled={!sealUrl}
-                    onClick={() => setSealUrl(null)}
-                  >
-                    삭제
-                  </Button>
+                  <Button type="button" variant="outline" size="sm" className="h-9" disabled={!sealUrl} onClick={() => setSealUrl(null)}>삭제</Button>
                 </div>
-                <label className="flex cursor-pointer items-center gap-2 text-xs">
-                  <input
-                    type="checkbox"
-                    className="size-3.5 rounded border-border"
-                    checked={sealEnabled}
-                    onChange={(e) => setSealEnabled(e.target.checked)}
-                    disabled={!sealUrl}
-                  />
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input type="checkbox" className="size-4 rounded border-border" checked={sealEnabled} onChange={(e) => setSealEnabled(e.target.checked)} disabled={!sealUrl} />
                   견적서에 직인 표시
                 </label>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-9 w-fit gap-2"
-                  disabled={isSealPending}
-                  onClick={saveSeal}
-                >
-                  {isSealPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+                <Button type="button" size="sm" className="h-9 w-fit gap-2" disabled={isSealPending} onClick={saveSeal}>
+                  {isSealPending ? <Loader2 className="size-4 animate-spin" /> : null}
                   직인 설정 저장
                 </Button>
               </div>
             </div>
-            {errorSeal ? (
-              <p className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                {errorSeal}
-              </p>
-            ) : null}
-          </SettingsSection>
+            {errorSeal ? <p className="mt-2 rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">{errorSeal}</p> : null}
+          </div>
 
-          <SettingsSection
-            title="기본 리마인드 문구"
-            badge={<SectionBadge>청구 리마인드</SectionBadge>}
-          >
-            <FieldHint>청구 화면에서 리마인드를 새로 쓸 때 입력란 기본값으로 들어갑니다.</FieldHint>
-            <Textarea
-              value={settings.reminderMessage}
-              onChange={(event) =>
-                setSettings((current) => ({
-                  ...current,
-                  reminderMessage: event.target.value,
-                }))
-              }
-              className="min-h-[5.5rem] text-sm"
-              placeholder="안내 멘트를 입력하세요"
-            />
-          </SettingsSection>
+          <div className="border-t border-border/40 pt-4">
+            <h4 className="text-sm font-medium mb-2">기본 리마인드 문구</h4>
+            <FieldHint className="mb-2">청구 리마인드 작성 시 기본값으로 들어갑니다.</FieldHint>
+            <Textarea value={settings.reminderMessage} onChange={(e) => setSettings((s) => ({ ...s, reminderMessage: e.target.value }))} className="min-h-[5rem] text-sm" placeholder="안내 멘트를 입력하세요" />
+          </div>
 
-          <div className="mt-4 flex flex-col gap-3 border-t border-border/50 pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm leading-snug text-muted-foreground">
-              위 영역만 저장합니다. 템플릿은 아래 카드에서 따로 저장하세요.
-            </p>
-            <Button
-              type="button"
-              onClick={saveBusiness}
-              disabled={isBizPending}
-              size="sm"
-              className="h-9 w-full shrink-0 gap-2 sm:w-auto"
-            >
-              {isBizPending ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden />
-              ) : (
-                <Save className="size-4" aria-hidden />
-              )}
-              사업자·결제 정보 저장
+          <div className="flex items-center justify-end border-t border-border/40 pt-4">
+            <Button type="button" onClick={saveBusiness} disabled={isBizPending} size="sm" className="h-9 gap-2">
+              {isBizPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+              사업자 정보 저장
             </Button>
           </div>
-          {errorBusiness ? (
-            <p className="mt-2 rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-              {errorBusiness}
-            </p>
-          ) : null}
-        </CardContent>
-      </Card>
+          {errorBusiness ? <p className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">{errorBusiness}</p> : null}
+        </div>
+      </SettingsAccordionItem>
 
-      <SettingsTaxInvoiceAspCard currentPlan={currentPlan} initialSettings={settings} />
+      {/* 전자세금계산서 */}
+      <SettingsAccordionItem
+        id="tax-invoice-asp"
+        title="전자세금계산서 ASP 연동"
+        badge={<SectionBadge>Pro</SectionBadge>}
+        description="팝빌·바로빌·스마트빌 등 10개 제공사 지원"
+      >
+        <SettingsTaxInvoiceAspCard currentPlan={currentPlan} initialSettings={settings} />
+      </SettingsAccordionItem>
 
-      <Card className="border-border/70" id="mini-landing">
-        <CardHeader className="space-y-1 pb-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <CardTitle className="text-base font-semibold">업체 소개 페이지</CardTitle>
-            <SectionBadge>Pro</SectionBadge>
-          </div>
-          <CardDescription className="text-sm leading-relaxed">
-            고객에게 보여 줄 단일 소개 랜딩입니다. 공개 문의 폼과 연결해 온라인 문의를 받을 수 있습니다.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-2">
+      {/* 업체 소개 */}
+      <SettingsAccordionItem
+        id="mini-landing"
+        title="업체 소개 페이지"
+        badge={<SectionBadge>Pro</SectionBadge>}
+        description="고객에게 보여줄 소개 랜딩 + 온라인 문의 연결"
+      >
+        <div className="flex flex-wrap items-center gap-2">
           {planAllowsFeature(currentPlan, "mini_landing") ? (
-            <Link
-              href="/settings/landing"
-              className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
-            >
-              편집·공개 설정
-            </Link>
+            <Link href="/settings/landing" className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}>편집·공개 설정</Link>
           ) : (
             <>
-              <Link
-                href="/billing?plan=pro"
-                className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
-              >
-                Pro로 업그레이드
-              </Link>
-              <p className="text-xs text-muted-foreground">무료 플랜에서는 이 기능을 사용할 수 없습니다.</p>
+              <Link href="/billing?plan=pro" className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}>Pro로 업그레이드</Link>
+              <p className="text-sm text-muted-foreground">무료 플랜에서는 이 기능을 사용할 수 없습니다.</p>
             </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </SettingsAccordionItem>
 
-      <SettingsMessagingChannelCard currentPlan={currentPlan} initialConfig={messagingChannelConfig} />
+      {/* 메시징 채널 */}
+      <SettingsAccordionItem
+        title="메시지 채널 연결"
+        badge={<SectionBadge>Pro</SectionBadge>}
+        description="카카오 알림톡(BYOA) 프록시 설정"
+      >
+        <SettingsMessagingChannelCard currentPlan={currentPlan} initialConfig={messagingChannelConfig} />
+      </SettingsAccordionItem>
 
-      <section id="public-inquiry">
+      {/* 공개 문의 폼 */}
+      <SettingsAccordionItem
+        id="public-inquiry"
+        title="고객 공개 문의 폼"
+        description="링크·QR로 고객 문의를 자동 수집"
+      >
         <SettingsPublicInquiryCard siteOrigin={siteOrigin} initialSettings={settings} />
-      </section>
+      </SettingsAccordionItem>
 
-      <section id="notifications-prefs">
+      {/* 알림 설정 */}
+      <SettingsAccordionItem
+        id="notifications-prefs"
+        title="알림 설정"
+        description="이메일 알림 수신 여부 관리"
+      >
         <SettingsNotificationPreferencesCard initial={initialNotificationPreferences} />
-      </section>
+      </SettingsAccordionItem>
 
-      <div className="relative py-1">
-        <div className="absolute inset-0 flex items-center" aria-hidden>
-          <span className="w-full border-t border-border/60" />
-        </div>
-        <div className="relative flex justify-center">
-          <span className="bg-background px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Business 전용
-          </span>
-        </div>
-      </div>
-
-      <Card className="border-border/70" id="audit-log">
-        <CardHeader className="space-y-1 pb-3">
+      {/* 자동화 */}
+      <SettingsAccordionGroup label="자동화">
+        <SettingsAccordionItem
+          id="auto-remind"
+          title="자동 리마인드 스케줄러"
+          badge={<SectionBadge>Pro</SectionBadge>}
+          description="연체 청구에 자동 이메일 리마인드 발송"
+        >
           <div className="flex flex-wrap items-center gap-2">
-            <CardTitle className="text-base font-semibold">감사 로그</CardTitle>
-            <SectionBadge>Business</SectionBadge>
+            {planAllowsFeature(currentPlan, "auto_remind") ? (
+              <Link href="/settings/auto-remind" className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}>규칙 관리</Link>
+            ) : (
+              <>
+                <Link href="/billing?plan=pro" className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}>Pro로 업그레이드</Link>
+                <p className="text-sm text-muted-foreground">Pro 이상 플랜에서 자동 리마인드를 사용할 수 있습니다.</p>
+              </>
+            )}
           </div>
-          <CardDescription className="text-sm leading-relaxed">
-            모든 견적·청구·고객·설정 변경 이력을 타임라인으로 추적합니다. 컴플라이언스 및 내부 감사에 활용할 수 있습니다.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-2">
-          {planAllowsFeature(currentPlan, "audit_log") ? (
-            <Link
-              href="/settings/audit-log"
-              className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
-            >
-              감사 로그 보기
-            </Link>
-          ) : (
-            <>
-              <Link
-                href="/billing?plan=business"
-                className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
-              >
-                Business로 업그레이드
-              </Link>
-              <p className="text-xs text-muted-foreground">Business 플랜에서 모든 변경 이력을 추적할 수 있습니다.</p>
-            </>
-          )}
-        </CardContent>
-      </Card>
+        </SettingsAccordionItem>
 
-      <Card className="border-border/70" id="white-label">
-        <CardHeader className="space-y-1 pb-3">
+        <SettingsAccordionItem
+          id="recurring-invoices"
+          title="반복 견적/청구 자동화"
+          badge={<SectionBadge>Pro</SectionBadge>}
+          description="매월·매분기 반복 견적/청구 자동 생성"
+        >
           <div className="flex flex-wrap items-center gap-2">
-            <CardTitle className="text-base font-semibold">화이트 라벨 PDF</CardTitle>
-            <SectionBadge>Business</SectionBadge>
+            {planAllowsFeature(currentPlan, "recurring_invoices") ? (
+              <Link href="/settings/recurring" className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}>반복 설정 관리</Link>
+            ) : (
+              <>
+                <Link href="/billing?plan=pro" className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}>Pro로 업그레이드</Link>
+                <p className="text-sm text-muted-foreground">Pro 이상 플랜에서 반복 자동화를 사용할 수 있습니다.</p>
+              </>
+            )}
           </div>
-          <CardDescription className="text-sm leading-relaxed">
-            고객에게 보내는 견적서·청구서 PDF 하단의 Bill-IO 브랜드 워터마크를 제거합니다.
-            Business 플랜에서는 자동으로 적용됩니다.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        </SettingsAccordionItem>
+      </SettingsAccordionGroup>
+
+      {/* Business 전용 */}
+      <SettingsAccordionGroup label="Business 전용">
+        <SettingsAccordionItem
+          id="audit-log"
+          title="감사 로그"
+          badge={<SectionBadge>Business</SectionBadge>}
+          description="모든 변경 이력을 타임라인으로 추적"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            {planAllowsFeature(currentPlan, "audit_log") ? (
+              <Link href="/settings/audit-log" className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}>감사 로그 보기</Link>
+            ) : (
+              <>
+                <Link href="/billing?plan=business" className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}>Business로 업그레이드</Link>
+                <p className="text-sm text-muted-foreground">Business 플랜에서 모든 변경 이력을 추적할 수 있습니다.</p>
+              </>
+            )}
+          </div>
+        </SettingsAccordionItem>
+
+        <SettingsAccordionItem
+          id="white-label"
+          title="화이트 라벨 PDF"
+          badge={<SectionBadge>Business</SectionBadge>}
+          description="견적서·청구서 PDF의 Bill-IO 워터마크 제거"
+        >
           {planAllowsFeature(currentPlan, "white_label_pdf") ? (
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-sm font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
                 <span className="size-1.5 rounded-full bg-emerald-500" />
                 활성화됨
               </span>
-              <span className="text-xs text-muted-foreground">견적서·청구서 인쇄 시 Bill-IO 로고가 표시되지 않습니다.</span>
+              <span className="text-sm text-muted-foreground">Bill-IO 로고가 표시되지 않습니다.</span>
             </div>
           ) : (
-            <>
-              <Link
-                href="/billing?plan=business"
-                className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
-              >
-                Business로 업그레이드
-              </Link>
-              <p className="mt-2 text-xs text-muted-foreground">Business 플랜에서 브랜드 없는 깔끔한 문서를 고객에게 전달할 수 있습니다.</p>
-            </>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link href="/billing?plan=business" className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}>Business로 업그레이드</Link>
+              <p className="text-sm text-muted-foreground">Business 플랜에서 브랜드 없는 문서를 전달할 수 있습니다.</p>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </SettingsAccordionItem>
+      </SettingsAccordionGroup>
 
-      <div className="relative py-1">
-        <div className="absolute inset-0 flex items-center" aria-hidden>
-          <span className="w-full border-t border-border/60" />
-        </div>
-        <div className="relative flex justify-center">
-          <span className="bg-background px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            자동화
-          </span>
-        </div>
-      </div>
-
-      <Card className="border-border/70" id="auto-remind">
-        <CardHeader className="space-y-1 pb-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <CardTitle className="text-base font-semibold">자동 리마인드 스케줄러</CardTitle>
-            <SectionBadge>Pro</SectionBadge>
-          </div>
-          <CardDescription className="text-sm leading-relaxed">
-            입금 기한 경과 청구에 자동으로 이메일 리마인드를 발송합니다. 매일 오전 9시에 규칙을 확인합니다.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-2">
-          {planAllowsFeature(currentPlan, "auto_remind") ? (
-            <Link
-              href="/settings/auto-remind"
-              className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
-            >
-              규칙 관리
-            </Link>
-          ) : (
-            <>
-              <Link
-                href="/billing?plan=pro"
-                className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
-              >
-                Pro로 업그레이드
-              </Link>
-              <p className="text-xs text-muted-foreground">Pro 이상 플랜에서 자동 리마인드를 사용할 수 있습니다.</p>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70" id="recurring-invoices">
-        <CardHeader className="space-y-1 pb-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <CardTitle className="text-base font-semibold">반복 견적/청구 자동화</CardTitle>
-            <SectionBadge>Pro</SectionBadge>
-          </div>
-          <CardDescription className="text-sm leading-relaxed">
-            매월·매분기 반복되는 견적과 청구를 자동으로 생성합니다. 정기 거래 고객 관리에 활용하세요.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-2">
-          {planAllowsFeature(currentPlan, "recurring_invoices") ? (
-            <Link
-              href="/settings/recurring"
-              className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
-            >
-              반복 설정 관리
-            </Link>
-          ) : (
-            <>
-              <Link
-                href="/billing?plan=pro"
-                className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9")}
-              >
-                Pro로 업그레이드
-              </Link>
-              <p className="text-xs text-muted-foreground">Pro 이상 플랜에서 반복 자동화를 사용할 수 있습니다.</p>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="relative py-1">
-        <div className="absolute inset-0 flex items-center" aria-hidden>
-          <span className="w-full border-t border-border/60" />
-        </div>
-        <div className="relative flex justify-center">
-          <span className="bg-background px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            템플릿
-          </span>
-        </div>
-      </div>
-
-      <Card className="border-border/70">
-        <CardHeader className="space-y-1 pb-3">
-          <CardTitle className="text-base font-semibold">기본 템플릿</CardTitle>
-          <CardDescription className="text-sm leading-relaxed">
-            견적 요약·리마인드 본문의 출발점입니다. 각각 견적/청구 흐름에서 초안으로 불러옵니다.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3 pb-4">
-          {templateState.map((template, index) => {
-            const isQuote = template.type === "quote"
-            return (
-              <div
-                key={`${template.id || template.type}-${index}`}
-                className="rounded-lg border border-border/60 bg-muted/10 p-3"
-              >
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-semibold text-foreground">
-                      {isQuote ? "기본 견적 템플릿" : "기본 리마인드 템플릿"}
-                    </span>
-                    <SectionBadge
-                      className={cn(
-                        isQuote
-                          ? "border-primary/30 bg-primary/[0.06] text-primary"
-                          : "border-amber-500/25 bg-amber-500/[0.06] text-amber-900 dark:text-amber-100"
-                      )}
-                    >
-                      {isQuote ? "견적 작성 시 사용" : "리마인드 작성 시 사용"}
+      {/* 템플릿 */}
+      <SettingsAccordionGroup label="템플릿">
+        <SettingsAccordionItem
+          title="기본 템플릿"
+          description="견적 요약·리마인드 본문 초안 관리"
+        >
+          <div className="space-y-3">
+            {templateState.map((template, index) => {
+              const isQuote = template.type === "quote"
+              return (
+                <div key={`${template.id || template.type}-${index}`} className="rounded-lg border border-border/60 bg-muted/10 p-3">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-sm font-semibold">{isQuote ? "기본 견적 템플릿" : "기본 리마인드 템플릿"}</span>
+                    <SectionBadge className={cn(isQuote ? "border-primary/30 bg-primary/[0.06] text-primary" : "border-amber-500/25 bg-amber-500/[0.06] text-amber-900 dark:text-amber-100")}>
+                      {isQuote ? "견적 작성 시" : "리마인드 작성 시"}
                     </SectionBadge>
                   </div>
-                  {template.isDefault ? (
-                    <span className="rounded-full border border-border/60 bg-background px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                      기본값
-                    </span>
-                  ) : null}
-                </div>
-                <FieldHint className="mb-2">
-                  {isQuote
-                    ? "견적 생성 시 요약란 초안으로 채워집니다."
-                    : "리마인드 작성 시 메시지 기본값으로 들어갑니다."}
-                </FieldHint>
-                <div className="space-y-2">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">템플릿 제목</label>
-                    <Input
-                      className="h-8 text-sm"
-                      value={template.name}
-                      onChange={(event) =>
-                        setTemplateState((current) =>
-                          current.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, name: event.target.value } : item
-                          )
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">내용</label>
-                    <Textarea
-                      value={template.content}
-                      onChange={(event) =>
-                        setTemplateState((current) =>
-                          current.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, content: event.target.value } : item
-                          )
-                        )
-                      }
-                      className="min-h-[5.5rem] text-sm"
-                    />
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">템플릿 제목</label>
+                      <Input className="h-8 text-sm" value={template.name} onChange={(e) => setTemplateState((c) => c.map((item, i) => i === index ? { ...item, name: e.target.value } : item))} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">내용</label>
+                      <Textarea value={template.content} onChange={(e) => setTemplateState((c) => c.map((item, i) => i === index ? { ...item, content: e.target.value } : item))} className="min-h-[5rem] text-sm" />
+                    </div>
                   </div>
                 </div>
-              </div>
-            )
-          })}
-
-          <div className="flex flex-col gap-3 border-t border-border/50 pt-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm leading-snug text-muted-foreground">
-              견적·리마인드 템플릿만 저장합니다. 사업자 정보는 위 카드에서 저장하세요.
-            </p>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="h-9 w-full shrink-0 gap-2 sm:w-auto"
-              onClick={saveTemplates}
-              disabled={isTplPending}
-            >
-              {isTplPending ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden />
-              ) : (
-                <Save className="size-4" aria-hidden />
-              )}
-              템플릿 저장
-            </Button>
+              )
+            })}
+            <div className="flex justify-end pt-2">
+              <Button type="button" variant="secondary" size="sm" className="h-9 gap-2" onClick={saveTemplates} disabled={isTplPending}>
+                {isTplPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                템플릿 저장
+              </Button>
+            </div>
+            {errorTemplates ? <p className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">{errorTemplates}</p> : null}
           </div>
-          {errorTemplates ? (
-            <p className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-              {errorTemplates}
-            </p>
-          ) : null}
-        </CardContent>
-      </Card>
+        </SettingsAccordionItem>
+      </SettingsAccordionGroup>
     </div>
   )
 }

@@ -14,7 +14,6 @@ import { planAllowsFeature } from "@/lib/plan-features"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { buttonVariants } from "@/components/ui/button-variants"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import type { BillingPlan, BusinessSettings } from "@/types/domain"
@@ -105,21 +104,8 @@ export function SettingsTaxInvoiceAspCard({
   }
 
   return (
-    <Card className="border-border/70" id="tax-invoice-asp">
-      <CardHeader className="space-y-1 pb-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <CardTitle className="text-base font-semibold">전자세금계산서 ASP 연동</CardTitle>
-          <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
-            Pro · 사용자 BYOA
-          </span>
-        </div>
-        <CardDescription>
-          등록한 발급대행(ASP) 계정으로 청구 화면에서 발행 요청을 보냅니다.
-          아래 제공사를 선택하면 해당 API에 맞는 설정 폼이 표시됩니다.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {!allowed ? (
+    <div className="space-y-4">
+      {!allowed ? (
           <div className="rounded-lg border border-dashed border-border/70 bg-muted/15 p-4 text-sm">
             <p className="text-muted-foreground">
               이 기능은 Pro 이상 플랜에서 사용할 수 있습니다. 플랜을 올리면 설정 저장·연결 테스트·청구 발행 흐름이
@@ -302,7 +288,6 @@ export function SettingsTaxInvoiceAspCard({
             </div>
           </>
         )}
-      </CardContent>
-    </Card>
+    </div>
   )
 }

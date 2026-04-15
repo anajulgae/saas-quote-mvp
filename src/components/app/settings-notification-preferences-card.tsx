@@ -6,7 +6,7 @@ import { toast } from "sonner"
 
 import { saveNotificationPreferencesAction } from "@/app/actions"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+// Card wrapper removed — rendered inside SettingsAccordionItem
 import type { NotificationPreferences } from "@/types/domain"
 
 function ToggleRow({
@@ -67,18 +67,10 @@ export function SettingsNotificationPreferencesCard({
   }
 
   return (
-    <Card className="border-border/70">
-      <CardHeader className="space-y-1 pb-3">
-        <CardTitle className="text-base font-semibold">알림 설정</CardTitle>
-        <CardDescription className="text-sm leading-relaxed">
-          문의·견적·청구·리마인드 이벤트를 앱 내 목록, 브라우저(데스크톱) 알림, 이메일로 받을지 선택합니다. SMS·카카오
-          자동 발송은 이후 단계에서 연결할 수 있습니다.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4">
         <section className="space-y-2">
           <p className="text-xs font-semibold text-muted-foreground">새 문의</p>
-          <p className="text-sm leading-relaxed text-muted-foreground">
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
             공개 문의 폼·고객 포털(거래 안내 링크)에서 접수된 문의에 공통 적용됩니다. 브라우저 알림은 탭을 보고 있지 않을 때도
             도움이 됩니다(권한 허용 필요).
           </p>
@@ -140,7 +132,6 @@ export function SettingsNotificationPreferencesCard({
           {pending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
           알림 설정 저장
         </Button>
-      </CardContent>
-    </Card>
+    </div>
   )
 }
