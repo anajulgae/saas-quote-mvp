@@ -423,7 +423,7 @@ export function InvoiceSendDialog({
       <DialogContent className="max-w-lg sm:max-w-lg" showCloseButton>
         <DialogHeader>
           <DialogTitle>청구서 보내기</DialogTitle>
-          <DialogDescription className="text-sm leading-relaxed">
+          <DialogDescription className="text-xs leading-relaxed">
             고객에게 공유 링크·이메일·PDF로 청구서를 전달합니다. 공개 링크는 로그인 없이 열립니다.
           </DialogDescription>
         </DialogHeader>
@@ -496,63 +496,23 @@ export function InvoiceSendDialog({
                 </Button>
               </div>
             ) : shareUrl ? (
-              <p className="break-all rounded border border-dashed border-border/70 bg-background px-2 py-1.5 font-mono text-xs text-muted-foreground">
+              <p className="break-all rounded border border-dashed border-border/70 bg-background px-2 py-1.5 font-mono text-[11px] text-muted-foreground">
                 {shareUrl}
               </p>
             ) : null}
 
-            {kakaoByoaAllowed ? (
-              <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/[0.04] p-3">
-                <p className="text-xs font-semibold text-foreground">카카오 알림톡 (BYOA)</p>
-                <p className="text-sm leading-snug text-muted-foreground">
-                  설정에 저장한 <strong className="font-medium text-foreground/85">본인 프록시</strong>로
-                  발송 요청만 전달합니다. 비용·승인 템플릿은 사용 중인 알림톡 사업자에서 관리합니다.
-                </p>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">수신 번호</label>
-                  <Input
-                    className="h-9 font-mono text-xs"
-                    value={alimPhone}
-                    onChange={(e) => setAlimPhone(e.target.value)}
-                    placeholder="01012345678"
-                  />
-                </div>
-                {previewVariables ? (
-                  <details className="text-xs text-muted-foreground">
-                    <summary className="cursor-pointer font-medium text-foreground/80">미리보기 (variables)</summary>
-                    <pre className="mt-2 max-h-32 overflow-auto rounded border border-border/60 bg-muted/30 p-2 font-mono text-xs">
-                      {JSON.stringify(
-                        { billIoVersion: 1, channelKind: "kakao_alimtalk", variables: previewVariables },
-                        null,
-                        2
-                      )}
-                    </pre>
-                  </details>
-                ) : (
-                  <p className="text-xs text-muted-foreground">공유 링크가 준비되면 미리보기가 표시됩니다.</p>
-                )}
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-9 gap-1.5"
-                  disabled={busy || !invoiceId}
-                  onClick={sendAlimtalkByoa}
-                >
-                  {alimBusy ? <Loader2 className="size-3.5 animate-spin" /> : <MessageCircle className="size-3.5" />}
-                  알림톡 발송 요청
-                </Button>
-              </div>
-            ) : null}
-
             <div className="space-y-2 border-t border-border/50 pt-3">
-              <p className="text-xs font-semibold text-foreground">이메일 보내기</p>
-              <p className="text-sm leading-snug text-muted-foreground">
-                발신 주소는 설정에 등록한 이메일을 사용합니다. 도메인 인증이 필요하면{" "}
-                <code className="rounded bg-muted px-1">RESEND_FROM</code>을 설정해 주세요.
+              <div className="flex items-center gap-2">
+                <Mail className="size-4 text-primary" />
+                <p className="text-sm font-semibold text-foreground">이메일로 보내기</p>
+                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">추천</span>
+              </div>
+              <p className="text-xs leading-snug text-muted-foreground">
+                별도 가입 없이 바로 사용 가능합니다. AI가 문체에 맞는 초안을 작성해 드립니다.
               </p>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                 <div className="min-w-0 flex-1 space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">문체</label>
+                  <label className="text-[11px] font-medium text-muted-foreground">문체</label>
                   <Select
                     value={messageTone}
                     items={messageToneSelectItems}
@@ -581,15 +541,15 @@ export function InvoiceSendDialog({
                 </Button>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">받는 사람</label>
+                <label className="text-[11px] font-medium text-muted-foreground">받는 사람</label>
                 <Input className="h-9" value={to} onChange={(e) => setTo(e.target.value)} type="email" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">제목</label>
+                <label className="text-[11px] font-medium text-muted-foreground">제목</label>
                 <Input className="h-9" value={subject} onChange={(e) => setSubject(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">본문</label>
+                <label className="text-[11px] font-medium text-muted-foreground">본문</label>
                 <Textarea className="min-h-[8rem] text-sm" value={body} onChange={(e) => setBody(e.target.value)} />
               </div>
               <label className="flex cursor-pointer items-start gap-2 text-xs">
@@ -602,6 +562,39 @@ export function InvoiceSendDialog({
                 <span>본문 말미에 고객 공유 링크를 자동으로 붙입니다.</span>
               </label>
             </div>
+
+            {kakaoByoaAllowed ? (
+              <div className="space-y-2 border-t border-border/50 pt-3">
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="size-4 text-amber-600" />
+                  <p className="text-sm font-semibold text-foreground">카카오 알림톡</p>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">추가 채널</span>
+                </div>
+                <p className="text-xs leading-snug text-muted-foreground">
+                  설정에 연결된 본인 계정으로 발송합니다. Bill-IO 추가 비용은 없습니다.
+                </p>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">수신 번호</label>
+                  <Input
+                    className="h-9 font-mono text-xs"
+                    value={alimPhone}
+                    onChange={(e) => setAlimPhone(e.target.value)}
+                    placeholder="01012345678"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-9 gap-1.5"
+                  disabled={busy || !invoiceId}
+                  onClick={sendAlimtalkByoa}
+                >
+                  {alimBusy ? <Loader2 className="size-3.5 animate-spin" /> : <MessageCircle className="size-3.5" />}
+                  알림톡 발송
+                </Button>
+              </div>
+            ) : null}
           </div>
         ) : null}
 

@@ -368,16 +368,6 @@ export function SettingsForm({
         </div>
       </SettingsAccordionItem>
 
-      {/* 전자세금계산서 */}
-      <SettingsAccordionItem
-        id="tax-invoice-asp"
-        title="전자세금계산서 ASP 연동"
-        badge={<SectionBadge>Pro</SectionBadge>}
-        description="팝빌·바로빌·스마트빌 등 10개 제공사 지원"
-      >
-        <SettingsTaxInvoiceAspCard currentPlan={currentPlan} initialSettings={settings} />
-      </SettingsAccordionItem>
-
       {/* 업체 소개 */}
       <SettingsAccordionItem
         id="mini-landing"
@@ -397,14 +387,25 @@ export function SettingsForm({
         </div>
       </SettingsAccordionItem>
 
-      {/* 메시징 채널 */}
-      <SettingsAccordionItem
-        title="메시지 채널 연결"
-        badge={<SectionBadge>Pro</SectionBadge>}
-        description="카카오 알림톡(BYOA) 프록시 설정"
-      >
-        <SettingsMessagingChannelCard currentPlan={currentPlan} initialConfig={messagingChannelConfig} />
-      </SettingsAccordionItem>
+      {/* 외부 서비스 연동 — 추가 옵션 그룹 */}
+      <SettingsAccordionGroup label="외부 서비스 연동 (추가 옵션)">
+        <SettingsAccordionItem
+          title="카카오 알림톡"
+          badge={<SectionBadge>Pro · 무료 연동</SectionBadge>}
+          description="본인 Solapi/NHN 계정 연결 — Bill-IO 추가 비용 없음"
+        >
+          <SettingsMessagingChannelCard currentPlan={currentPlan} initialConfig={messagingChannelConfig} />
+        </SettingsAccordionItem>
+
+        <SettingsAccordionItem
+          id="tax-invoice-asp"
+          title="전자세금계산서 발행"
+          badge={<SectionBadge>Pro · 무료 연동</SectionBadge>}
+          description="팝빌 월 100건 무료 등 — Bill-IO 추가 비용 없음"
+        >
+          <SettingsTaxInvoiceAspCard currentPlan={currentPlan} initialSettings={settings} />
+        </SettingsAccordionItem>
+      </SettingsAccordionGroup>
 
       {/* 공개 문의 폼 */}
       <SettingsAccordionItem
