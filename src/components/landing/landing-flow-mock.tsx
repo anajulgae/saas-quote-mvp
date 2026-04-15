@@ -35,8 +35,8 @@ export function LandingFlowMock({ className }: { className?: string }) {
     },
     {
       k: "수금",
-      v: "추천 문구 · 리마인드",
-      scene: "입금 단계별 안내·다음 연락",
+      v: "자동 리마인드 · AI 문구",
+      scene: "자동 이메일 리마인드·AI 수금 문구·미수 알림",
       tone: "primary" as const,
     },
   ]

@@ -150,7 +150,7 @@ export function DashboardMockPreview({ className }: { className?: string }) {
                     <div className="mt-3 space-y-1.5 border-t border-border/50 pt-2">
                       {[
                         { n: "Q-218", a: "₩ 2.4M", st: "PDF·링크" },
-                        { n: "INV-1042", a: "₩ 1.8M", st: "리마인드 예정" },
+                        { n: "INV-1042", a: "₩ 1.8M", st: "자동 리마인드 ON" },
                       ].map((row) => (
                         <div key={row.n} className="flex items-center justify-between gap-2 text-[9px] sm:text-[10px]">
                           <span className="font-bold text-foreground">{row.n}</span>
@@ -171,7 +171,7 @@ export function DashboardMockPreview({ className }: { className?: string }) {
                   </div>
                   {[
                     { t: "영상 제작 견적", s: "선금 대기", c: "amber" as const },
-                    { t: "인테리어 잔금", s: "연체 · 재안내", c: "rose" as const },
+                    { t: "인테리어 잔금", s: "자동 리마인드 발송 중", c: "rose" as const },
                     { t: "디자인 문의", s: "AI 운영 분석됨", c: "slate" as const },
                   ].map((row) => (
                     <div

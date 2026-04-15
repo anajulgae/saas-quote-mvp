@@ -26,9 +26,9 @@ import { LandingFlowMock } from "./landing-flow-mock"
 
 export function LandingHero() {
   const trust = [
-    "공개 링크만 걸면 문의가 쌓입니다 — 카톡·인스타 바이오에 그대로",
-    "견적·청구·미수·세금계산서까지 한 화면에서 — 다시 헤매지 않음",
-    "AI가 문의·견적·청구까지 ‘빈 화면’ 시간을 줄입니다 — 운영 분석·풀 초안·수금 문구",
+    "짧은 링크 하나로 문의가 쌓입니다 — 카톡·인스타 바이오에 바로 붙여넣기",
+    "견적·청구·세금계산서·자동 리마인드까지 한 화면 — 다시 헤매지 않음",
+    "AI 매출 예측·운영 분석·초안·수금 문구로 '빈 화면' 시간을 줄입니다",
   ]
 
   return (
@@ -56,10 +56,9 @@ export function LandingHero() {
                 <span className="text-primary">문의부터 입금까지 한 흐름.</span>
               </h1>
               <p className="max-w-xl text-pretty text-[15px] font-semibold leading-relaxed text-muted-foreground sm:text-[1.05rem] sm:leading-relaxed">
-                접수 → 정리 → 견적 발송 → 청구 → 세금계산서 → 수금·리마인드까지{" "}
+                접수 → 정리 → 견적 발송 → 청구 → 세금계산서 → 자동 리마인드·수금까지{" "}
                 <span className="font-bold text-foreground">끊기지 않게</span> 이어집니다. AI는 문의 유형·다음 액션,
-                견적 항목·옵션·납기, 입금 상황별 안내 문구까지 보조합니다. 카톡·전화에 흩어진 걸 다시 찾느라 쓰던
-                시간을 줄입니다.
+                견적 항목·옵션·납기, 입금 상황별 안내 문구까지 보조합니다. 카톡·전화에 흩어진 걸 다시 찾느라 쓰던 시간을 줄입니다.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
@@ -202,9 +201,9 @@ export function LandingDifferentiators() {
       lead:
         "일반 견적 툴은 ‘내가 입력’에만 강합니다. Bill-IO는 고객이 스스로 남긴 요청이 문의함으로 들어오게 만듭니다. 홈페이지 없이도 공식 창구가 생깁니다.",
       bullets: [
-        "공개 문의 폼 URL — 카톡·인스타 바이오에 그대로",
+        "짧은 공개 폼 URL(/r/…) — 카톡·인스타 바이오에 바로 붙여넣기",
         "(Pro) 업체 소개 `/biz` 페이지에서 소개와 접수를 한 번에",
-        "놓치기 쉬운 DM·전화를 줄이는 ‘한 줄 주소’",
+        "짧은 주소로 DM·전화 문의를 줄이고, 접수를 한곳에 모음",
       ],
       icon: Globe,
     },
@@ -214,7 +213,7 @@ export function LandingDifferentiators() {
       lead:
         "견적 보내고 끝이면 고객은 다시 물어봅니다. 공개 링크·PDF·직인으로 보내고, (Pro) 미니 포털에서 요약을 한 페이지로 보여 주면 문의가 줄어듭니다.",
       bullets: [
-        "공개 견적·청구 링크로 전달 통일",
+        "짧은 견적(/q/…)·청구(/i/…) 링크로 전달 — 복사·공유 간편",
         "PDF·직인 이미지까지 한 흐름에서",
         "(Pro) 고객 포털 — ‘뭐 보냈더라?’를 줄임",
       ],
@@ -224,11 +223,11 @@ export function LandingDifferentiators() {
       badge: "속도 · 수금",
       title: "AI가 운영 흐름을 보조하고, 입금이 늦어도 다음 연락을 놓치지 않습니다",
       lead:
-        "문의는 유형·긴급도·추천 질문·다음 액션까지, 견적은 기본·옵션·납기·고객 안내까지 초안을 올립니다. 청구는 입금 단계별 추천·메시지 초안, 고객 상세에서는 이력 인사이트까지(플랜·설정에 따름). 알림·캘린더·리마인드가 같은 맥락에 붙습니다.",
+        "AI가 문의 분석·견적 초안·수금 문구를 보조하고, 자동 리마인드 스케줄러가 연체 청구에 매일 이메일을 보냅니다. 반복 견적/청구 자동화로 정기 문서도 자동 생성. 대시보드에서 AI 매출 예측까지 확인합니다(플랜·설정에 따름).",
       bullets: [
         "문의 AI — 요약·구조화에 더해 운영 분석·견적 전환 힌트",
         "견적 AI — 항목·옵션·결제·납기까지 발송 직전 수준 초안",
-        "청구·수금 AI — 다음 액션·리마인드·추심 본문 초안",
+        "자동 리마인드·반복 청구 — 수동 팔로업과 정기 문서 작성을 자동화",
       ],
       icon: Zap,
     },
@@ -243,7 +242,7 @@ export function LandingDifferentiators() {
     {
       icon: Wallet,
       title: "청구 URL · 미수 추적",
-      benefit: "공개 청구·입금 단계를 한곳에서 보고, AI 추천·문구로 다음 연락을 정리합니다.",
+      benefit: "공개 청구·입금 단계를 한곳에서 보고, 자동 리마인드와 AI 문구로 다음 연락을 놓치지 않습니다.",
     },
     {
       icon: CalendarDays,
@@ -253,7 +252,7 @@ export function LandingDifferentiators() {
     {
       icon: Bell,
       title: "알림",
-      benefit: "새 문의·후속 일정을 브라우저·메일 등으로 바로 알립니다.",
+      benefit: "새 문의·후속 일정을 브라우저·메일로 알리고, 연체 청구에는 자동 리마인드를 보냅니다.",
     },
   ]
 
@@ -332,7 +331,7 @@ export function LandingDifferentiators() {
           <Link href="/signup" className="font-bold text-primary underline-offset-4 hover:underline">
             무료로 시작
           </Link>
-          해 흐름을 먼저 밟아 보세요. Pro에서 랜딩·포털·세금계산서·향상된 AI 운영 보조가 열리고, Business에서는 감사 로그·화이트 라벨 PDF까지 추가됩니다.
+          해 흐름을 먼저 밟아 보세요. Pro에서 자동 리마인드·반복 청구·AI 매출 예측·전자세금계산서(추가 비용 없음)가 열리고, Business에서는 감사 로그·화이트 라벨 PDF까지 추가됩니다.
         </p>
       </div>
     </section>
@@ -476,13 +475,13 @@ export function LandingHowItWorks() {
       step: "5",
       title: "승인 후 청구 · 세금계산서",
       scene: "선금·잔금 나눠 청구",
-      desc: "공개 청구 URL로 요청하고 입금 단계를 기록합니다. Pro에서는 전자세금계산서도 같은 흐름에서 발행합니다.",
+      desc: "공개 청구 URL로 요청하고 입금 단계를 기록합니다. Pro에서는 전자세금계산서(팝빌 월 100건 무료 등)도 같은 흐름에서 발행합니다.",
     },
     {
       step: "6",
       title: "수금 · 리마인드",
       scene: "연체 시 다음 연락일",
-      desc: "입금 단계별 AI 추천·문구 초안과 미수·추심 메모·알림으로 다음 연락을 놓치지 않습니다.",
+      desc: "자동 리마인드 스케줄러가 연체 청구에 매일 이메일을 보내고, AI 추천·문구 초안과 미수 알림으로 다음 연락을 놓치지 않습니다.",
     },
   ]
 
@@ -558,8 +557,11 @@ export function LandingPricing() {
   const proHighlights = [
     "스타터 대비 AI·발송·포털 한도 확대",
     "업체 소개 랜딩(`/biz`)·고객 포털 본격 활용",
-    "카카오 채널(BYOA)·추심·리마인드 고도화",
-    "전자세금계산서 ASP 연동·발행·상태 추적",
+    "자동 리마인드 스케줄러 — 연체 청구에 매일 자동 이메일 발송",
+    "반복 견적/청구 자동화 — 매월·매분기 정기 문서 자동 생성",
+    "카카오 알림톡·이메일 발송 — 추가 비용 없이 본인 계정 연동",
+    "전자세금계산서 — 팝빌 월 100건 무료 등 10개 제공사 연동",
+    "AI 매출 예측·스마트 대시보드",
     "문의·견적·청구·고객 AI 보조(운영 분석·풀 초안·수금 문구)",
   ]
   const businessHighlights = [
@@ -773,11 +775,11 @@ const faqItems = [
   },
   {
     q: "전자세금계산서는 어떻게 발행하나요?",
-    a: "Pro 이상 플랜에서 ASP(발급대행) 연동을 설정한 뒤, 청구 상세에서 발행 흐름을 진행합니다. 설정·플랜은 /settings 과 /billing 을 참고하세요.",
+    a: "Pro 이상 플랜에서 전자세금계산서를 발행할 수 있습니다. 팝빌 월 100건 무료 등 10개 제공사를 지원하며, Bill-IO 추가 비용은 없습니다. 설정은 /settings 에서 진행하세요.",
   },
   {
     q: "카카오 연동은 어떻게 하나요?",
-    a: "Pro 이상에서 알림톡 BYOA 엔드포인트를 설정에 저장합니다. 무료 체험 중에도 Pro 기능을 쓸 수 있어 동일하게 시험해 볼 수 있습니다.",
+    a: "Pro 이상에서 카카오 알림톡·이메일 발송을 설정할 수 있습니다. 본인 계정을 연결하는 방식이며, Bill-IO 추가 비용은 없습니다. Solapi 가입 시 무료 크레딧이 제공됩니다.",
   },
   {
     q: "비즈니스 플랜에서만 되는 건 뭔가요?",
@@ -856,7 +858,7 @@ export function LandingFinalCta() {
         </h2>
         <p className="mx-auto mt-4 max-w-lg text-sm font-semibold leading-relaxed text-primary-foreground/92 sm:text-base">
           <strong className="font-extrabold text-primary-foreground">무료로 시작</strong>하고 첫 문의를 받아 보세요.
-          문의·견적·청구·세금계산서가 한 줄로 이어지고, Pro에서는 AI 운영 분석·풀 초안·수금 문구·전자세금계산서까지 같은 맥락에서 켜집니다.
+          문의·견적·청구·세금계산서가 한 줄로 이어지고, Pro에서는 AI 매출 예측·자동 리마인드·반복 청구·전자세금계산서까지 같은 흐름에서 켜집니다.
         </p>
         <div className="mt-10 flex flex-col items-stretch gap-3 sm:items-center">
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-center sm:gap-4">
@@ -922,7 +924,7 @@ export function LandingFooter() {
             Bill-IO
           </div>
           <p className="mt-3 text-sm font-medium leading-relaxed text-muted-foreground">
-            문의 접수부터 견적·청구·세금계산서·수금·리마인드까지. AI 운영 보조로 빈 화면 시간을 줄이고, 소규모
+            문의 접수부터 견적·청구·세금계산서·자동 리마인드·수금까지. AI 매출 예측과 운영 보조로 빈 화면 시간을 줄이고, 소규모
             사업자가 놓치기 쉬운 흐름을 한 제품에서 잇습니다.
           </p>
         </div>

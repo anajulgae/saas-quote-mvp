@@ -9,7 +9,7 @@ import type { BillingPlan } from "@/types/domain"
 const comparisonRows = [
   {
     starter: "1석 · 문의→견적→청구→수금 핵심 흐름",
-    pro: "AI 고도화·랜딩·카카오·세금계산서 ASP·추심",
+    pro: "자동 리마인드·반복 청구·AI 매출 예측·카카오·세금계산서(추가 비용 없음)",
     business: "감사 로그·화이트 라벨 PDF·대량 AI·우선 지원",
   },
   {
@@ -41,7 +41,7 @@ const plans: Array<{
   {
     plan: "pro",
     highlight: true,
-    summary: "AI 운영 보조·랜딩·카카오·전자세금계산서·추심까지, 매출 흐름을 넓히는 팀에 맞습니다.",
+    summary: "자동 리마인드·반복 견적/청구·AI 매출 예측·전자세금계산서(추가 비용 없음)까지, 매출 흐름을 넓히는 팀에 맞습니다.",
     cta: "프로 선택",
     href: "/billing?plan=pro",
   },
