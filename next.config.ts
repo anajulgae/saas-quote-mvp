@@ -1,6 +1,23 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  /**
+   * 커스텀 도메인(예: www.bill-io.com) + 프록시/전달 헤더 조합에서
+   * `Origin` 과 `Host` 가 어긋나면 Server Actions 가 CSRF로 차단될 수 있습니다.
+   * *.vercel.app 은 기본 배포·프리뷰용.
+   * @see https://nextjs.org/docs/app/api-reference/config/next-config-js/serverActions#allowedorigins
+   */
+  experimental: {
+    serverActions: {
+      allowedOrigins: [
+        "www.bill-io.com",
+        "bill-io.com",
+        "app.bill-io.com",
+        "saas-quote-mvp.vercel.app",
+        "*.vercel.app",
+      ],
+    },
+  },
   turbopack: {
     root: __dirname,
   },
