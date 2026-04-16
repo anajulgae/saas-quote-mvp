@@ -7,11 +7,11 @@ export function createServiceSupabaseClient() {
   if (!isSupabaseConfigured()) {
     return null
   }
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim().replace(/^"|"$/g, "")
   if (!key) {
     return null
   }
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, key, {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!.trim(), key, {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 }
