@@ -3350,10 +3350,12 @@ export async function getInquiriesPageData(): Promise<{
     context.supabase
       .from("customers")
       .select("*")
+      .eq("user_id", context.userId)
       .order("created_at", { ascending: false }),
     context.supabase
       .from("inquiries")
       .select("*")
+      .eq("user_id", context.userId)
       .order("created_at", { ascending: false }),
     context.supabase
       .from("business_settings")
@@ -3450,18 +3452,22 @@ export async function getCustomersPageData(): Promise<{
     context.supabase
       .from("customers")
       .select("*")
+      .eq("user_id", context.userId)
       .order("created_at", { ascending: false }),
     context.supabase
       .from("inquiries")
       .select("id, customer_id, created_at, title, stage")
+      .eq("user_id", context.userId)
       .order("created_at", { ascending: false }),
     context.supabase
       .from("quotes")
       .select("id, customer_id, status, updated_at, quote_number, title, total, created_at")
+      .eq("user_id", context.userId)
       .order("updated_at", { ascending: false }),
     context.supabase
       .from("invoices")
       .select("id, customer_id, payment_status, updated_at, invoice_number, amount")
+      .eq("user_id", context.userId)
       .order("updated_at", { ascending: false }),
     context.supabase
       .from("activity_logs")
@@ -3666,21 +3672,25 @@ export async function getCustomerDetailData(customerId: string): Promise<{
       .from("customers")
       .select("*")
       .eq("id", customerId)
+      .eq("user_id", context.userId)
       .maybeSingle(),
     context.supabase
       .from("inquiries")
       .select("*")
       .eq("customer_id", customerId)
+      .eq("user_id", context.userId)
       .order("created_at", { ascending: false }),
     context.supabase
       .from("quotes")
       .select("*")
       .eq("customer_id", customerId)
+      .eq("user_id", context.userId)
       .order("created_at", { ascending: false }),
     context.supabase
       .from("invoices")
       .select("*")
       .eq("customer_id", customerId)
+      .eq("user_id", context.userId)
       .order("created_at", { ascending: false }),
     context.supabase
       .from("activity_logs")
@@ -3803,10 +3813,11 @@ export async function getQuotesPageData(): Promise<{
     { data: bizRow, error: bizError },
     { data: kakaoRow },
   ] = await Promise.all([
-    context.supabase.from("customers").select("*"),
+    context.supabase.from("customers").select("*").eq("user_id", context.userId),
     context.supabase
       .from("quotes")
       .select("*")
+      .eq("user_id", context.userId)
       .order("created_at", { ascending: false }),
     context.supabase
       .from("quote_items")
@@ -3815,6 +3826,7 @@ export async function getQuotesPageData(): Promise<{
     context.supabase
       .from("inquiries")
       .select("*")
+      .eq("user_id", context.userId)
       .order("created_at", { ascending: false }),
     context.supabase
       .from("templates")
@@ -3824,7 +3836,8 @@ export async function getQuotesPageData(): Promise<{
       .order("created_at", { ascending: true }),
     context.supabase
       .from("invoices")
-      .select("id, quote_id, invoice_number, amount, payment_status"),
+      .select("id, quote_id, invoice_number, amount, payment_status")
+      .eq("user_id", context.userId),
     context.supabase
       .from("activity_logs")
       .select("*")
@@ -4014,18 +4027,21 @@ export async function getInvoicesPageData(): Promise<{
     { data: bizRow, error: bizErr },
     { data: kakaoRow },
   ] = await Promise.all([
-    context.supabase.from("customers").select("*"),
+    context.supabase.from("customers").select("*").eq("user_id", context.userId),
     context.supabase
       .from("invoices")
       .select("*")
+      .eq("user_id", context.userId)
       .order("created_at", { ascending: false }),
     context.supabase
       .from("reminders")
       .select("*")
+      .eq("user_id", context.userId)
       .order("sent_at", { ascending: false }),
     context.supabase
       .from("quotes")
       .select("*")
+      .eq("user_id", context.userId)
       .order("created_at", { ascending: false }),
     context.supabase
       .from("templates")
