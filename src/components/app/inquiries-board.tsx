@@ -1341,7 +1341,7 @@ export function InquiriesBoard({
                       {customer?.companyName ?? customer?.name} · {inquiry.channel}
                     </p>
                   </div>
-                  <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex shrink-0 items-start gap-1.5" onClick={(e) => e.stopPropagation()}>
                     <Select
                       value={inquiry.stage}
                       items={inquiryStageSelectItems}
@@ -1369,6 +1369,34 @@ export function InquiriesBoard({
                         ))}
                       </SelectContent>
                     </Select>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-8")}
+                      >
+                        <MoreHorizontal className="size-4" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem className="gap-2" onClick={() => openEdit(inquiry)}>
+                          <Pencil className="size-4" />
+                          수정
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="gap-2"
+                          onClick={() => router.push(`/quotes?customer=${inquiry.customerId}&new=1`)}
+                        >
+                          <ArrowRight className="size-4" />
+                          견적 작성
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="gap-2 text-destructive focus:text-destructive"
+                          onClick={() => setDeleteTarget(inquiry)}
+                        >
+                          <Trash2 className="size-4" />
+                          삭제
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
                 <p className="line-clamp-2 text-xs text-muted-foreground">{inquiry.details}</p>
@@ -1414,6 +1442,16 @@ export function InquiriesBoard({
                 <ExternalLink className="size-3.5" />
                 고객 상세
               </Link>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => {
+                  setDrawerInquiryId(null)
+                  setDeleteTarget(drawerInquiry)
+                }}
+              >
+                삭제
+              </Button>
             </div>
           ) : null
         }
