@@ -61,6 +61,10 @@ export function toUserFacingActionError(error: unknown, fallback: string): strin
     return "응답이 지연되었습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요."
   }
 
+  if (lower.includes("supabase_service_role_key")) {
+    return "서버 설정(SUPABASE_SERVICE_ROLE_KEY)이 없습니다. 배포 환경 변수를 확인해 주세요."
+  }
+
   return fallback
 }
 

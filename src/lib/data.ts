@@ -1354,7 +1354,9 @@ export async function deleteInquiryRecord(inquiryId: string) {
     throw new Error("DEMO_MODE")
   }
 
-  const { data: row, error: fetchErr } = await context.supabase
+  // 삭제와 동일하게 service role + user_id로 조회 (목록 RLS와 단건 조회 정책 불일치로 인한 실패 방지)
+  const admin = getServiceClient()
+  const { data: row, error: fetchErr } = await admin
     .from("inquiries")
     .select("id, title, customer_id")
     .eq("id", inquiryId)
@@ -1366,7 +1368,6 @@ export async function deleteInquiryRecord(inquiryId: string) {
 
   const inq = row as { id: string; title: string; customer_id: string }
 
-  const admin = getServiceClient()
   const { error: delErr } = await admin
     .from("inquiries")
     .delete()
