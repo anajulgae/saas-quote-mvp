@@ -540,10 +540,10 @@ async function getDataContext(): Promise<AppDataContext> {
   }
 }
 
-function getAdminClientForDelete() {
-  const admin = createServiceSupabaseClient()
-  if (!admin) throw new Error("Service role key가 설정되지 않아 삭제할 수 없습니다.")
-  return admin as unknown as QueryableSupabase
+function getServiceClient() {
+  const client = createServiceSupabaseClient()
+  if (!client) throw new Error("SUPABASE_SERVICE_ROLE_KEY가 설정되지 않았습니다.")
+  return client
 }
 
 export async function createActivityLog(input: {
@@ -1315,32 +1315,31 @@ export async function deleteQuoteRecord(quoteId: string) {
     .from("quotes")
     .select("*")
     .eq("id", quoteId)
+    .eq("user_id", context.userId)
     .maybeSingle()
 
-  if (quoteError) {
-    throw quoteError
-  }
+  if (quoteError) throw quoteError
 
   const quoteRow = quoteRowRaw as QuoteRow | null
-  if (!quoteRow) {
-    throw new Error("QUOTE_NOT_FOUND")
-  }
+  if (!quoteRow) throw new Error("QUOTE_NOT_FOUND")
 
-  const admin = getAdminClientForDelete()
-  const { error: delError } = await admin.from("quotes").delete().eq("id", quoteId).eq("user_id", context.userId)
+  const admin = getServiceClient()
+  const { error: delError } = await admin
+    .from("quotes")
+    .delete()
+    .eq("id", quoteId)
+    .eq("user_id", context.userId)
 
-  if (delError) {
-    throw delError
-  }
+  if (delError) throw delError
 
-  await createActivityLog({
+  void createActivityLog({
     action: "quote.deleted",
     description: `「${quoteRow.title}」(${quoteRow.quote_number}) 견적을 삭제했습니다.`,
     customerId: quoteRow.customer_id,
     metadata: {
       quote_number: quoteRow.quote_number,
     },
-  })
+  }).catch((e) => console.error("[activity_log] quote.deleted", e))
 
   return {
     mode: "supabase" as const,
@@ -1367,7 +1366,7 @@ export async function deleteInquiryRecord(inquiryId: string) {
 
   const inq = row as { id: string; title: string; customer_id: string }
 
-  const admin = getAdminClientForDelete()
+  const admin = getServiceClient()
   const { error: delErr } = await admin
     .from("inquiries")
     .delete()
@@ -1376,11 +1375,11 @@ export async function deleteInquiryRecord(inquiryId: string) {
 
   if (delErr) throw delErr
 
-  await createActivityLog({
+  void createActivityLog({
     action: "inquiry.deleted",
     description: `「${inq.title}」 문의를 삭제했습니다.`,
     customerId: inq.customer_id,
-  })
+  }).catch((e) => console.error("[activity_log] inquiry.deleted", e))
 
   return { mode: "supabase" as const, customerId: inq.customer_id }
 }
@@ -1404,9 +1403,8 @@ export async function deleteInvoiceRecord(invoiceId: string) {
 
   const inv = row as { id: string; invoice_number: string; customer_id: string }
 
-  const admin = getAdminClientForDelete()
+  const admin = getServiceClient()
 
-  // 연결된 리마인더 삭제
   await admin.from("reminders").delete().eq("invoice_id", invoiceId)
 
   const { error: delErr } = await admin
@@ -1417,11 +1415,11 @@ export async function deleteInvoiceRecord(invoiceId: string) {
 
   if (delErr) throw delErr
 
-  await createActivityLog({
+  void createActivityLog({
     action: "invoice.deleted",
     description: `「${inv.invoice_number}」 청구를 삭제했습니다.`,
     customerId: inv.customer_id,
-  })
+  }).catch((e) => console.error("[activity_log] invoice.deleted", e))
 
   return { mode: "supabase" as const, customerId: inv.customer_id }
 }
@@ -1446,7 +1444,7 @@ export async function deleteCustomerRecord(customerId: string) {
   const cust = row as { id: string; name: string; company_name: string | null }
   const label = cust.company_name?.trim() || cust.name
 
-  const admin = getAdminClientForDelete()
+  const admin = getServiceClient()
 
   // 연결된 데이터 삭제 (리마인더 → 청구 → 견적항목 → 견적 → 문의 → 활동 → 고객)
   const { data: invoiceIds } = await context.supabase
@@ -1478,10 +1476,10 @@ export async function deleteCustomerRecord(customerId: string) {
 
   if (delErr) throw delErr
 
-  await createActivityLog({
+  void createActivityLog({
     action: "customer.deleted",
     description: `「${label}」 고객과 연결된 모든 데이터를 삭제했습니다.`,
-  })
+  }).catch((e) => console.error("[activity_log] customer.deleted", e))
 
   return { mode: "supabase" as const }
 }

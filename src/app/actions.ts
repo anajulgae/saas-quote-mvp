@@ -862,6 +862,7 @@ export async function deleteQuoteAction(quoteId: string) {
     revalidatePath("/quotes")
     return { ok: true as const }
   } catch (error) {
+    console.error("[deleteQuoteAction]", quoteId, error)
     return {
       ok: false as const,
       error: quoteMutationErrorMessage(error, "견적 삭제에 실패했습니다."),
@@ -893,6 +894,7 @@ export async function deleteInvoiceAction(invoiceId: string) {
     revalidatePath("/invoices")
     return { ok: true as const }
   } catch (error) {
+    console.error("[deleteInvoiceAction]", invoiceId, error)
     return {
       ok: false as const,
       error: toUserFacingActionError(error, "청구 삭제에 실패했습니다."),
@@ -909,6 +911,7 @@ export async function deleteCustomerAction(customerId: string) {
     revalidatePath("/invoices")
     return { ok: true as const }
   } catch (error) {
+    console.error("[deleteCustomerAction]", customerId, error)
     return {
       ok: false as const,
       error: toUserFacingActionError(error, "고객 삭제에 실패했습니다."),
