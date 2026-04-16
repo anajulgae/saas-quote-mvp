@@ -838,6 +838,28 @@ function quoteMutationErrorMessage(error: unknown, fallback: string): string {
   return toUserFacingActionError(error, fallback)
 }
 
+/** 삭제 전용: DB에 해당 행이 없거나(목록과 세션 불일치) 데모 모드 */
+function deleteEntityErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) {
+    if (error.message === "DEMO_MODE") {
+      return "데모 세션에서는 저장되지 않습니다. 실제 계정으로 로그인해 주세요."
+    }
+    switch (error.message) {
+      case "QUOTE_NOT_FOUND":
+        return "견적을 찾을 수 없습니다. 목록을 새로고침한 뒤 다시 시도해 주세요."
+      case "INQUIRY_NOT_FOUND":
+        return "문의를 찾을 수 없습니다. 다른 계정 데이터이거나 이미 삭제되었을 수 있습니다. 새로고침 후 다시 시도해 주세요."
+      case "INVOICE_NOT_FOUND":
+        return "청구를 찾을 수 없습니다. 목록을 새로고침한 뒤 다시 시도해 주세요."
+      case "CUSTOMER_NOT_FOUND":
+        return "고객을 찾을 수 없습니다. 목록을 새로고침한 뒤 다시 시도해 주세요."
+      default:
+        break
+    }
+  }
+  return toUserFacingActionError(error, fallback)
+}
+
 export async function duplicateQuoteAction(quoteId: string) {
   try {
     await duplicateQuoteRecord(quoteId)
@@ -865,7 +887,7 @@ export async function deleteQuoteAction(quoteId: string) {
     console.error("[deleteQuoteAction]", quoteId, error)
     return {
       ok: false as const,
-      error: quoteMutationErrorMessage(error, "견적 삭제에 실패했습니다."),
+      error: deleteEntityErrorMessage(error, "견적 삭제에 실패했습니다."),
     }
   }
 }
@@ -881,7 +903,7 @@ export async function deleteInquiryAction(inquiryId: string) {
     console.error("[deleteInquiryAction]", inquiryId, error)
     return {
       ok: false as const,
-      error: toUserFacingActionError(error, "문의 삭제에 실패했습니다."),
+      error: deleteEntityErrorMessage(error, "문의 삭제에 실패했습니다."),
     }
   }
 }
@@ -897,7 +919,7 @@ export async function deleteInvoiceAction(invoiceId: string) {
     console.error("[deleteInvoiceAction]", invoiceId, error)
     return {
       ok: false as const,
-      error: toUserFacingActionError(error, "청구 삭제에 실패했습니다."),
+      error: deleteEntityErrorMessage(error, "청구 삭제에 실패했습니다."),
     }
   }
 }
@@ -914,7 +936,7 @@ export async function deleteCustomerAction(customerId: string) {
     console.error("[deleteCustomerAction]", customerId, error)
     return {
       ok: false as const,
-      error: toUserFacingActionError(error, "고객 삭제에 실패했습니다."),
+      error: deleteEntityErrorMessage(error, "고객 삭제에 실패했습니다."),
     }
   }
 }
