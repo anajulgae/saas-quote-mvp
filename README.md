@@ -231,7 +231,7 @@ npm run build
 
 - **플랜**: Starter / Pro / Business — 가격·카피는 `src/lib/billing/catalog.ts`, 기능 게이트는 `src/lib/plan-features.ts`, 월 한도(AI 호출 수·문서 이메일 발송·포털 인원·좌석)는 `src/lib/subscription.ts`의 `PLAN_USAGE_LIMITS`와 DB `users` 사용량 컬럼(마이그레이션 **0014**).
 - **7일 체험**: 가입 시 `subscription_status=trialing`, `trial_ends_at` 기준으로 **기능·한도는 Pro 수준**(`getEffectiveBillingPlan`). 만료 시 `trial_expired`로 전환되며 Starter 기준으로 동작( `fetchUserBillingState` ).
-- **구독 UI**: `/billing` — 플랜 선택·해지 예약·다운그레이드 예약·사용량·이벤트 타임라인. PG 연동 시 `users.current_period_end`, `stripe_customer_id` 등을 웹훅으로 채우는 확장점이 마련되어 있습니다(`append_billing_event` RPC).
+- **구독 UI**: `/billing` — 플랜 선택·해지 예약·다운그레이드 예약·사용량·이벤트 타임라인. PG 연동 시 `users.current_period_end`, provider 고객 id(레거시 DB 컬럼 `stripe_customer_id`) 등을 웹훅으로 채우는 확장점이 마련되어 있습니다(`append_billing_event` RPC).
 - **문서 발송 사용량**: 견적·청구 **이메일 발송 성공** 시 서버 액션에서 `bump_user_usage('document_send')` 호출.
 - **고객센터**: `/help` (FAQ, 공지, 가이드, 문의 `/help/contact`) — 문의는 `support_tickets`에 저장(RLS). 지원 메일 노출: 환경변수 **`NEXT_PUBLIC_SUPPORT_EMAIL`**.
 - **콘텐츠 초안**: `src/content/help-center.ts`.
@@ -257,7 +257,7 @@ npm run build
 - Plans now map to real subscription state: `starter`, `pro`, and `business` are resolved from `users.plan` plus billing status.
 - Trial flow: every new account starts in `trialing`, and automatic billing continues after checkout if a payment method is saved before trial end.
 - Billing status flow: `trialing`, `active`, `past_due`, `canceled`, `incomplete`, `pending`, and `trial_expired`.
-- Billing provider abstraction lives under `src/lib/billing/` and currently supports `mock` and `stripe`.
+- Billing provider abstraction lives under `src/lib/billing/` and currently supports `mock` and `dodo`.
 - Webhook processing is handled by `/api/billing/webhook`, with duplicate protection in `billing_webhook_events`.
 - Billing events are stored in `billing_events`; product activity stays in `activity_logs`.
 
@@ -271,14 +271,14 @@ npm run build
 ## Billing environment
 
 - Add the billing variables from `.env.example`.
-- For Stripe mode, configure:
-  - `BILLING_PROVIDER=stripe`
+- For Dodo mode, configure:
+  - `BILLING_PROVIDER=dodo`
   - `BILLING_MODE=test` or `live`
-  - `BILLING_STRIPE_SECRET_KEY`
-  - `BILLING_STRIPE_WEBHOOK_SECRET`
-  - `BILLING_STRIPE_PRICE_STARTER_MONTHLY`
-  - `BILLING_STRIPE_PRICE_PRO_MONTHLY`
-  - `BILLING_STRIPE_PRICE_BUSINESS_MONTHLY`
+  - `BILLING_DODO_API_KEY`
+  - `BILLING_DODO_WEBHOOK_SECRET`
+  - `BILLING_DODO_PRODUCT_STARTER`
+  - `BILLING_DODO_PRODUCT_PRO`
+  - `BILLING_DODO_PRODUCT_BUSINESS`
 ---
 
 ## Analytics

@@ -80,6 +80,18 @@ async function dodoRequest<T>(
   return { ok: true, data: json as T }
 }
 
+function withQuery(path: string, query: Record<string, string | boolean | null | undefined>) {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(query)) {
+    if (value === null || value === undefined || value === "") {
+      continue
+    }
+    params.set(key, typeof value === "boolean" ? String(value) : value)
+  }
+  const qs = params.toString()
+  return qs ? `${path}?${qs}` : path
+}
+
 function normalizeDodoStatus(raw: unknown): SubscriptionStatus | null {
   const s = typeof raw === "string" ? raw.trim().toLowerCase() : ""
   if (s === "active") return "active"
@@ -221,11 +233,23 @@ export class DodoBillingProvider implements BillingProvider {
   }
 
   async createPortalSession(
-    _input: BillingPortalInput
+    input: BillingPortalInput
   ): Promise<BillingProviderPortalResult> {
+    const result = await dodoRequest<{ link?: string }>(
+      withQuery(`/customers/${encodeURIComponent(input.customerId)}/customer-portal/session`, {
+        return_url: input.returnUrl,
+      }),
+      { method: "POST" }
+    )
+    if (!result.ok) {
+      return { ok: false, error: result.error }
+    }
+    if (!result.data.link) {
+      return { ok: false, error: "Dodo customer portal 링크를 받지 못했습니다." }
+    }
     return {
       ok: true,
-      redirectUrl: `${getSiteOrigin()}/billing`,
+      redirectUrl: result.data.link,
     }
   }
 

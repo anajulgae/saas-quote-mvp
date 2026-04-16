@@ -66,7 +66,7 @@ async function updateUserBillingState(
   }
 }
 
-async function loadStripeCustomerId(
+async function loadBillingCustomerId(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
   userId: string
@@ -411,9 +411,9 @@ export async function beginCheckoutForPlan(input: {
     return { ok: true, redirectUrl: billingRedirectPath(input.plan) }
   }
 
-  let stripeCustomerId: string | null = null
+  let billingCustomerId: string | null = null
   try {
-    stripeCustomerId = await loadStripeCustomerId(supabase, input.userId)
+    billingCustomerId = await loadBillingCustomerId(supabase, input.userId)
   } catch (error) {
     return {
       ok: false,
@@ -428,7 +428,7 @@ export async function beginCheckoutForPlan(input: {
     trialEndsAt,
     successUrl: billingRedirectPath(input.plan),
     cancelUrl: billingRedirectPath(input.plan),
-    customerId: stripeCustomerId,
+    customerId: billingCustomerId,
   })
 
   if (!checkout.ok) {
@@ -442,7 +442,7 @@ export async function beginCheckoutForPlan(input: {
     billing_provider: provider.name,
     billing_provider_subscription_id: checkout.providerSubscriptionId ?? billing.billingProviderSubscriptionId,
     billing_provider_price_id: checkout.providerPriceId ?? billing.billingProviderPriceId,
-    stripe_customer_id: checkout.providerCustomerId ?? stripeCustomerId,
+    stripe_customer_id: checkout.providerCustomerId ?? billingCustomerId,
     trial_started_at: billing.trialStartedAt ?? (trialEndsAt ? new Date().toISOString() : null),
   })
 
@@ -477,9 +477,9 @@ export async function openBillingPortalForUser(input: {
     return { ok: true, redirectUrl: billingRedirectPath() }
   }
 
-  let stripeCustomerId: string | null = null
+  let billingCustomerId: string | null = null
   try {
-    stripeCustomerId = await loadStripeCustomerId(supabase, input.userId)
+    billingCustomerId = await loadBillingCustomerId(supabase, input.userId)
   } catch (error) {
     return {
       ok: false,
@@ -487,15 +487,15 @@ export async function openBillingPortalForUser(input: {
     }
   }
 
-  if (!stripeCustomerId) {
+  if (!billingCustomerId) {
     return {
       ok: false,
-      error: "저장된 결제 고객이 없습니다. 먼저 체크아웃으로 결제를 진행해 주세요.",
+      error: "저장된 결제 고객 정보가 없습니다. 먼저 체크아웃으로 결제를 진행해 주세요.",
     }
   }
 
   const portal = await provider.createPortalSession({
-    customerId: stripeCustomerId,
+    customerId: billingCustomerId,
     returnUrl: billingRedirectPath(),
   })
   if (!portal.ok) {

@@ -258,7 +258,7 @@ Preview 환경에만 `ENABLE_DEMO_LOGIN=true` 를 추가하고, Production에는
 ### Provider and webhook flow
 
 - Provider abstraction: `src/lib/billing/provider.ts`
-- Providers: `mock`, `stripe`
+- Providers: `mock`, `dodo`
 - Checkout entry: `/api/billing/checkout`
 - Portal entry: `/api/billing/portal`
 - Webhook entry: `/api/billing/webhook`
@@ -280,11 +280,11 @@ Preview 환경에만 `ENABLE_DEMO_LOGIN=true` 를 추가하고, Production에는
 
 - `BILLING_PROVIDER`
 - `BILLING_MODE`
-- `BILLING_STRIPE_SECRET_KEY`
-- `BILLING_STRIPE_WEBHOOK_SECRET`
-- `BILLING_STRIPE_PRICE_STARTER_MONTHLY`
-- `BILLING_STRIPE_PRICE_PRO_MONTHLY`
-- `BILLING_STRIPE_PRICE_BUSINESS_MONTHLY`
+- `BILLING_DODO_API_KEY`
+- `BILLING_DODO_WEBHOOK_SECRET`
+- `BILLING_DODO_PRODUCT_STARTER`
+- `BILLING_DODO_PRODUCT_PRO`
+- `BILLING_DODO_PRODUCT_BUSINESS`
 
 ### Failure handling
 

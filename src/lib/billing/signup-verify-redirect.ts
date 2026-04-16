@@ -7,7 +7,7 @@ import { getBillingProvider } from "@/lib/billing/provider"
 export function pathAfterEmailVerification(): string {
   try {
     const p = getBillingProvider()
-    if ((p.name === "dodo" || p.name === "stripe") && p.isConfigured()) {
+    if (p.name === "dodo" && p.isConfigured()) {
       return "/billing"
     }
   } catch {

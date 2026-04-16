@@ -110,7 +110,7 @@ export function BillingConsoleClient({
       ? Math.round((billing.documentSendsThisMonth / limits.documentSendsPerMonth) * 100)
       : 0
 
-  const pgEnabled = runtime.provider === "stripe" || runtime.provider === "dodo"
+  const pgEnabled = runtime.provider === "dodo"
   const showPgCheckout = pgEnabled && runtime.configured
   const hasActiveSub = Boolean(billing.billingProviderSubscriptionId?.trim())
 
@@ -186,7 +186,7 @@ export function BillingConsoleClient({
               아직 등록된 결제 수단이 없습니다.
             </p>
           )}
-          {showPgCheckout && runtime.provider === "stripe" && Boolean(billing.billingCustomerId?.trim()) ? (
+          {showPgCheckout && Boolean(billing.billingCustomerId?.trim()) ? (
             <div className="mt-3">
               <button
                 type="button"

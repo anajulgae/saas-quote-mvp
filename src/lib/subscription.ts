@@ -13,7 +13,7 @@ export type UserBillingSnapshot = {
   billingProvider: string | null
   billingProviderSubscriptionId: string | null
   billingProviderPriceId: string | null
-  /** Stripe `cus_*` 또는 Paddle `ctm_*` — DB 컬럼 `stripe_customer_id` */
+  /** Dodo customer id 등 provider 고객 식별자 — 레거시 DB 컬럼 `stripe_customer_id` 재사용 */
   billingCustomerId: string | null
   paymentMethodBrand: string | null
   paymentMethodLast4: string | null
