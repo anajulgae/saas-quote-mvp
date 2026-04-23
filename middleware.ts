@@ -57,12 +57,8 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/c/")
   const isAuthenticated = hasSessionCookie(request)
 
+  // 파킹 중 — 루트는 항상 파킹 페이지로
   if (pathname === "/") {
-    if (isAuthenticated) {
-      const nextUrl = request.nextUrl.clone()
-      nextUrl.pathname = "/dashboard"
-      return stripStaleDemoCookie(request, NextResponse.redirect(nextUrl))
-    }
     return stripStaleDemoCookie(request, NextResponse.next())
   }
 
